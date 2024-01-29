@@ -1,4 +1,0 @@
-tensorflow-gpu
-scipy
-pandas
-numpy==1.20.3

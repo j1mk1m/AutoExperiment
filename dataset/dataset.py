@@ -5,9 +5,6 @@ from torch.utils.data import Dataset, DataLoader
 import csv
 import subprocess
 
-# modes:
-# Full code, full code(no readme), function headers, main function removed, no code
-
 class AutoExperimentDataset(Dataset):
     def __init__(self, mode, workspace):
         self.mode = mode
@@ -60,7 +57,7 @@ class AutoExperimentDataset(Dataset):
         if self.mode == "FC":
             shutil.copytree(source_code_dir, workspace_code_dir)
         elif self.mode == "NC":
-            pass
+            os.mkdirs(workspace_code_dir)
         elif self.mode == "PC-80":
             self.copy_code_partial(source_code_dir, workspace_code_dir, 0.8)
         elif self.mode == "PC-60":
@@ -74,6 +71,7 @@ class AutoExperimentDataset(Dataset):
         return workspace_dir
 
     def copy_code_partial(self, dataset_dir, workspace_dir, proportion=1):
+        # TODO
         pass
 
 
