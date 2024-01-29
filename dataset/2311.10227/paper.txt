@@ -1,0 +1,613 @@
+::: ltx_page_main
+::: ltx_page_content
+[\\pdfcolInitStack]{#id1 .ltx_ERROR .undefined}
+
+::: {#p1 .ltx_para}
+tcb@breakable
+:::
+
+# Think Twice: Perspective-Taking Improves Large Language Models' Theory-of-Mind Capabilities {#think-twice-perspective-taking-improves-large-language-models-theory-of-mind-capabilities .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [Alex Wilf, Sihyun Shawn Lee, Paul Pu Liang, Louis-Philippe Morency\
+Carnegie Mellon University\
+[awilf@cs.cmu.edu]{#id1.1.id1 .ltx_text .ltx_font_typewriter}\
+]{.ltx_personname}]{.ltx_creator .ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Human interactions are deeply rooted in the interplay of thoughts,
+beliefs, and desires made possible by Theory of Mind (ToM): our
+cognitive ability to understand the mental states of ourselves and
+others. Although ToM may come naturally to us, emulating it presents a
+challenge to even the most advanced Large Language Models (LLMs). Recent
+improvements to LLMs' reasoning capabilities from simple yet effective
+prompting techniques such as Chain-of-Thought (CoT) (Wei et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib40){.ltx_ref})
+have seen limited applicability to ToM (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref}).
+In this paper, we turn to the prominent cognitive science theory
+"Simulation Theory" to bridge this gap. We introduce [SimToM]{#id2.id1.1
+.ltx_text .ltx_font_smallcaps}, a novel two-stage prompting framework
+inspired by Simulation Theory's notion of
+[perspective-taking]{#id2.id1.2 .ltx_text .ltx_font_bold}. To implement
+this idea on current ToM benchmarks, [SimToM]{#id2.id1.3 .ltx_text
+.ltx_font_smallcaps} first filters context based on what the character
+in question knows before answering a question about their mental state.
+Our approach, which requires no additional training and minimal
+prompt-tuning, shows substantial improvement over existing methods, and
+our analysis reveals the importance of perspective-taking to
+Theory-of-Mind capabilities. Our findings suggest perspective-taking as
+a promising direction for future research into improving LLMs' ToM
+capabilities. Our code is [publicly
+available](https://github.com/shawnsihyunlee/simulatedtom){.ltx_ref
+.ltx_href target="_blank"}.
+:::
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+What did the group of friends feel as they gathered around the fire,
+exchanging stories and laughter and knowing glances? Underlying this
+seemingly commonplace setting is an intricate interplay of thoughts,
+beliefs, and desires weaving together the fabric of human interaction.
+This is the domain of Theory of Mind (ToM): the cognitive ability to
+attribute mental states to ourselves and others, and to understand that
+others have beliefs, desires, and intentions that may differ from our
+own  (Premack and Woodruff,
+[1978](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib30){.ltx_ref};
+Wellman et al.,
+[2001](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib41){.ltx_ref}).
+This often unconscious ability is foundational to human cognition
+ (Carruthers,
+[2009](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib5){.ltx_ref})
+and social interaction  (Langley et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib26){.ltx_ref}),
+yet it is a task that, despite its simplicity, seems to perplex even the
+most advanced Large Language Models (LLMs) (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref};
+Sap et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib31){.ltx_ref}).
+Recently, simple prompting strategies such as Chain-of-Thought
+(CoT) (Wei et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib40){.ltx_ref})
+have gained popularity because they can substantially improve LLM
+reasoning capabilities on some tasks without additional training or
+prompt tuning across models. Yet simple solutions to ToM still elude
+us (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref}).
+Are LLMs incapable of performing ToM reasoning? Or have we just not
+found the right way to prompt them yet?
+:::
+
+<figure id="S1.F1" class="ltx_figure">
+<img
+src="./%5B2311.10227%5D%20Think%20Twice_%20Perspective-Taking%20Improves%20Large%20Language%20Models’%20Theory-of-Mind%20Capabilities_files/x1.png"
+id="S1.F1.g1" class="ltx_graphics ltx_centering ltx_img_landscape"
+width="830" height="614" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 1:
+</span>Instead of performing Theory-of-Mind question-answering in a
+single inference pass, <span id="S1.F1.5.1"
+class="ltx_text ltx_font_smallcaps">SimToM</span> first prompts LLMs to
+perform <span id="S1.F1.6.2"
+class="ltx_text ltx_font_italic">perspective-taking</span>: filtering
+the context only to what the character in question <span id="S1.F1.7.3"
+class="ltx_text ltx_font_italic">knows</span>. Then, the LLM answers the
+question given this <span id="S1.F1.8.4"
+class="ltx_text ltx_font_italic">filtered</span> context. The example in
+this figure is representative of the core idea underlying current
+benchmarks used to gauge LLMs’ ToM capabilities, called the Sally-Anne
+false-belief tests (Baron-Cohen et al., <a
+href="https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib3"
+class="ltx_ref">1985</a>).</figcaption>
+</figure>
+
+::: {#S1.p2 .ltx_para}
+Although most current LLM probing strategies employ a single inference
+pass to answer ToM questions (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref}),
+a prominent theory from cognitive science called "Simulation
+Theory" (Goldman,
+[2006](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib15){.ltx_ref})
+postulates that humans utilize a distinct step [before]{#S1.p2.1.1
+.ltx_text .ltx_font_italic} answering ToM questions called
+[perspective-taking]{#S1.p2.1.2 .ltx_text .ltx_font_bold} in which we
+"step into the other person's shoes", understanding their beliefs and
+goals before answering questions about their mental state  (Barlassina
+and Gordon,
+[2017](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib2){.ltx_ref}).
+In the example in Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#S1.F1 "Figure 1 ‣ 1 Introduction ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref},
+understanding Jim's perspective amounts to understanding Jim's [lack of
+knowledge]{#S1.p2.1.3 .ltx_text .ltx_font_italic} about a recent
+development (Avi moving the ball to the basket).
+:::
+
+::: {#S1.p3 .ltx_para}
+In this paper, we propose a simple two-stage prompting framework for
+LLMs inspired by Simulation Theory called [SimToM]{#S1.p3.1.1 .ltx_text
+.ltx_font_smallcaps} that first implements perspective-taking, filtering
+the context only to what the person in question [knows]{#S1.p3.1.2
+.ltx_text .ltx_font_italic}, before answering Theory-of-Mind questions
+[given that filtered context]{#S1.p3.1.3 .ltx_text .ltx_font_italic}.
+Our approach seamlessly integrates with pre-trained LLMs, requiring no
+additional training and minimal prompt-tuning across models, while still
+demonstrating substantial performance improvements over off-the-shelf
+models using 0-shot MC and CoT probing.
+:::
+
+::: {#S1.p4 .ltx_para}
+We perform extensive analysis and ablations of our method and find that
+LLM's are surprisingly capable of perspective-taking when prompted and
+that improved perspective-taking capabilities are tied closely to
+[further]{#S1.p4.1.1 .ltx_text .ltx_font_italic} improvements in ToM
+capabilities. These findings suggest that future research into
+Theory-of-Mind may find it useful to include [SimToM]{#S1.p4.1.2
+.ltx_text .ltx_font_smallcaps} as a simple yet effective baseline, and
+that this framework for thinking about ToM in LLMs may open new avenues
+for understanding and improving LLMs' abilities to simulate human-like
+ToM reasoning. Our code is [publicly
+available](https://github.com/shawnsihyunlee/simulatedtom){.ltx_ref
+.ltx_href target="_blank"}.
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Background {#background .ltx_title .ltx_title_section}
+
+::: {#S2.SS1 .section .ltx_subsection}
+### [2.1 ]{.ltx_tag .ltx_tag_subsection}"Simulation" Theory of Mind {#simulation-theory-of-mind .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS1.p1 .ltx_para}
+"Simulation Theory" (ST) (Goldman,
+[2006](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib15){.ltx_ref})
+proposes an explanation for humans' ability to perform ToM that relies
+on a cognitive mechanism comprising two processes:
+[perspective-taking]{#S2.SS1.p1.1.1 .ltx_text .ltx_font_bold} ("putting
+yourself in their shoes"), followed by answering a ToM question from
+that perspective (Hurley,
+[2008](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib23){.ltx_ref};
+Goldman,
+[2008](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib16){.ltx_ref}).
+ST has strong philosophical (Gordon,
+[2007](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib20){.ltx_ref};
+Evans,
+[1982](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib11){.ltx_ref};
+Gordon,
+[1986](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib18){.ltx_ref})
+and empirical supporte from decades of cognitive science
+research (Gallese and Goldman,
+[1998](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib12){.ltx_ref};
+Gallese et al.,
+[2004](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib13){.ltx_ref};
+Hurley,
+[2008](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib23){.ltx_ref}),
+though it is still an active area of debate (see Appendix [[A]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#A1 "Appendix A A Further Discussion of Cognitive Science Perspectives on Simulation Theory ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref}
+for a detailed discussion).
+:::
+
+::: {#S2.SS1.SSS0.Px1 .section .ltx_paragraph}
+##### Perspective-Taking {#perspective-taking .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS1.SSS0.Px1.p1 .ltx_para}
+ST argues that perspective-taking, or placing oneself in another's
+position, is the initial step to simulating another's mental state. It
+involves simulating the beliefs and goals of the other individual.
+Crucial to this type of simulating are "imagining believing" what they
+believe (Currie,
+[2002a](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib9){.ltx_ref};
+Goldman,
+[2006](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib15){.ltx_ref}),
+or "imagining desiring" what they desire  (Currie,
+[2002b](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib10){.ltx_ref}).
+:::
+:::
+
+::: {#S2.SS1.SSS0.Px2 .section .ltx_paragraph}
+##### Question-Answering {#question-answering .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS1.SSS0.Px2.p1 .ltx_para}
+After perspective-taking, ST theorists argue that humans then answer a
+ToM question by observing and reasoning [as if you were in their
+shoes]{#S2.SS1.SSS0.Px2.p1.1.1 .ltx_text .ltx_font_italic}  (Barlassina
+and Gordon,
+[2017](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib2){.ltx_ref};
+Goldman,
+[2008](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib16){.ltx_ref}).
+Some theorists describe this as "reuse" of a "cognitive mechanism"
+ (Hurley,
+[2008](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib23){.ltx_ref};
+Craver,
+[2007](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib7){.ltx_ref})
+shared between humans.
+:::
+:::
+:::
+
+::: {#S2.SS2 .section .ltx_subsection}
+### [2.2 ]{.ltx_tag .ltx_tag_subsection}Are LLMs Capable of ToM? {#are-llms-capable-of-tom .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS2.p1 .ltx_para}
+Supervised models can perform well on ToM tasks after finetuning ,
+but Sclar et al.
+([2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib33){.ltx_ref})
+show that they are brittle and overfit in ways that do not generalize to
+out-of-domain ToM tasks, suggesting that zero-shot methods may be more
+robust. As zero-shot methods and evaluation becoming increasingly common
+in NLP for this reason (Zhao et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib43){.ltx_ref};
+Sap et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib32){.ltx_ref}),
+we consider the unsupervised zero-shot setting for this work as well.
+:::
+
+::: {#S2.SS2.p2 .ltx_para}
+Most modern LLMs struggle zero-shot on simple ToM tasks  (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref};
+Sap et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib31){.ltx_ref}).
+Some have claimed that recent ToM capabilities have emerged in large
+models (Bubeck et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib4){.ltx_ref};
+Kosinski,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib25){.ltx_ref}),
+but others have argued that LLMs still fail on "trivial"
+alterations (Ullman,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib38){.ltx_ref})
+to existing datasets, suggesting limitations in current benchmark
+approaches or possible dataset leakage to closed-source models' training
+sets (Shapira et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib34){.ltx_ref}).
+:::
+
+::: {#S2.SS2.p3 .ltx_para}
+Experimentally, current large models still lag behind human performance:
+for example, GPT-3.5-Turbo gets only 12.5% on the "action" subset of
+false belief questions in BigTOM (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref}).
+We find in Section [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#S6 "6 Results and Discussion ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref}
+that GPT-4 still lags behind human performance substantially on ToMI (Le
+et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib27){.ltx_ref}),
+and although it performs well on BigTOM, this may be partly because
+GPT-4 itself was used to create the BigTOM dataset. From the literature
+and these results, it appears that LLMs do not yet reliably display
+zero-shot ToM capabilities (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref}).
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Benchmarking Theory-of-Mind Capabilities {#benchmarking-theory-of-mind-capabilities .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para}
+One well studied method for evaluating theory of mind capabilities is
+through the Sally Anne false-belief tests (Baron-Cohen et al.,
+[1985](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib3){.ltx_ref}).
+In essence, one agent (Sally) knows something about the world, then they
+leave, and another agent (Anne) changes something about the world. For
+example: Sally puts a ball in the basket then leaves the room, after
+which Anne moves the ball to the box.
+:::
+
+::: {#S3.p2 .ltx_para}
+We can then ask a few different types of questions, for example: "Where
+does Sally believe the ball is?" If Anne has moved the ball, Sally's
+belief will be incorrect -- this type of question is called [false
+belief]{#S3.p2.1.1 .ltx_text .ltx_font_bold}, and has its counterpart in
+[true belief]{#S3.p2.1.2 .ltx_text .ltx_font_bold} questions, where
+Sally's belief about the world is correct. We can also ask about
+[actions]{#S3.p2.1.3 .ltx_text .ltx_font_bold} Sally would take as a
+result of those beliefs, for example: "What will Sally do when she
+returns looking for the ball?". And instead of asking about Sally
+directly, we could also ask about what [Anne thinks Sally
+thinks]{#S3.p2.1.4 .ltx_text .ltx_font_bold} -- this is called a [second
+order]{#S3.p2.1.5 .ltx_text .ltx_font_bold} question, contrasted with
+the [first order]{#S3.p2.1.6 .ltx_text .ltx_font_bold} questions above.
+:::
+
+::: {#S3.p3 .ltx_para}
+To the best of our knowledge, there are two existing datasets that test
+these capabilities in the reading comprehension setting:
+[ToMI]{#S3.p3.1.1 .ltx_text .ltx_font_bold} and [BigTOM]{#S3.p3.1.2
+.ltx_text .ltx_font_bold}.[^1^[[^1^[1]{.ltx_tag .ltx_tag_note}Both
+datasets are available in the English language
+only.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote1 .ltx_note
+.ltx_role_footnote}
+:::
+
+::: {#S3.SS1 .section .ltx_subsection}
+### [3.1 ]{.ltx_tag .ltx_tag_subsection}ToMI {#tomi .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS1.p1 .ltx_para}
+ToMI (Le et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib27){.ltx_ref})
+is a dataset of Sally-Anne stories, questions, and answer
+choices.[^2^[[^2^[2]{.ltx_tag .ltx_tag_note}Made publicly available with
+the [CC
+License](https://github.com/facebookresearch/ToMi/blob/master/LICENSE){.ltx_ref
+.ltx_href
+target="_blank"}.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote2
+.ltx_note .ltx_role_footnote} For this paper, we use the updated version
+of ToMI from  (Arodi and Cheung,
+[2021](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib1){.ltx_ref};
+Sap et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib31){.ltx_ref})
+that has relabelled mislabelled second-order questions and disambiguated
+the location of containers after their reference (e.g., "The ball is in
+the [basket]{#S3.SS1.p1.1.1 .ltx_text .ltx_font_bold}. The
+[basket]{#S3.SS1.p1.1.2 .ltx_text .ltx_font_bold} is in the front
+yard.").
+:::
+
+<figure id="S3.F2" class="ltx_figure">
+<img
+src="./%5B2311.10227%5D%20Think%20Twice_%20Perspective-Taking%20Improves%20Large%20Language%20Models’%20Theory-of-Mind%20Capabilities_files/x2.png"
+id="S3.F2.g1" class="ltx_graphics ltx_centering ltx_img_landscape"
+width="1660" height="934" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 2: </span>An
+overview of <span id="S3.F2.5.1"
+class="ltx_text ltx_font_smallcaps">SimToM</span>, a two-stage prompting
+framework for enhancing zero-shot Theory-of-Mind capabilities in LLMs.
+The first step is <span id="S3.F2.6.2"
+class="ltx_text ltx_font_bold">perspective-taking</span>, in which a
+model attempts to understand what the agent knows and wants. We then
+query the LLM to <span id="S3.F2.7.3"
+class="ltx_text ltx_font_bold">infer</span> the answer to the question
+given this <span id="S3.F2.8.4"
+class="ltx_text ltx_font_italic">perspective</span>.</figcaption>
+</figure>
+:::
+
+::: {#S3.SS2 .section .ltx_subsection}
+### [3.2 ]{.ltx_tag .ltx_tag_subsection}BigTOM {#bigtom .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS2.p1 .ltx_para}
+BigTOM (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref})
+is also a Sally-Anne false belief-style ToM
+benchmark.[^3^[[^3^[3]{.ltx_tag .ltx_tag_note}Made publicly available
+with the [MIT
+license](https://github.com/cicl-stanford/procedural-evals-tom/blob/main/LICENSE){.ltx_ref
+.ltx_href
+target="_blank"}.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote3
+.ltx_note .ltx_role_footnote} However, BigTOM evaluates ToM capabilities
+on a larger space of tasks than modification in object location and
+frames its stories in more natural language and social settings. BigTOM
+achieves this by building a causal template defining an agent's desire,
+percept, and initial belief, before generating a causal event that
+changes the environment and generating the resulting agent's belief or
+action. The authors of BigTOM create these templates, and generate the
+outputs using GPT-4.
+:::
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}[SimToM]{#S4.1.1 .ltx_text .ltx_font_smallcaps}: [Simulated]{#S4.2.2 .ltx_text .ltx_font_smallcaps} Theory of Mind {#simtom-simulated-theory-of-mind .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para}
+[SimToM]{#S4.p1.1.1 .ltx_text .ltx_font_smallcaps} is a simple two-stage
+prompting framework for that enhances zero-shot ToM capabilities in
+LLMs.
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Motivation {#motivation .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para}
+We illustrate a motivating example in Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#S3.F2 "Figure 2 ‣ 3.1 ToMI ‣ 3 Benchmarking Theory-of-Mind Capabilities ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref}.[^4^[[^4^[4]{.ltx_tag
+.ltx_tag_note}The example we use is very similar to an actual question
+from BigTOM (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref}),
+although with two false beliefs instead of
+one.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote4 .ltx_note
+.ltx_role_footnote} The story is as follows: the woman in green fills a
+cup with steamed whole milk, after which the woman [does not
+see]{#S4.SS1.p1.1.1 .ltx_text .ltx_font_italic} the man in purple
+replace the whole milk in the cup with oat milk. The woman then adds
+cinnamon spice on top, which [the man does not see]{#S4.SS1.p1.1.2
+.ltx_text .ltx_font_italic}, then [both]{#S4.SS1.p1.1.3 .ltx_text
+.ltx_font_italic} observe that the customer receives their drink. The
+question is "Which kind of latte does the woman in green believe was
+served? Whole milk + cinnamon spice, or oat milk + cinnamon spice?" The
+correct answer is whole milk + cinnamon spice, because the woman is not
+aware of the change the man made.
+:::
+
+::: {#S4.SS1.p2 .ltx_para}
+0-shot CoT prompting will pass the whole story in as context and ask the
+LLM to reason through the answer:
+:::
+
+::: {#S4.SS1.p4 .ltx_para}
+However, CoT will often output the [true answer]{#S4.SS1.p4.1.1
+.ltx_text .ltx_font_italic} -- in this case, the type of latte the
+customer [actually received]{#S4.SS1.p4.1.2 .ltx_text .ltx_font_italic}:
+oat milk + cinnamon spice. This amounts to a failure of
+perspective-taking: answering the question based on [what she knows and
+what she does not know, regardless of whether it is correct or
+not]{#S4.SS1.p4.1.3 .ltx_text .ltx_font_italic}.
+:::
+
+::: {#S4.SS1.p5 .ltx_para}
+Motivated by this intuition and the literature on Simulation Theory, we
+hypothesize that LLMs' may be having difficulty with ToM reasoning
+because they are attempting to perform two tasks in a [single inference
+pass]{#S4.SS1.p5.1.1 .ltx_text .ltx_font_italic}: perspective-taking and
+question-answering. To solve this, we break the ToM reasoning process
+into two inference passes:
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S4.I1.i1}
+
+    ::: {#S4.I1.i1.p1 .ltx_para}
+    [Perspective-Taking]{#S4.I1.i1.p1.1.1 .ltx_text .ltx_font_bold}:
+    understand what the woman knows
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S4.I1.i2}
+
+    ::: {#S4.I1.i2.p1 .ltx_para}
+    [Question-Answering]{#S4.I1.i2.p1.1.1 .ltx_text .ltx_font_bold}:
+    answer the question given [what the woman knows]{#S4.I1.i2.p1.1.2
+    .ltx_text .ltx_font_italic} ([not]{#S4.I1.i2.p1.1.3 .ltx_text
+    .ltx_font_italic} the whole story)
+    :::
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Perspective-Taking {#perspective-taking-1 .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.p1 .ltx_para}
+Barlassina and Gordon
+([2017](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib2){.ltx_ref})
+describe Perspective-Taking as "switching roles" to understand the other
+person's "relevant beliefs and goals". In [SimToM]{#S4.SS2.p1.1.1
+.ltx_text .ltx_font_smallcaps}, we implement this in a simple, concrete
+way: by asking models to first [filter]{#S4.SS2.p1.1.2 .ltx_text
+.ltx_font_italic} the story to only the events that the character in
+question knows about.[^5^[[^5^[5]{.ltx_tag .ltx_tag_note}Our
+implementation of [SimToM]{#footnote5.1 .ltx_text .ltx_font_smallcaps}
+requires the name of the character the question asks about -- e.g., "the
+woman in green". We parse this during preprocessing, described in
+Section [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#S5 "5 Experimental Details ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref}.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote5
+.ltx_note .ltx_role_footnote}. To do this, we prompt an LLM as follows:
+:::
+
+::: {#S4.SS2.p2 .ltx_para .ltx_noindent}
+![](data:image/svg+xml;base64,PHN2ZyBpZD0iUzQuU1MyLnAyLnBpYzEiIGNsYXNzPSJsdHhfcGljdHVyZSIgaGVpZ2h0PSI4MC4xNCIgb3ZlcmZsb3c9InZpc2libGUiIHZlcnNpb249IjEuMSIgd2lkdGg9IjYwMCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCw4MC4xNCkgbWF0cml4KDEgMCAwIC0xIDAgMCkiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLXdpZHRoPSIwLjRwdCIgY29sb3I9IiMwMDAwMDAiPjxnIGZpbGw9IiNBNkE2QTYiIGZpbGwtb3BhY2l0eT0iMS4wMDAwMDAiPjxwYXRoIGQ9Ik0gMCA1LjkxIEwgMCA3NC4yNCBDIDAgNzcuNSAyLjY0IDgwLjE0IDUuOTEgODAuMTQgTCA1OTQuMDkgODAuMTQgQyA1OTcuMzYgODAuMTQgNjAwIDc3LjUgNjAwIDc0LjI0IEwgNjAwIDUuOTEgQyA2MDAgMi42NCA1OTcuMzYgMCA1OTQuMDkgMCBMIDUuOTEgMCBDIDIuNjQgMCAwIDIuNjQgMCA1LjkxIFoiIHN0eWxlPSJzdHJva2U6bm9uZSI+PC9wYXRoPjwvZz48ZyBmaWxsPSIjRTZFNkU2IiBmaWxsLW9wYWNpdHk9IjEuMDAwMDAwIj48cGF0aCBkPSJNIDEuOTcgNS45MSBMIDEuOTcgNTYuMDMgTCA1OTguMDMgNTYuMDMgTCA1OTguMDMgNS45MSBDIDU5OC4wMyAzLjczIDU5Ni4yNyAxLjk3IDU5NC4wOSAxLjk3IEwgNS45MSAxLjk3IEMgMy43MyAxLjk3IDEuOTcgMy43MyAxLjk3IDUuOTEgWiIgc3R5bGU9InN0cm9rZTpub25lIj48L3BhdGg+PC9nPjxnIGZpbGwtb3BhY2l0eT0iMS4wMDAwMDAiIHRyYW5zZm9ybT0ibWF0cml4KDEuMCAwLjAgMC4wIDEuMCAyMS42NSA2MS45NCkiPjxmb3JlaWdub2JqZWN0IHdpZHRoPSI1NTYuNjkiIGhlaWdodD0iMTIuMyIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPgo8cCBpZD0iUzQuU1MyLnAyLnBpYzEuMy4zLjMuMi4yIiBjbGFzcz0ibHR4X3AgbHR4X21pbmlwYWdlIGx0eF9hbGlnbl9ib3R0b20iIHN0eWxlPSJ3aWR0aDo0MDIuM3B0OyI+PHNwYW4gaWQ9IlM0LlNTMi5wMi5waWMxLjMuMy4zLjIuMi4xIiBjbGFzcz0ibHR4X3RleHQgbHR4X2ZvbnRfdHlwZXdyaXRlciBsdHhfZm9udF9ib2xkIGx0eF9mb250X3NtYWxsY2FwcyI+U2ltVG9NPHNwYW4gaWQ9IlM0LlNTMi5wMi5waWMxLjMuMy4zLjIuMi4xLjEiIGNsYXNzPSJsdHhfdGV4dCBsdHhfZm9udF91cHJpZ2h0Ij4gU3RlcCAjMTogUGVyc3BlY3RpdmUtVGFraW5nPC9zcGFuPjwvc3Bhbj48L3A+PC9mb3JlaWdub2JqZWN0PjwvZz48ZyBmaWxsLW9wYWNpdHk9IjEuMDAwMDAwIiB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgMjEuNjUgMTMuNzgpIj48Zm9yZWlnbm9iamVjdCB3aWR0aD0iNTU2LjY5IiBoZWlnaHQ9IjMwLjQ0IiB0cmFuc2Zvcm09Im1hdHJpeCgxIDAgMCAtMSAwIDE2LjYpIiBvdmVyZmxvdz0idmlzaWJsZSI+PHNwYW4gaWQ9IlM0LlNTMi5wMi5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEiIGNsYXNzPSJsdHhfaW5saW5lLXBhcmEgbHR4X21pbmlwYWdlIGx0eF9hbGlnbl9ib3R0b20iIHN0eWxlPSJ3aWR0aDo0MDIuM3B0OyI+CjxzcGFuIGlkPSJTNC5TUzIucDIucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4xLjEuMS4xLjEuMS4xLnAxIiBjbGFzcz0ibHR4X3BhcmEgbHR4X2FsaWduX2xlZnQiPgo8c3BhbiBpZD0iUzQuU1MyLnAyLnBpYzEuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS5wMS4xIiBjbGFzcz0ibHR4X3AiPjxzcGFuIGlkPSJTNC5TUzIucDIucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4xLjEuMS4xLjEuMS4xLnAxLjEuMSIgY2xhc3M9Imx0eF90ZXh0IGx0eF9mb250X3R5cGV3cml0ZXIiPlRoZSBmb2xsb3dpbmcgaXMgYSBzZXF1ZW5jZSBvZiBldmVudHM6IHtzdG9yeX08L3NwYW4+PC9zcGFuPgo8c3BhbiBpZD0iUzQuU1MyLnAyLnBpYzEuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS5wMS4yIiBjbGFzcz0ibHR4X3AiPjxzcGFuIGlkPSJTNC5TUzIucDIucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4xLjEuMS4xLjEuMS4xLnAxLjIuMSIgY2xhc3M9Imx0eF90ZXh0IGx0eF9mb250X3R5cGV3cml0ZXIiPldoaWNoIGV2ZW50cyBkb2VzIHtjaGFyYWN0ZXJfbmFtZX0ga25vdyBhYm91dD88L3NwYW4+PC9zcGFuPgo8L3NwYW4+PC9zcGFuPjwvZm9yZWlnbm9iamVjdD48L2c+PC9nPjwvc3ZnPg==){#S4.SS2.p2.pic1
+.ltx_picture}
+:::
+:::
+
+::: {#S4.SS3 .section .ltx_subsection}
+### [4.3 ]{.ltx_tag .ltx_tag_subsection}Question-Answering {#question-answering-1 .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS3.p1 .ltx_para}
+Question-Answering proceeds just as in baseline 0-shot or CoT, except
+that we replace the [full story]{#S4.SS3.p1.1.1 .ltx_text
+.ltx_font_italic} with our [modified]{#S4.SS3.p1.1.2 .ltx_text
+.ltx_font_italic} version resultig from Perspective-Taking. The story is
+modified so that information that the agent does not know about is
+[hidden]{#S4.SS3.p1.1.3 .ltx_text .ltx_font_italic} from the LLM when it
+answers the question. In this example, the woman does not know that the
+man swapped the milk, so that information is removed during
+perspective-taking.
+:::
+
+::: {#S4.SS3.p3 .ltx_para}
+In this example, the story from the woman in green's perspective is: she
+fills a cup with steamed whole milk, adds cinnamon spice, and serves it
+to a customer. During Question-Answering, we would prompt the model
+[only]{#S4.SS3.p3.1.1 .ltx_text .ltx_font_italic} with this perspective,
+then ask the same question of the model.
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Experimental Details {#experimental-details .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para}
+Our experiments are intended to investigate the effectiveness of our
+method by evaluate LLMs 0-shot on ToM benchmarks with and without our
+[SimToM]{#S5.p1.1.1 .ltx_text .ltx_font_smallcaps} prompting framework.
+In this section, we detail how models are prompted and evaluated on the
+benchmarks described in Section [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#S3 "3 Benchmarking Theory-of-Mind Capabilities ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref}:
+BigTOM and ToMI.
+:::
+
+::: {#S5.SS1 .section .ltx_subsection}
+### [5.1 ]{.ltx_tag .ltx_tag_subsection}Prompting {#prompting .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS1.p1 .ltx_para}
+We evaluate LLMs using MC-probing: we prompt models with a story, a
+question, and answer choices, and ask it to choose the correct answer
+choice given the question and story. Models can decline to answer (and
+the Llama models often do this), which can reduce their performance
+below 50% random accuracy. We reproduce our 0-shot prompts exactly in
+Appendix [[E]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#A5 "Appendix E Baseline Prompts ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref}.
+:::
+
+::: {#S5.SS1.p2 .ltx_para}
+Our prompts for [SimToM]{#S5.SS1.p2.1.1 .ltx_text .ltx_font_smallcaps}
+vary somewhat based on the structure of the dataset, and vary minimally
+between Llama and GPT models. We reproduce the exact prompts used in
+Appendix [[B]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2311.10227#A2 "Appendix B SimToM Prompts ‣ Think Twice: Perspective-Taking Improves Large Language Models’ Theory-of-Mind Capabilities"){.ltx_ref}.
+:::
+:::
+
+::: {#S5.SS2 .section .ltx_subsection}
+### [5.2 ]{.ltx_tag .ltx_tag_subsection}Evaluation {#evaluation .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS2.p1 .ltx_para}
+Because false belief questions are the most challenging question
+category for modern models (Gandhi et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib14){.ltx_ref})
+and are at the core of the "Sally-Anne False-Belief Tests", we report
+our results averaged across all false belief question types and across
+All question types in our results. For BigTOM, this means averaging
+across "Forward Action" and "Belief" false belief questions; for ToMI,
+this includes averaging across first and second order question types.
+:::
+
+::: {#S5.SS2.p2 .ltx_para}
+We evaluate our approach on four state of the art language models: two
+open source -- Llama2-7b and 13-b chat  (Touvron et al.,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib37){.ltx_ref})
+-- and two closed source: GPT-3.5-Turbo and GPT-4 (OpenAI,
+[2023](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib29){.ltx_ref}).
+We query all models with temperature=0.0 for reproducibility. We run
+inference on the open source models on a single A100 GPU, and query the
+closed-source models using their API. The result for one model on one
+benchmark takes around three hours to run.
+:::
+
+::: {#S5.SS2.SSS0.Px1 .section .ltx_paragraph}
+##### BigTOM {#bigtom-1 .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS2.SSS0.Px1.p1 .ltx_para}
+In our experiments we consider the "Forward Action" and "Forward Belief"
+questions and not the "Backward Belief" so as to closely mimic the
+structure of the ToMI questions. BigTOM is balanced, with 200 questions
+per question type, so we do not randomly sample as we do for ToMI.
+BigTOM is a binary MC task, with random accuracy being 50%. We parse the
+character name deterministically: it is the first word in each story.
+:::
+:::
+
+::: {#S5.SS2.SSS0.Px2 .section .ltx_paragraph}
+##### ToMI {#tomi-1 .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS2.SSS0.Px2.p1 .ltx_para}
+To evaluate our methods on ToMI (Le et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2311.10227#bib.bib27){.ltx_ref}),
+we randomly sample 100 samples from each of the ten question types to
+create a balanced dataset of 1000 samples. We parse the name of the
+character in question deterministically: because ToMI is created from
+templates, the character name is always the third word in the question.
+:::
+
+::: {#S5.SS2.SSS0.Px2.p2 .ltx_para}
+The original ToMI dataset does not include the answer choices in the
+questions. We find that this artificially depresses baseline
+performance, as LLMs often output ambiguous answers. For example, an LLM
+outputted this answer to a ToMI question: "Charlotte look for the melon
+in the [front yard]{#S5.SS2.SSS0.Px2.p2.1.1 .ltx_text .ltx_font_bold}",
+despite the only valid choices being either container A or B (both
+situated in the front yard). To rectify this, we parse the ToMI stories
+and include both possible answer choices (e.g., A and B) from the
+template used for story creation when querying the model. This process
+makes this setting a binary multiple-choice task similar to BigTOM. A
+random guessing baseline would have 50% accuracy.
+:::
+

@@ -1,0 +1,1516 @@
+# Graph Neural Networks for Link Prediction with Subgraph Sketching {#graph-neural-networks-for-link-prediction-with-subgraph-sketching .ltx_title .ltx_title_document}
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Many Graph Neural Networks (GNNs) perform poorly compared to simple
+heuristics on Link Prediction (LP) tasks. This is due to limitations in
+expressive power such as the inability to count triangles (the backbone
+of most LP heuristics) and because they can not distinguish automorphic
+nodes (those having identical structural roles). Both expressiveness
+issues can be alleviated by learning link (rather than node)
+representations and incorporating structural features such as triangle
+counts. Since explicit link representations are often prohibitively
+expensive, recent works resorted to subgraph-based methods, which have
+achieved state-of-the-art performance for LP, but suffer from poor
+efficiency due to high levels of redundancy between subgraphs. We
+analyze the components of subgraph GNN (SGNN) methods for link
+prediction. Based on our analysis, we propose a novel full-graph GNN
+called ELPH (Efficient Link Prediction with Hashing) that passes
+subgraph sketches as messages to approximate the key components of SGNNs
+without explicit subgraph construction. ELPH is provably more expressive
+than Message Passing GNNs (MPNNs).
+:::
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+Link Prediction (LP) is an important problem in graph ML with many
+industrial applications. For example, recommender systems can be
+formulated as LP; link prediction is also a key process in drug
+discovery and knowledge graph construction. There are three main classes
+of LP methods: (i) [heuristics]{#S1.p1.1.1 .ltx_text .ltx_font_bold}
+(See Appendix [[C.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A3.SS1 "C.1 Heuristic Methods for Link Prediction ‣ Appendix C More on Structural Features ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref})
+that estimate the distance between two nodes (e.g. personalized page
+rank
+(PPR) ([page1999pagerank,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib29){.ltx_ref}
+) or graph
+distance ([zhou2009predicting,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib53){.ltx_ref}
+)) or the similarity of their neighborhoods (e.g Common Neighbors (CN),
+Adamic-Adar
+(AA) ([adamic2003friends,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib2){.ltx_ref}
+), or Resource Allocation
+(RA) ([zhou2009predicting,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib53){.ltx_ref}
+)); (ii) [unsupervised node embeddings]{#S1.p1.1.2 .ltx_text
+.ltx_font_bold} or [factorization]{#S1.p1.1.3 .ltx_text .ltx_font_bold}
+methods, which encompass the majority of production recommendation
+systems ([koren2009matrix,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib21){.ltx_ref}
+;
+[chamberlain2020tuning,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib7){.ltx_ref}
+); and, recently, (iii) Graph Neural Networks, in particular of the
+Message-Passing type
+(MPNNs) ([Gilmer2017,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib14){.ltx_ref}
+;
+[kipf2017,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib20){.ltx_ref}
+;
+[Hamilton2017,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib15){.ltx_ref}
+).[^1^[[^1^[1]{.ltx_tag .ltx_tag_note}GNNs are a broader category than
+MPNNs. Since the majority of GNNs used in practice are of the message
+passing type, we will use the terms
+synonymously.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote1
+.ltx_note .ltx_role_footnote} GNNs excel in graph- and node-level tasks,
+but often fail to outperform node embeddings or heuristics on common LP
+benchmarks such as the Open Graph Benchmark
+(OGB) ([hu2020open,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib18){.ltx_ref}
+).
+:::
+
+::: {#S1.p2 .ltx_para}
+There are two related reasons why MPNNs tend to be poor link predictors.
+Firstly, due to the equivalence of message passing to the
+Weisfeiler-Leman (WL) graph isomorphism
+test ([xu2018how,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib43){.ltx_ref}
+;
+[morris2019weisfeiler,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib27){.ltx_ref}
+), standard MPNNs are provably incapable of counting
+triangles ([chen2020can,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib9){.ltx_ref}
+) and consequently of counting Common Neighbors or computing one-hop or
+two-hop LP heuristics such as AA or RA. Secondly, GNN-based LP
+approaches combine permutation-equivariant structural node
+representations (obtained by message passing on the graph) and a readout
+function that maps from two node representations to a link probability.
+However, generating link representations as a function of equivariant
+node representations encounters the problem that all nodes $u$ in the
+same orbit induced by the graph automorphism group have equal
+representations. Therefore, the link probability
+$p\operatorname{}{(u,v)}$ is the same for all $u$ in the orbit
+independent of e.g. the graph distance $d\operatorname{}{(u,v)}$ (Figure
+[[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S1.F1 "Figure 1 ‣ 1 Introduction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+ ([srinivasan2019equivalence,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib36){.ltx_ref}
+).
+:::
+
+<figure id="S1.F1" class="ltx_figure ltx_align_floatright">
+<img src="./gnnforlink_files/x1.png" id="S1.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="245"
+height="109" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S1.F1.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 1</span>: </span><span
+id="S1.F1.3.2" class="ltx_text" style="font-size:90%;">Nodes 2 and 4 are
+in the same orbit induced by the graph’s automorphism group. As a
+result, a conventional GNN will assign the same probability to links
+(1,2) and (1,4).</span></figcaption>
+</figure>
+
+::: {#S1.p3 .ltx_para}
+This is a result of GNN's built-in permutation equivariance, which
+produces equal representation for any nodes whose enclosing subgraphs
+(corresponding to the receptive field of the GNN) are
+isomorphic.[^2^[[^2^[2]{.ltx_tag .ltx_tag_note}More precisely,
+WL-equivalent, which is a necessary but insufficient condition for
+isomorphism. ]{.ltx_note_content}]{.ltx_note_outer}]{#footnote2
+.ltx_note .ltx_role_footnote} We refer to this phenomenon as the
+[automorphic node problem]{#S1.p3.2.1 .ltx_text .ltx_font_italic} and
+define [automorphic nodes]{#S1.p3.2.2 .ltx_text .ltx_font_italic}
+(denoted $u \cong v$) to be those nodes that are indistinguishable by
+means of a given $k$-layer GNN. On the other hand, transductive node
+embedding methods such as
+TransE ([bordes2013translating,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib3){.ltx_ref}
+) and
+DeepWalk ([perozzi2014deepwalk,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib32){.ltx_ref}
+), or matrix
+factorization ([koren2009matrix,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib21){.ltx_ref}
+) do not suffer from this problem as the embeddings are not permutation
+equivariant.
+:::
+
+::: {#S1.p4 .ltx_para}
+Several methods have been proposed to improve GNN expressivity for LP.
+Most simply, adding unique node IDs immediately makes all structural
+node representations distinguishable, but at the expense of
+generalization ([abboud2021surprising,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib1){.ltx_ref}
+) and training
+convergence ([sato2021random,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib34){.ltx_ref}
+). Substructure counts may act as permutation-equivariant approximately
+unique
+identifiers ([bouritsas2022improving,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib5){.ltx_ref}
+), but they require a precomputation step which may be computationally
+intractable in the worst case. More successfully, a family of structural
+features, sometimes referred to as [labeling tricks]{#S1.p4.1.1
+.ltx_text .ltx_font_italic}, have recently been proposed that solve the
+automorphic node problem while still being equivariant and having good
+generalization ([li2020distance,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib23){.ltx_ref}
+;
+[zhang2021labeling,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib52){.ltx_ref}
+;
+[you2021identity,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib46){.ltx_ref}
+). However, adding structural features amounts to computing structural
+node representations that are conditioned on an edge and so can no
+longer be efficiently computed in parallel. For the purpose of
+tractability, state-of-the-art methods for LP restrict computation to
+subgraphs enclosing a link, transforming link prediction into [binary
+subgraph classification]{#S1.p4.1.2 .ltx_text
+.ltx_font_italic} ([zhang2021labeling,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib52){.ltx_ref}
+;
+[zhang2018link,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib49){.ltx_ref}
+;
+[yin2022algorithm,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib45){.ltx_ref}
+). Subgraph GNNs (SGNN) are inspired by the strong performance of LP
+heuristics compared to more sophisticated techniques and are motivated
+as an attempt to learn data-driven LP heuristics.
+:::
+
+::: {#S1.p5 .ltx_para}
+Despite impressive performance on benchmark datasets, SGNNs suffer from
+some serious limitations: (i) Constructing the subgraphs is expensive;
+(ii) Subgraphs are irregular and so batching them is inefficient on GPUs
+(iii); Each step of inference is almost as expensive as each training
+step because subgraphs must be constructed for every test link. These
+drawbacks preclude many applications, where scalability or efficient
+inference are required.
+:::
+
+::: {#S1.SS0.SSS0.Px1 .section .ltx_paragraph}
+##### Main contributions. {#main-contributions. .ltx_title .ltx_title_paragraph}
+
+::: {#S1.SS0.SSS0.Px1.p1 .ltx_para}
+\(i\) We analyze the relative contributions of SGNN components and
+reveal which properties of the subgraphs are salient to the LP problem.
+(ii) Based on our analysis, we develop an MPNN (ELPH) that passes
+subgraph sketches as messages. The sketches allow the most important
+qualities of the subgraphs to be summarized in the nodes. The resulting
+model removes the need for explicit subgraph construction and is a
+full-graph MPNN with the similar complexity to GCN. (iii) We prove that
+ELPH is strictly more expressive than MPNNs for LP and that it solves
+the automorphic node problem. (iv) As full-graph GNNs suffer from
+scalability issues when the data exceeds GPU memory, we develop BUDDY, a
+highly scalable model that precomputes sketches and node features. (v)
+We provide an open source Pytorch library for (sub)graph sketching that
+generates data sketches via message passing on the GPU. Experimental
+evaluation shows that our methods compares favorably to state-of-the-art
+both in terms of accuracy and speed.
+:::
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Preliminaries {#preliminaries .ltx_title .ltx_title_section}
+
+::: {#S2.SS0.SSS0.Px1 .section .ltx_paragraph}
+##### Notation. {#notation. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px1.p1 .ltx_para}
+Let $G = {(\mathcal{V},\mathcal{E})}$ be an undirected graph comprising
+the set of $n$ nodes (vertices) $\mathcal{V}$ and $e$ links (edges)
+$\mathcal{E}$. We denote by $d\operatorname{}{(u,v)}$ the [geodesic
+distance]{#S2.SS0.SSS0.Px1.p1.37.1 .ltx_text .ltx_font_italic} (shortest
+walk length) between nodes $u$ and $v$. Let
+$S = {({{\mathcal{V}_{S} \subseteq \mathcal{V}},{\mathcal{E}_{S} \subseteq \mathcal{E}}})}$
+be a node-induced subgraph of $G$ satisfying
+${(u,v)} \in \mathcal{E}_{S}$ iff ${(u,v)} \in \mathcal{E}$ for any
+${u,v} \in \mathcal{V}_{S}$. We denote by
+$S_{u\operatorname{}v}^{k} = {(\mathcal{V}_{u\operatorname{}v},\mathcal{E}_{u\operatorname{}v})}$
+a $k$-hop subgraph enclosing the link $(u,v)$, where
+$\mathcal{V}_{u\operatorname{}v}$ is the union of the $k$-hop neighbors
+of $u$ and $v$ and $\mathcal{E}_{u\operatorname{}v}$ is the union of the
+links that can be reached by a $k$-hop walk originating at $u$ and $v$
+(for simplicity, where possible, we omit $k$). Similarly, $S_{u}^{k}$ is
+the $k$-hop subgraph enclosing node $u$. The given features of nodes
+$\mathcal{V}_{u\operatorname{}v}$ are denoted by $X_{u\operatorname{}v}$
+and the derived structure features by $Z_{u\operatorname{}v}$. The
+probability of a link $(u,v)$ is denoted by $p\operatorname{}{(u,v)}$.
+When nodes $u$ and $v$ have isomorphic enclosing subgraphs (i.e.,
+$S_{u} \cong S_{v}$), we write $u \cong v$.
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px2 .section .ltx_paragraph}
+##### Sketches for Intersection Estimation. {#sketches-for-intersection-estimation. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px2.p1 .ltx_para}
+We use two sketching techniques, [HyperLogLog]{#S2.SS0.SSS0.Px2.p1.8.1
+.ltx_text
+.ltx_font_italic} ([hyperloglog,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib13){.ltx_ref}
+;
+[hyperloglogplus,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib16){.ltx_ref}
+) and [MinHashing]{#S2.SS0.SSS0.Px2.p1.8.2 .ltx_text
+.ltx_font_italic} ([broder1997resemblance,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib6){.ltx_ref}
+). Given sets $A$ and $B$, [HyperLogLog]{#S2.SS0.SSS0.Px2.p1.8.3
+.ltx_text .ltx_font_italic} efficiently estimates the cardinality of the
+union $|{A \cup B}|$ and [MinHashing]{#S2.SS0.SSS0.Px2.p1.8.4 .ltx_text
+.ltx_font_italic} estimates the Jaccard index
+${J\operatorname{}{(A,B)}} = {{|{A \cap B}|}/{|{A \cup B}|}}$. We
+combine these approaches to estimate the intersection of node sets
+produced by graph traversals
+ ([hyperloglogminhash,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib30){.ltx_ref}
+). These techniques represent sets as sketches, where the sketches are
+much smaller than the sets they represent. Each technique has a
+parameter $p$ controlling the trade-off between the accuracy and
+computational cost. Running times for merging two sets, adding an
+element to a set, and extracting estimates only depend on $p$, but they
+are constant with respect to the size of the set. Importantly, the
+sketches of the union of sets are given by permutation-invariant
+operations (element-wise $\min$ for minhash and element-wise $\max$ for
+hyperloglog). More details are provided in Appendix [[C.3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A3.SS3 "C.3 Subgraph Sketches ‣ Appendix C More on Structural Features ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px3 .section .ltx_paragraph}
+##### Graph Neural Networks for Link Prediction. {#graph-neural-networks-for-link-prediction. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px3.p1 .ltx_para}
+Message-passing GNNs (MPNNs) are parametric functions of the form
+$\mathbf{Y} = {{GNN}\operatorname{}{(\mathbf{X})}}$, where $\mathbf{X}$
+and $\mathbf{Y}$ are matrix representations (of size $n \times d$ and
+$n \times d^{\prime}$, where $n$ is the number of nodes and
+$d,d^{\prime}$ are the input and output dimensions, respectively) of
+input and output node features. [Permutation
+equivariance]{#S2.SS0.SSS0.Px3.p1.11.1 .ltx_text .ltx_font_italic}
+implies that
+${\mathbf{\Pi}\operatorname{}{GNN}\operatorname{}{(\mathbf{X})}} = {{GNN}\operatorname{}{({\mathbf{\Pi}\operatorname{}\mathbf{X}})}}$
+for any $n \times n$ node permutation matrix $\mathbf{\Pi}$. This is
+achieved in GNNs by applying a local permutation-invariant aggregation
+function $\square$ (typically sum, mean, or max) to the neighbor
+features of every node ('message passing'), resulting in a node-wise
+update of the form
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathbf{y}_{\mathbf{u}} = {\gamma\operatorname{}\left( \mathbf{x}_{u},{\square_{v \in {\mathcal{N}\operatorname{}{(u)}}}\operatorname{}\phi\operatorname{}\left( \mathbf{x}_{u},\mathbf{x}_{v} \right)} \right)}},$$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $\phi,\gamma$ are learnable functions. MPNNs are upperbounded in
+their discriminative power by the Weisfeiler-Leman isomorphism test (WL)
+([weisfeiler1968reduction,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib40){.ltx_ref}
+), a procedure iteratively refining the representation of a node by
+hashing its star-shaped neighborhood. As a consequence, since WL always
+identically represents automorphic nodes ($u \cong v$), any MPNN would
+do the same: $\mathbf{y}_{u} = \mathbf{y}_{v}$. Given the node
+representations $\mathbf{Y}$ computed by a GNN, link probabilities can
+then be computed as
+${p\operatorname{}{(u,v)}} = {R\operatorname{}{(\mathbf{y}_{u},\mathbf{y}_{v})}}$,
+where $R$ is a learnable readout function with the property that
+${R\operatorname{}{(\mathbf{y}_{u},\mathbf{y}_{v})}} = {R\operatorname{}{(\mathbf{y}_{u},\mathbf{y}_{w})}}$
+for any $v \cong w$. This node automorphism problem is detrimental for
+LP as ${p\operatorname{}{(u,v)}} = {p\operatorname{}{(u,w)}}$ if
+$v \cong w$ even when
+${d\operatorname{}{(u,v)}} \gg {d\operatorname{}{(u,w)}}$. As an
+example, in Figure[[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S1.F1 "Figure 1 ‣ 1 Introduction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+$2 \cong 4$, therefore
+${p\operatorname{}{(1,2)}} = {p\operatorname{}{(1,4)}}$ while
+${d\operatorname{}{(1,2)}} = 2 < {d\operatorname{}{(1,4)}} = 3$. As a
+result, a GNN may suggest to link totally unrelated nodes ($v$ may even
+be in a separate connected component to $u$ and $w$, but still have
+equal probability of connecting to
+$u$ ([srinivasan2019equivalence,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib36){.ltx_ref}
+)).
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px4 .section .ltx_paragraph}
+##### Subgraph GNNs (SGNN). {#subgraph-gnns-sgnn. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px4.p1 .ltx_para}
+([zhang2021labeling,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib52){.ltx_ref}
+;
+[zhang2018link,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib49){.ltx_ref}
+;
+[yin2022algorithm,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib45){.ltx_ref}
+) convert LP into binary graph classification. For a pair of nodes $u,v$
+and the enclosing subgraph $S_{u\operatorname{}v}$, SGNNs produce node
+representations $\mathbf{Y}_{u\operatorname{}v}$ and one desires
+${R\operatorname{}{(\mathbf{Y}_{u\operatorname{}v})}} = 1$ if
+${(u,v)} \in \mathcal{E}$ and zero otherwise. In order to resolve the
+automorphic node problem, node features are augmented with structural
+features
+([bouritsas2020improving,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib4){.ltx_ref}
+) that improve the ability of networks to count substructures
+([chen2020can,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib9){.ltx_ref}
+). SGNNs were originally motivated by the strong performance of
+heuristics on benchmark datasets and attempted to learn generalized
+heuristics. When the graph is large it is not tractable to learn
+heuristics over the full graph, but global heuristics can be well
+approximated from subgraphs that are augmented with structural features
+with an approximation error that decays exponentially with the number of
+hops taken to construct the
+subgraph ([zhang2018link,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib49){.ltx_ref}
+).
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Analyzing Subgraph Methods for Link Prediction {#analyzing-subgraph-methods-for-link-prediction .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para}
+SGNNs can be decomposed into the following steps: (i) subgraph
+extraction around every pair of nodes for which one desires to perform
+LP; (ii) augmentation of the subgraph nodes with structure features;
+(iii) feature propagation over the subgraphs using a GNN, and (iv)
+learning a graph-level readout function to predict the link. Steps
+(ii)--(iv) rely on the existence of a set of subgraphs (i), which is
+either constructed on the fly or as a preprocessing step. In the
+remainder of this section we discuss the inherent complexity of each of
+these steps and perform ablation studies with the goal of understanding
+the relative importance of each.
+:::
+
+<figure id="S3.F2" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S3.F1.sf1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./gnnforlink_files/x2.png" id="S3.F1.sf1.g1"
+class="ltx_graphics ltx_img_landscape" width="830" height="622"
+alt="Refer to caption" />
+<br />
+
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F1.sf1.2.1.1" class="ltx_text" style="font-size:90%;">(a)</span>
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S3.F2.1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./gnnforlink_files/x3.png" id="S3.F2.1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="622" alt="Refer to caption" />
+<br />
+
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F2.1.2.1.1" class="ltx_ERROR undefined">\thesubsubfigure</span>
+</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F2.9.4.1"
+class="ltx_text" style="font-size:90%;">Figure 2</span>: </span><span
+id="S3.F2.7.3" class="ltx_text" style="font-size:90%;">(a) Structure
+features in SGNNs. (b) LP readout function over the output of all nodes
+in <span
+class="math inline"><em>S</em><sub><em>u</em> <em>v</em></sub></span>
+(sum or mean) or just <span class="math inline"><em>u</em></span> and
+<span class="math inline"><em>v</em></span> (edge).</span></figcaption>
+</figure>
+
+::: {#S3.SS0.SSS0.Px1 .section .ltx_paragraph}
+##### Structure Features {#structure-features .ltx_title .ltx_title_paragraph}
+
+<figure id="S3.F3" class="ltx_figure ltx_align_floatright">
+<img src="./gnnforlink_files/x4.png" id="S3.F3.g1"
+class="ltx_graphics ltx_img_landscape" width="368" height="245"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F3.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 3</span>: </span><span
+id="S3.F3.3.2" class="ltx_text" style="font-size:90%;">The importance of
+DRNL structure features. Importance is based on the weights in a
+logistic regression model using all DRNL features without node
+features.</span></figcaption>
+</figure>
+
+::: {#S3.SS0.SSS0.Px1.p1 .ltx_para}
+Structure features address limitations in GNN expressivity stemming from
+the inherent inability of message passing to distinguish automorphic
+nodes. In SGNNs, permutation-equivariant distances
+$d\operatorname{}{(u,i)}$ and
+${d\operatorname{}{(v,i)}\operatorname{}{\forall i}} \in \mathcal{V}_{u\operatorname{}v}$
+are used. The three most well known are Zero-One (ZO)
+encoding ([you2021identity,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib46){.ltx_ref}
+), Double Radius Node Labeling
+(DRNL) ([zhang2018link,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib49){.ltx_ref}
+) and Distance Encoding
+(DE) ([zhang2018link,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib49){.ltx_ref}
+). To solve the automorphic node problem, all that is required is to
+distinguish $u$ and $v$ from
+$\mathcal{V}_{u\operatorname{}v} \smallsetminus {\{ u,v\}}$, which ZO
+achieves with binary node labels. DRNL has $z_{u} = z_{v} = 1$ and
+$z_{j} = {f\operatorname{}{({d\operatorname{}{(u,j)}},{d\operatorname{}{(v,j)}})}} > 1$,
+where $f:{{\mathbb{N}}^{2}\rightarrow{\mathbb{N}}}$ is a bijective map.
+Distance Encoding
+(DE) ([li2020distance,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib23){.ltx_ref}
+) generalizes DRNL; each node is encoded with a tuple
+$z_{j} = {({d\operatorname{}{(u,j)}},{d\operatorname{}{(v,j)}})}$ (See
+Figure [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F5 "Figure 5 ‣ Propagation / GNN ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+Both of these schemes therefore include a unique label for triangles /
+common neighbors (See Appendix [[C.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A3.SS4 "C.4 Labeling Schemes ‣ Appendix C More on Structural Features ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+for more details on labeling schemes). The relative performance of ZO,
+DRNL, DE and no structure features is shown in Figure [[1(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F1.sf1 "1(a) ‣ Figure 2 ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+The use of structure features greatly improves performance and DRNL and
+DE slightly outperform ZO, with a more pronounced outperformance for the
+larger Pubmed dataset. It is important to note that structure features
+are conditioned on edges and so can not be easily paralellized in the
+same way that node features usually are in GNNs and must be calculated
+for each link at both training and inference time. In particular DRNL
+requires two full traversals of each subgraph, which for regular graphs
+is $\mathcal{O}\operatorname{}{({deg}^{k})}$, but for complex networks
+becomes $O\operatorname{}{({|\mathcal{E}|})}$.
+:::
+
+::: {#S3.SS0.SSS0.Px1.p2 .ltx_para}
+In Figure [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F3 "Figure 3 ‣ Structure Features ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+we investigate the relative importance of DRNL structure features.
+Feature importance is measured using the weights in a logistic
+regression link prediction model with only structure feature counts as
+inputs. We then sum up feature importances corresponding to different
+max distance $r$ and normalize the total sum to one. The Figure
+indicates that most of the predictive performance is concentrated in low
+distances.
+:::
+:::
+
+::: {#S3.SS0.SSS0.Px2 .section .ltx_paragraph}
+##### Propagation / GNN {#propagation-gnn .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS0.SSS0.Px2.p1 .ltx_para}
+In SGNNs, structure features are usually embedded into a continuous
+space, concatenated to any node features and propagated over subgraphs.
+While this procedure is necessary for ZO encodings, it is less clear why
+labels that precisely encode distances and are directly comparable as
+distances should be embedded in this way. Instead of passing embedded DE
+or DRNL structure features through a GNN, we fixed the number of DE
+features by setting the max distance to three and trained an MLP
+directly on the counts of these nine features (e.g. (1,1): 3, (1,2): 1,
+etc.). Figure [[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F3.sf1 "3(a) ‣ Figure 4 ‣ Propagation / GNN ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+shows that doing so, while leaving ceteris paribus (node features still
+propagated over the subgraph) actually improves performance in two out
+of three datasets. We also investigated if any features require SGNN
+propagation by passing both raw node features and structure feature
+counts through an MLP. The results in the right columns of
+Figure [[3(b)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F3.sf2 "3(b) ‣ Figure 4 ‣ Propagation / GNN ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+indicate that this reduces performance severely, but by pre-propagating
+the features as
+$\mathbf{x}_{u}^{\prime} = {{1/{|{N\operatorname{}{(u)}}|}}\operatorname{}{\sum_{i \in {N\operatorname{}{(u)}}}\mathbf{x}_{i}}}$
+(middle columns) it is possible to almost recover the performance of
+propagation with the SGNN (left columns).
+:::
+
+<figure id="S3.F4" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S3.F3.sf1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./gnnforlink_files/x5.png" id="S3.F3.sf1.g1"
+class="ltx_graphics ltx_img_landscape" width="830" height="553"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F3.sf1.2.1.1" class="ltx_text" style="font-size:90%;">(a)</span>
+</span><span id="S3.F3.sf1.3.2" class="ltx_text"
+style="font-size:90%;">Propagating structure
+features</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S3.F3.sf2"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./gnnforlink_files/x6.png" id="S3.F3.sf2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="553" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F3.sf2.2.1.1" class="ltx_text" style="font-size:90%;">(b)</span>
+</span><span id="S3.F3.sf2.3.2" class="ltx_text"
+style="font-size:90%;">Propagating node features.</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F4.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 4</span>: </span><span
+id="S3.F4.3.2" class="ltx_text" style="font-size:90%;">Examining the
+extent to which an SGNN is needed to propagate features. (a) An MLP on
+structure feature counts outperforms SGNN propagation in two of three
+datasets. (b) An MLP on structure feature counts and raw node features
+performs poorly (no prop), but performance can be recovered if node
+features are propagated over the graph in preprocessing
+(preprop).</span></figcaption>
+</figure>
+
+<figure id="S3.F5" class="ltx_figure ltx_align_floatright">
+<img src="./gnnforlink_files/x7.png" id="S3.F5.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="245"
+height="136" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F5.4.2.1"
+class="ltx_text" style="font-size:90%;">Figure 5</span>: </span><span
+id="S3.F5.2.1" class="ltx_text" style="font-size:90%;">The DE node
+labeling scheme for link <span
+class="math inline">(<em>u</em>,<em>v</em>)</span> </span></figcaption>
+</figure>
+:::
+
+::: {#S3.SS0.SSS0.Px3 .section .ltx_paragraph}
+##### Readout / Pooling Function {#readout-pooling-function .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS0.SSS0.Px3.p1 .ltx_para}
+Given SGNN node representations $\mathbf{Y}_{u\operatorname{}v}$ on the
+subgraph, a readout function
+$R\operatorname{}{(S_{u\operatorname{}v},\mathbf{Y}_{u\operatorname{}v})}$
+maps a representations to link probabilities. For graph classification
+problems, this is most commonly done by pooling node representations
+(graph pooling) typically with a mean or sum operation plus an MLP. For
+LP, an alternative is edge pooling with
+$R\operatorname{}{(\mathbf{y}_{u},\mathbf{y}_{v})}$, usually with the
+Hadamard product. A major advantage of edge pooling is that it can be
+formulated subgraph free. Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F2 "Figure 2 ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+indicates that edge pooling produces better predictive performance than
+either mean or sum pooling across all nodes in
+$\mathcal{V}_{u\operatorname{}v}$.
+:::
+:::
+
+::: {#S3.SS0.SSS0.Px4 .section .ltx_paragraph}
+##### Analysis Summary {#analysis-summary .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS0.SSS0.Px4.p1 .ltx_para}
+The main results of Section [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3 "3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+are that (i) The inclusion of structure features leads to very large
+improvements across all datasets (Figure [[1(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F1.sf1 "1(a) ‣ Figure 2 ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref});
+(ii) The processing of these features, by embedding them and propagating
+them with an SGNN is sub-optimal both in terms of efficiency and
+performance (Figure [[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F3.sf1 "3(a) ‣ Figure 4 ‣ Propagation / GNN ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref});
+(iii) Most of the importance of the structure features is located in the
+lowest distances (Figure [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F3 "Figure 3 ‣ Structure Features ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref});
+and (iv) edge level readout functions greatly outperform mean or sum
+pooling over subgraphs (Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F2 "Figure 2 ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+If, on one hand, subgraphs are employed as a tractable alternative to
+the full graph for each training edge, on the other, generating them
+remains an expensive operation
+($\mathcal{O}\operatorname{}{({deg}^{k})}$ time complexity for regular
+graphs and $\mathcal{O}\operatorname{}{({|\mathcal{E}|})}$ for complex
+networks with power law degree distributions [^3^[[^3^[3]{.ltx_tag
+.ltx_tag_note}Subgraphs can be pre-computed, but the subgraphs combined
+are much larger than the original dataset, exceeding available memory
+for even moderately-sized
+datasets.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote3 .ltx_note
+.ltx_role_footnote}, see Appendix [[C.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A3.SS2 "C.2 Subgraph Generation Complexity ‣ Appendix C More on Structural Features ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+Within this context, our analysis shows that if the information
+necessary to compute structure features for an edge can be encoded in
+the nodes, then it is possible to recover the predictive performance of
+SGNNs without the cost of generating a different subgraph for each edge.
+We build upon this observation to design an efficient yet expressive
+model in Section [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4 "4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+:::
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Link Prediction with Subgraph Sketching {#link-prediction-with-subgraph-sketching .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para}
+We now develop a full-graph GNN model that uses node-wise subgraph
+sketches to approximate structure features such as the counts of DE and
+DRNL labels, which our analysis indicated are sufficient to encompass
+the salient patterns governing the existence of a link
+(Figure [[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F3.sf1 "3(a) ‣ Figure 4 ‣ Propagation / GNN ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Structure Features Counts {#structure-features-counts .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para}
+Let
+$\mathcal{A}_{u\operatorname{}v}\operatorname{}{\lbrack d_{u},d_{v}\rbrack}$
+be the number of ($d_{u}$, $d_{v}$) labels for the link ($u$, $v$),
+which is equivalent to the number of nodes at distances exactly $d_{u}$
+and $d_{v}$ from $u$ and $v$ respectively (See Figure [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F5 "Figure 5 ‣ Propagation / GNN ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+We compute
+$\mathcal{A}_{u\operatorname{}v}\operatorname{}{\lbrack d_{u},d_{v}\rbrack}$
+for all $d_{u}$, $d_{v}$ less than the receptive field $k$, which
+guarantees a number of counts that do not depend on the graph size and
+mitigates overfitting. To alleviate the loss of information coming from
+a fixed $k$, we also compute
+${\mathcal{B}_{u\operatorname{}v}\operatorname{}{\lbrack d\rbrack}} = {\sum_{d_{v} = {k + 1}}^{\infty}{\mathcal{A}_{u\operatorname{}v}\operatorname{}{\lbrack d,d_{v}\rbrack}}}$,
+counting the number of nodes at distance $d$ from $u$ and at distance
+$> k$ from $v$. We compute
+$\mathcal{B}_{u\operatorname{}v}\operatorname{}{\lbrack d\rbrack}$ for
+all $1 \leq d \leq k$. Figure [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4.F6 "Figure 6 ‣ Estimating Intersections and Cardinalities ‣ 4.1 Structure Features Counts ‣ 4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+shows how $\mathcal{A}$ and $\mathcal{B}$ relate to the neighborhoods of
+the two nodes. Overall, this results in $k^{2}$ counts for $\mathcal{A}$
+and $2\operatorname{}k$ counts for $\mathcal{B}$ ($k$ for the source and
+$k$ for the destination node), for a total of
+$k\operatorname{}{({k + 2})}$ count features. These counts can be
+computed efficiently without constructing the whole subgraph for each
+edge. Defining
+${N_{d_{u},d_{v}}\operatorname{}{(u,v)}} \triangleq {{N_{d_{u}}\operatorname{}{(u)}} \cap {N_{d_{v}}\operatorname{}{(v)}}}$,
+we have
+
+  -- ------------------------------------------------------------------------------ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $\mathcal{A}_{u\operatorname{}v}\operatorname{}{\lbrack d_{u},d_{v}\rbrack}$   $= {{|{N_{d_{u},d_{v}}\operatorname{}{(u,v)}}|} - {\sum\limits_{{x \leq d_{u}},{{y \leq d_{v}},{{(x,y)} \neq {(d_{u},d_{v})}}}}{|{N_{x,y}\operatorname{}{(u,v)}}|}}}$                                                                         [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $\mathcal{B}_{u\operatorname{}v}\operatorname{}{\lbrack d\rbrack}$             $= {{|{N_{d}\operatorname{}{(u)}}|} - {\mathcal{B}_{u\operatorname{}v}\operatorname{}{\lbrack{d - 1}\rbrack}} - {\sum\limits_{i = 1}^{d}{\sum\limits_{j = 1}^{d}{\mathcal{A}_{u\operatorname{}v}\operatorname{}{\lbrack i,j\rbrack}}}}}$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+where $N_{d}\operatorname{}{(u)}$ are the $d$-hop neighbors of $u$ (i.e.
+nodes at distance $\leq d$ from $u$).
+:::
+
+::: {#S4.SS1.SSS0.Px1 .section .ltx_paragraph}
+##### Estimating Intersections and Cardinalities {#estimating-intersections-and-cardinalities .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px1.p1 .ltx_para}
+$|{N_{d_{u},d_{v}}\operatorname{}{(u,v)}}|$ and
+$|{N_{d}\operatorname{}{(u)}}|$ can be efficiently approximated with the
+sketching techniques introduced in section [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S2 "2 Preliminaries ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+Let $\mathbf{h}_{u}^{(d)}$ and $\mathbf{m}_{u}^{(d)}$ be the
+*HyperLogLog* and *MinHash* sketches of node $u$'s $d$-hop neighborhood,
+obtained recursively from the initial node sketches
+$\mathbf{h}_{u}^{(0)}$ and $\mathbf{m}_{u}^{(0)}$ using the relations
+$\mathbf{m}_{u}^{(d)} = {\min_{v \in {\mathcal{N}\operatorname{}{(u)}}}\mathbf{m}_{v}^{({d - 1})}}$
+and
+$\mathbf{h}_{u}^{(d)} = {\max_{v \in {\mathcal{N}\operatorname{}{(u)}}}\mathbf{h}_{v}^{({d - 1})}}$.
+We can approximate the intersection of neighborhood sets as
+
+  -- --------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $|{N_{d_{u},d_{v}}\operatorname{}{(u,v)}}|$   $\triangleq {|{{N_{d_{u}}\operatorname{}{(u)}} \cap {N_{d_{v}}\operatorname{}{(v)}}}|} =$                                                                                          [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                   $= {{J\operatorname{}{({N_{d_{u}}\operatorname{}{(u)}},{N_{d_{v}}\operatorname{}{(v)}})}} \cdot {|{{N_{d_{u}}\operatorname{}{(u)}} \cup {N_{d_{v}}\operatorname{}{(v)}}}|}}$       [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                   $\approx H\left( \mathbf{m}_{u}^{(d_{u})},\mathbf{m}_{v}^{(d_{v})} \right) \cdot {card}\left( \max\left. (\mathbf{h}_{u}^{(d_{u})},\mathbf{h}_{v}^{(d_{v})} \right), \right.$      [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where
+${H\operatorname{}{(x,y)}} = {{1/n}\operatorname{}{\sum_{i}^{n}\delta_{x_{i},y_{i}}}}$
+is the Hamming similarity, $card$ is the *HyperLogLog* cardinality
+estimation function (see Appendix [[C.3.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A3.SS3.SSS1 "C.3.1 Hyperloglog ‣ C.3 Subgraph Sketches ‣ Appendix C More on Structural Features ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref})
+and $\max$ is taken elementwise. *MinHashing* approximates the Jaccard
+similarity ($J$) between two sets and *HyperLogLog* approximates set
+cardinality. $|{N_{d}\operatorname{}{(u)}}|$ can be approximated as
+${|{N_{d}\operatorname{}{(u)}}|} \approx {{card}\operatorname{}{(\mathbf{h}_{u}^{(d)})}}$.
+The cost of this operation only depends on additional parameters of
+*HyperLogLog* and *MinHashing* (outlined in more detail in
+Section [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S2.SS0.SSS0.Px2 "Sketches for Intersection Estimation. ‣ 2 Preliminaries ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref})
+which allow for a tradeoff between speed and accuracy, but is
+nevertheless independent of the graph size. Using this approximations we
+obtain estimates $\hat{\mathcal{A}}$ and $\hat{\mathcal{B}}$ of the
+structure features counts.
+:::
+
+<figure id="S4.F6" class="ltx_figure">
+<img src="./gnnforlink_files/x8.png" id="S4.F6.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="531"
+height="163" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S4.F6.10.5.1"
+class="ltx_text" style="font-size:90%;">Figure 6</span>: </span><span
+id="S4.F6.8.4" class="ltx_text" style="font-size:90%;">Blue and red
+concentric circles indicate 1 and 2-hop neighborhoods of <span
+class="math inline"><em>u</em></span> and <span
+class="math inline"><em>v</em></span> respectively. Structure features
+<span class="math inline">𝒜</span> and <span
+class="math inline">ℬ</span> measure the cardinalities of intersections
+of these neighborhoods.</span></figcaption>
+</figure>
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Efficient Link Prediction with Hashes (ELPH) {#efficient-link-prediction-with-hashes-elph .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.p1 .ltx_para}
+We present ELPH, a novel MPNN for link prediction. In common with other
+full-graph GNNs, it employs a feature propagation component with a link
+level readout function. However, by augmenting the messages with
+subgraph sketches, it achieves higher expressiveness for the same
+asymptotic complexity. ELPH's feature propagation fits the standard MPNN
+formalism ([Gilmer2017,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib14){.ltx_ref}
+):
+
+  -- -------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $\mathbf{m}_{u}^{(l)}$     ${= {\min\limits_{v \in {\mathcal{N}\operatorname{}{(u)}}}\mathbf{m}_{v}^{({l - 1})}}},{\mathbf{h}_{u}^{(l)} = {\max\limits_{v \in {\mathcal{N}\operatorname{}{(u)}}}\mathbf{h}_{v}^{({l - 1})}}}$                                                                                          [(7)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $\mathbf{e}_{u,v}^{(l)}$   $= {\{{{{\hat{\mathcal{B}}}_{u\operatorname{}v}\operatorname{}{\lbrack l\rbrack}},{{\hat{\mathcal{A}}}_{u\operatorname{}v}\operatorname{}{\lbrack d_{u},l\rbrack}},{{\hat{\mathcal{A}}}_{u\operatorname{}v}\operatorname{}{\lbrack l,d_{v}\rbrack}}}:{{{\forall d_{u}},d_{v}} < l}\}}$      [(8)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $\mathbf{x}_{u}^{(l)}$     $= {\gamma^{(l)}\operatorname{}\left( \mathbf{x}_{u}^{({l - 1})},{\square_{v \in {\mathcal{N}\operatorname{}{(u)}}}\operatorname{}\phi^{(l)}\operatorname{}\left( \mathbf{x}_{u}^{({l - 1})},\mathbf{x}_{v}^{({l - 1})},\mathbf{e}_{u,v}^{(l)} \right)} \right)}$                           [(9)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $\phi,\gamma$ are learnable functions, $\square$ is a local
+permutation-invariant aggregation function (typically sum, mean, or
+max), $\mathbf{x}_{u}^{(0)}$ are the original node features, and
+$\mathbf{m}_{u}^{(0)}$ and $\mathbf{h}_{u}^{(0)}$ are the
+[MinHashing]{#S4.SS2.p1.12.1 .ltx_text .ltx_font_italic} and
+[HyperLogLog]{#S4.SS2.p1.12.2 .ltx_text .ltx_font_italic} single node
+sketches respectively. Minhash and hyperloglog sketches of
+$N_{l}\operatorname{}{(u)}$ are computed by aggregating with $\min$ and
+$\max$ operators respectively the sketches of
+$N_{l - 1}\operatorname{}{(u)}$ (Eq. [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4.E7 "7 ‣ 4.2 Efficient Link Prediction with Hashes (ELPH) ‣ 4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+These sketches can be used to compute the intersection estimations
+${\hat{\mathcal{B}}}_{u\operatorname{}v}$ and
+${\hat{\mathcal{A}}}_{u\operatorname{}v}$ up to the $l$-hop
+neighborhood, which are then used as edge features (Eq. [[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4.E8 "8 ‣ 4.2 Efficient Link Prediction with Hashes (ELPH) ‣ 4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+Intuitively, the role of the edge features is to modulate message
+transmission based on local graph structures, similarly to how attention
+is used to modulate message transmission based on feature couplings. A
+link predictor is then applied to the final node representations of the
+form
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${{p\operatorname{}{(u,v)}} = {\psi\operatorname{}\left( {\mathbf{x}_{u}^{(k)} \odot \mathbf{x}_{v}^{(k)}},{\{{{{\hat{\mathcal{B}}}_{u\operatorname{}v}\operatorname{}{\lbrack d\rbrack}},{{\hat{\mathcal{A}}}_{u\operatorname{}v}\operatorname{}{\lbrack d_{u},d_{v}\rbrack}}}:{{{\forall d},d_{u},d_{v}} \in {\lbrack k\rbrack}}\}} \right)}},$      [(10)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+where ${\lbrack k\rbrack} = {\{ 1,\ldots,k\}}$, $k$ is a receptive
+field, $\psi$ is an MLP and $\odot$ is the element-wise product.
+$p\operatorname{}{(u,v)}$ decouples the readout function from subgraph
+generation as suggested in Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F2 "Figure 2 ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+This approach moves computation from edgewise operations e.g. generating
+subgraphs, to nodewise operations (generating sketches) that encapsulate
+the most relevant subgraph information for LP. We have shown that (i)
+GNN propagation is either not needed (structure features) or can be
+preprocessed globally (given features) (ii) structure features can be
+generated from sketches instead of subgraphs (iii) an edge pooling
+readout function performs as well as a graph pooling readout. In
+combination these approaches circumvent the need to explicitly construct
+subgraphs. The resulting model efficiently combines node features and
+the graph structure without explicitly constructing subgraphs and is as
+efficient as
+GCN ([kipf2017,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib20){.ltx_ref}
+).
+:::
+
+::: {#S4.SS2.SSS0.Px1 .section .ltx_paragraph}
+##### Expressive power of ELPH {#expressive-power-of-elph .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS2.SSS0.Px1.p1 .ltx_para}
+ELPH combines the advantageous traits of both GNNs and subgraph-based
+methods, i.e. tractable computational complexity and the access to
+pair-wise structural features. Furthermore, as the following results
+show, it is more expressive than MPNNs:
+:::
+
+::: {#S4.Thmtheorem1 .ltx_theorem .ltx_theorem_proposition}
+###### [[Proposition 4.1]{#S4.Thmtheorem1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#S4.Thmtheorem1.2.2 .ltx_text .ltx_font_bold} {#proposition-4.1. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S4.Thmtheorem1.p1 .ltx_para}
+[Let $\mathcal{M}_{ELPH}$ be the family of ELPH models as per
+Equations [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4.E7 "7 ‣ 4.2 Efficient Link Prediction with Hashes (ELPH) ‣ 4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref} -
+[[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4.E9 "9 ‣ 4.2 Efficient Link Prediction with Hashes (ELPH) ‣ 4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+and [[10]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4.E10 "10 ‣ 4.2 Efficient Link Prediction with Hashes (ELPH) ‣ 4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+where estimates are exact
+(${\hat{\mathcal{A}} \equiv \mathcal{A}},{\hat{\mathcal{B}} \equiv \mathcal{B}}$)[^4^[[^4^[[4]{#footnote4.1.1.1
+.ltx_text .ltx_font_upright}]{.ltx_tag .ltx_tag_note}[For sufficiently
+large samples, this result can be extended to approximate counts via
+unbiased estimators.]{#footnote4.5 .ltx_text
+.ltx_font_upright}]{.ltx_note_content}]{.ltx_note_outer}]{#footnote4
+.ltx_note .ltx_role_footnote}. $\mathcal{M}_{ELPH}$ *does not* suffer
+from the automorphic node problem.]{#S4.Thmtheorem1.p1.3.3 .ltx_text
+.ltx_font_italic}
+:::
+:::
+
+::: {#S4.SS2.SSS0.Px1.p2 .ltx_para}
+While we rigorously define the automorphic node problem and prove the
+above in Section [[A.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A1.SS2 "A.2 Deferred theoretical results and proofs ‣ Appendix A Theoretical Analyses ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref},
+this result states that there exists non-automorphic links with
+automorphic nodes that an ELPH model is able to discriminate (thanks to
+structural features). Contrary to ELPHs, MPNNs are not able to
+distinguish any of these links; we build upon this consideration, as
+well as the observation that ELPH models subsume MPNNs, to obtain this
+additional result:
+:::
+
+::: {#S4.Thmtheorem2 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 4.2]{#S4.Thmtheorem2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#S4.Thmtheorem2.2.2 .ltx_text .ltx_font_bold} {#theorem-4.2. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S4.Thmtheorem2.p1 .ltx_para}
+[Let $\mathcal{M}_{MPNN}$ be the family of Message Passing Neural
+Networks (Equation [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S2.E1 "1 ‣ Graph Neural Networks for Link Prediction. ‣ 2 Preliminaries ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+$\mathcal{M}_{ELPH}$ is strictly more powerful than $\mathcal{M}_{MPNN}$
+($\mathcal{M}_{ELPH} ⊏ \mathcal{M}_{MPNN}$).]{#S4.Thmtheorem2.p1.4.4
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#S4.SS2.SSS0.Px1.p3 .ltx_para}
+We prove this in Section [[A.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A1.SS2 "A.2 Deferred theoretical results and proofs ‣ Appendix A Theoretical Analyses ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+Intuitively, the Theorem states that while all links separated by MPNNs
+are also separated by ELPHs, there also exist links separated by the
+latter family but not by the former.
+:::
+:::
+:::
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Scaling ELPH with Preprocessing (BUDDY) {#scaling-elph-with-preprocessing-buddy .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para}
+Similarly to other full-graph GNNs (e.g. GCN), ELPH is efficient when
+the dataset fits into GPU memory. When it does not, the graph must be
+batched into subgraphs. Batching is a major challenge associated with
+scalable GNNs and invariably introduces high levels of redundancy across
+batches. Here we introduce a large scale version of ELPH, called BUDDY,
+which uses preprocessing to side-step the need to have the full dataset
+in GPU memory.
+:::
+
+::: {#S5.SS0.SSS0.Px1 .section .ltx_paragraph}
+##### Preprocessing {#preprocessing .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS0.SSS0.Px1.p1 .ltx_para}
+Figure [[3(b)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S3.F3.sf2 "3(b) ‣ Figure 4 ‣ Propagation / GNN ‣ 3 Analyzing Subgraph Methods for Link Prediction ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}
+indicated that a fixed propagation of the node features almost recovers
+the performance of learnable SGNN propagation. This propagation can be
+achieved by efficient sparse scatter operations and done only once in
+preprocessing. Sketches can also be precomputed in a similar way:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+     ${\mathbf{M}^{(l)} = {\text{scatter\_min}\operatorname{}{(\mathbf{M}^{({l - 1})},G)}}},{{\mathbf{H}^{(l)} = {\text{scatter\_max}\operatorname{}{(\mathbf{H}^{({l - 1})},G)}}},{\mathbf{X}^{(l)} = {\text{scatter\_mean}\operatorname{}{(\mathbf{X}^{({l - 1})},G)}}}}$   
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+
+where
+${\text{scatter\_min}\operatorname{}{(\mathbf{M}^{(l)},G)}_{u}} = {\min_{v \in {\mathcal{N}\operatorname{}{(u)}}}\mathbf{m}_{v}^{({l - 1})}}$
+and [scatter_max]{#S5.SS0.SSS0.Px1.p1.7.1 .ltx_text .ltx_markedasmath}
+and [scatter_mean]{#S5.SS0.SSS0.Px1.p1.7.2 .ltx_text .ltx_markedasmath}
+are defined similarly, $\mathbf{X}^{(0)}$ are the original node
+features, and $\mathbf{M}^{(0)}$ and $\mathbf{H}^{(0)}$ are the
+[MinHashing]{#S5.SS0.SSS0.Px1.p1.7.3 .ltx_text .ltx_font_italic} and
+[HyperLogLog]{#S5.SS0.SSS0.Px1.p1.7.4 .ltx_text .ltx_font_italic} single
+node sketches respectively. Similarly
+to ([rossi2020sign,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib33){.ltx_ref}
+), we concatenate features diffused at different hops to obtain the
+input node features:
+$\mathbf{Z} = \left\lbrack {\mathbf{X}^{(0)} \parallel \mathbf{X}^{(1)} \parallel \ldots \parallel \mathbf{X}^{(k)}} \right\rbrack$.
+:::
+:::
+
+::: {#S5.SS0.SSS0.Px2 .section .ltx_paragraph}
+##### Link Predictor {#link-predictor .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS0.SSS0.Px2.p1 .ltx_para}
+We now have
+${p\operatorname{}{(u,v)}} = {\psi\operatorname{}\left( {\mathbf{z}_{u}^{(k)} \odot \mathbf{z}_{v}^{(k)}},{\{{{{\hat{\mathcal{B}}}_{u\operatorname{}v}\operatorname{}{\lbrack d\rbrack}},{{\hat{\mathcal{A}}}_{u\operatorname{}v}\operatorname{}{\lbrack d_{u},d_{v}\rbrack}}}:{{{\forall d},d_{u},d_{v}} \in {\lbrack k\rbrack}}\}} \right)}$,
+where $\psi$ is an MLP and ${\hat{\mathcal{A}}}_{u\operatorname{}v}$ and
+${\hat{\mathcal{B}}}_{u\operatorname{}v}$ are computed using
+$\mathbf{M}$ and $\mathbf{H}$ as explained in Section [[4.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S4.SS1 "4.1 Structure Features Counts ‣ 4 Link Prediction with Subgraph Sketching ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+Doing so effectively converts a GNN into an MLP, removing the need to
+sample batches of subgraphs when the dataset overflows GPU
+memory ([rossi2020sign,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib33){.ltx_ref}
+). Further improvements in efficiency are possible when multiple
+computations on the same edge sets are required. In this case, the edge
+features
+$\{{{\hat{\mathcal{B}}}_{u\operatorname{}v}\operatorname{}{\lbrack d\rbrack}},{{\hat{\mathcal{A}}}_{u\operatorname{}v}\operatorname{}{\lbrack d_{u},d_{v}\rbrack}}\}$
+can be precomputed and cached.
+:::
+:::
+
+::: {#S5.SS0.SSS0.Px3 .section .ltx_paragraph}
+##### Complexity {#complexity .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS0.SSS0.Px3.p1 .ltx_para}
+Denoting the complexity of hash operations as $h$, the node
+representation dimension $d$ and the number of edges
+$E = {|\mathcal{E}|}$, the preprocessing complexity of BUDDY is
+$\mathcal{O}\operatorname{}{({{k\operatorname{}E\operatorname{}d} + {k\operatorname{}E\operatorname{}h}})}$.
+The first term being node feature propagation and the second sketch
+propagation. Preprocessing for SEAL and NBFNet are
+$\mathcal{O}\operatorname{}{(1)}$. A link probability is computed by (i)
+extracting $k\operatorname{}{({k + 2})}$ $k$-hop structural features,
+which costs $\mathcal{O}\operatorname{}{({k^{2}\operatorname{}h})}$ and
+(ii) An MLP on structural and node features, which results in
+$\mathcal{O}\operatorname{}{({{k^{2}\operatorname{}h} + {k\operatorname{}d^{2}}})}$
+operations. Both are [independent of the size of the
+graph]{#S5.SS0.SSS0.Px3.p1.14.1 .ltx_text .ltx_font_bold}. Since SGNNs
+construct subgraphs for each link they are
+$\mathcal{O}\operatorname{}{({E\operatorname{}d^{2}})}$ for complex
+networks (See Section [[C.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A3.SS2 "C.2 Subgraph Generation Complexity ‣ Appendix C More on Structural Features ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+Finally, the total complexity of NBFNet is
+$\mathcal{O}\operatorname{}{({{E\operatorname{}d} + {N\operatorname{}d^{2}}})}$
+with an amortized time for a single link prediction of
+$\mathcal{O}\operatorname{}{({{{E\operatorname{}d}/N} + d^{2}})}$ ([zhu2021neural,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib54){.ltx_ref}
+). However, this is only realized in situations where the link
+probability $p\operatorname{}{(u,j)}$ is required
+${\forall j} \in \mathcal{V}$. Complexities are summarized in
+Table [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S5.T1 "Table 1 ‣ Expressiveness of BUDDY ‣ 5 Scaling ELPH with Preprocessing (BUDDY) ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}.
+:::
+:::
+
+::: {#S5.SS0.SSS0.Px4 .section .ltx_paragraph}
+##### Expressiveness of BUDDY {#expressiveness-of-buddy .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS0.SSS0.Px4.p1 .ltx_para}
+Similarly to ELPH, BUDDY does not suffer from the automorphic node
+problem (see Proposition and its Proof in Appendix [[A.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A1.SS2 "A.2 Deferred theoretical results and proofs ‣ Appendix A Theoretical Analyses ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}).
+However, due to its non-parametric feature propagation, this class of
+models does not subsume MPNNs and we cannot exclude the presence of
+links separated by MPNNs, but not by BUDDY. Nevertheless, BUDDY
+empirically outperforms common MPNNs by large margins (see
+Section [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#S7 "7 Experiments ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}),
+while also being extremely scalable.
+:::
+
+<figure id="S5.T1" class="ltx_table ltx_align_floatright">
+<div id="S5.T1.19"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:234.7pt;height:74.9pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(4.5pt,-1.4pt) scale(1.03990076942295,1.03990076942295) ;">
+</span>
+<table id="S5.T1.19.9"
+class="ltx_tabular ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S5.T1.19.9.10.1" class="header ltx_tr">
+<th id="S5.T1.19.9.10.1.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt"><span
+id="S5.T1.19.9.10.1.1.1"
+class="ltx_text ltx_font_bold">Complexity</span></th>
+<th id="S5.T1.19.9.10.1.2"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S5.T1.19.9.10.1.2.1" class="ltx_text ltx_font_bold">SEAL</span></th>
+<th id="S5.T1.19.9.10.1.3"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S5.T1.19.9.10.1.3.1"
+class="ltx_text ltx_font_bold">NBFNet</span></th>
+<th id="S5.T1.19.9.10.1.4"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S5.T1.19.9.10.1.4.1"
+class="ltx_text ltx_font_bold">BUDDY</span></th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S5.T1.13.3.3" class="odd ltx_tr">
+<th id="S5.T1.13.3.3.4"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_tt">Preprocessing</th>
+<td id="S5.T1.11.1.1.1"
+class="ltx_td ltx_align_center ltx_border_tt"><span
+class="math inline">𝒪 (1)</span></td>
+<td id="S5.T1.12.2.2.2"
+class="ltx_td ltx_align_center ltx_border_tt"><span
+class="math inline">𝒪 (1)</span></td>
+<td id="S5.T1.13.3.3.3"
+class="ltx_td ltx_align_center ltx_border_tt"><span
+class="math inline">𝒪 (<em>k</em><em>E</em>(<em>d</em>+<em>h</em>))</span></td>
+</tr>
+<tr id="S5.T1.16.6.6" class="even ltx_tr">
+<th id="S5.T1.16.6.6.4"
+class="ltx_td ltx_align_left ltx_th ltx_th_row">Training (1 link)</th>
+<td id="S5.T1.14.4.4.1" class="ltx_td ltx_align_center"><span
+class="math inline">𝒪 (<em>E</em><em>d</em><sup>2</sup>)</span></td>
+<td id="S5.T1.15.5.5.2" class="ltx_td ltx_align_center"><span
+class="math inline">𝒪 (<em>E</em> <em>d</em>+<em>N</em> <em>d</em><sup>2</sup>)</span></td>
+<td id="S5.T1.16.6.6.3" class="ltx_td ltx_align_center"><span
+class="math inline">𝒪 (<em>k</em><sup>2</sup> <em>h</em>+<em>k</em> <em>d</em><sup>2</sup>)</span></td>
+</tr>
+<tr id="S5.T1.19.9.9" class="odd ltx_tr">
+<th id="S5.T1.19.9.9.4"
+class="ltx_td ltx_align_left ltx_th ltx_th_row">Inference</th>
+<td id="S5.T1.17.7.7.1" class="ltx_td ltx_align_center"><span
+class="math inline">𝒪 (<em>E</em><em>d</em><sup>2</sup>)</span></td>
+<td id="S5.T1.18.8.8.2" class="ltx_td ltx_align_center"><span
+class="math inline">𝒪 (<em>E</em> <em>d</em>+<em>N</em> <em>d</em><sup>2</sup>)</span></td>
+<td id="S5.T1.19.9.9.3" class="ltx_td ltx_align_center"><span
+class="math inline">𝒪 (<em>k</em><sup>2</sup> <em>h</em>+<em>k</em> <em>d</em><sup>2</sup>)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S5.T1.21.6.1"
+class="ltx_text" style="font-size:90%;">Table 1</span>: </span><span
+id="S5.T1.10.5" class="ltx_text" style="font-size:90%;">Model
+complexity. <span class="math inline"><em>N</em></span> and <span
+class="math inline"><em>E</em></span> are the number of nodes and edges
+respectively. We use <span
+class="math inline"><em>d</em></span>-dimensional node features, <span
+class="math inline"><em>k</em></span> hops for propagation and sketches
+of size <span class="math inline"><em>h</em></span>.</span></figcaption>
+</figure>
+:::
+:::
+
+::: {#S6 .section .ltx_section}
+## [6 ]{.ltx_tag .ltx_tag_section}Related Work {#related-work .ltx_title .ltx_title_section}
+
+::: {#S6.p1 .ltx_para}
+Subgraph methods for link prediction were introduced as the Weisfeiler
+Leman Neural Machine (WLNM)
+in ([zhang2017weisfeiler,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib48){.ltx_ref}
+). As an MLP is used to learn from subgraphs instead of a GNN their
+model is not permutation-equivariant and uses a hashing-based WL
+algorithm ([kersting2014power,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib19){.ltx_ref}
+) to generate node indices for the MLP. Note that 'hashing' here refers
+to injective neighbor aggregation functions, distinct from the data
+sketching methods employed in the current work. The MLP in WLNM was
+replaced by a GNN in the seminal
+SEAL ([zhang2018link,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib49){.ltx_ref}
+), thus removing the need for a hashing scheme. Additional
+methodological improvements were made
+in ([zhang2021labeling,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib52){.ltx_ref}
+;
+[zhang2021nested,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib51){.ltx_ref}
+) and subgraph generation was improved
+in ([yin2022algorithm,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib45){.ltx_ref}
+). Applications to recommender systems were addressed
+in ([zhang2019inductive,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib50){.ltx_ref}
+)
+and ([yin2022algorithm,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib45){.ltx_ref}
+) use random walks to efficiently approximate subgraphs. The DRNL
+labeling scheme was introduced in SEAL and further labeling schemes are
+developed
+in ([you2021identity,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib46){.ltx_ref}
+;
+[li2020distance,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib23){.ltx_ref}
+) and generalized with equivariant positional
+encodings ([wang2022equivariant,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib39){.ltx_ref}
+). Neural Bellman-Ford
+Networks ([zhu2021neural,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib54){.ltx_ref}
+) takes a different approach. It is concerned with single source
+distances where each layer of the neural networks is equivalent to an
+iteration of the Bellman-Ford algorithm and can be regarded as using a
+partial labeling scheme. The same graph and augmentation can be shared
+among multiple destinations and so it is faster (amortized) than SGNNs.
+However, it suffers from poor space complexity and thus requires
+impractically high memory consumption.
+Neo-GNN ([yun2021neo,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib47){.ltx_ref}
+) directly learns a heuristic function using an edgewise and a nodewise
+neural network.
+#GNN ([wu2021hashing,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib42){.ltx_ref}
+) directly hashes node features, instead of graph structure, and is
+limited to node features that can be interpreted as set memberships.
+Another paradigm for LP uses self-supervised node embeddings combined
+with an (often) approximate distance metric. Amongst the best known
+models are
+TransE ([bordes2013translating,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib3){.ltx_ref}
+),
+DistMult ([yangYHGD14a,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib44){.ltx_ref}
+), or
+complEx ([pmlr-v48-trouillon16,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib38){.ltx_ref}
+), which have been shown to scale to large LP systems in
+e.g. ([pbg,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib22){.ltx_ref}
+;
+[el2022twhin,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib10){.ltx_ref}
+). Decoupling feature propagation and learning in GNNs was first
+implemented in
+SGC ([wu2019simplifying,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib41){.ltx_ref}
+) and then scalably in
+SIGN ([rossi2020sign,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib33){.ltx_ref}
+).
+:::
+
+<figure id="S6.T2" class="ltx_table">
+<div id="S6.T2.86"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:426.8pt;height:336.2pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(42.0pt,-33.1pt) scale(1.24504459493981,1.24504459493981) ;">
+</span>
+<table id="S6.T2.86.86"
+class="ltx_tabular ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S6.T2.86.86.87.1" class="header ltx_tr">
+<th id="S6.T2.86.86.87.1.1"
+class="ltx_td ltx_th ltx_th_row ltx_border_tt"></th>
+<th id="S6.T2.86.86.87.1.2"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S6.T2.86.86.87.1.2.1"
+class="ltx_text ltx_font_bold">Cora</span></th>
+<th id="S6.T2.86.86.87.1.3"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S6.T2.86.86.87.1.3.1"
+class="ltx_text ltx_font_bold">Citeseer</span></th>
+<th id="S6.T2.86.86.87.1.4"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S6.T2.86.86.87.1.4.1"
+class="ltx_text ltx_font_bold">Pubmed</span></th>
+<th id="S6.T2.86.86.87.1.5"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S6.T2.86.86.87.1.5.1"
+class="ltx_text ltx_font_bold">Collab</span></th>
+<th id="S6.T2.86.86.87.1.6"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S6.T2.86.86.87.1.6.1" class="ltx_text ltx_font_bold">PPA</span></th>
+<th id="S6.T2.86.86.87.1.7"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S6.T2.86.86.87.1.7.1"
+class="ltx_text ltx_font_bold">Citation2</span></th>
+<th id="S6.T2.86.86.87.1.8"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+id="S6.T2.86.86.87.1.8.1" class="ltx_text ltx_font_bold">DDI</span></th>
+</tr>
+<tr id="S6.T2.86.86.88.2" class="odd ltx_tr">
+<th id="S6.T2.86.86.88.2.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row">Metric</th>
+<th id="S6.T2.86.86.88.2.2"
+class="ltx_td ltx_align_center ltx_th ltx_th_column">HR@100</th>
+<th id="S6.T2.86.86.88.2.3"
+class="ltx_td ltx_align_center ltx_th ltx_th_column">HR@100</th>
+<th id="S6.T2.86.86.88.2.4"
+class="ltx_td ltx_align_center ltx_th ltx_th_column">HR@100</th>
+<th id="S6.T2.86.86.88.2.5"
+class="ltx_td ltx_align_center ltx_th ltx_th_column">HR@50</th>
+<th id="S6.T2.86.86.88.2.6"
+class="ltx_td ltx_align_center ltx_th ltx_th_column">HR@100</th>
+<th id="S6.T2.86.86.88.2.7"
+class="ltx_td ltx_align_center ltx_th ltx_th_column">MRR</th>
+<th id="S6.T2.86.86.88.2.8"
+class="ltx_td ltx_align_center ltx_th ltx_th_column">HR@20</th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S6.T2.7.7.7" class="odd ltx_tr">
+<th id="S6.T2.7.7.7.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span
+id="S6.T2.7.7.7.8.1" class="ltx_text ltx_font_bold">CN</span></th>
+<td id="S6.T2.1.1.1.1"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">33.92 ± 0.46</span></td>
+<td id="S6.T2.2.2.2.2"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">29.79 ± 0.90</span></td>
+<td id="S6.T2.3.3.3.3"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">23.13 ± 0.15</span></td>
+<td id="S6.T2.4.4.4.4"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">56.44 ± 0.00</span></td>
+<td id="S6.T2.5.5.5.5"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">27.65 ± 0.00</span></td>
+<td id="S6.T2.6.6.6.6"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">51.47 ± 0.00</span></td>
+<td id="S6.T2.7.7.7.7"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">17.73 ± 0.00</span></td>
+</tr>
+<tr id="S6.T2.14.14.14" class="even ltx_tr">
+<th id="S6.T2.14.14.14.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row"><span
+id="S6.T2.14.14.14.8.1" class="ltx_text ltx_font_bold">AA</span></th>
+<td id="S6.T2.8.8.8.1" class="ltx_td ltx_align_center"><span
+class="math inline">39.85 ± 1.34</span></td>
+<td id="S6.T2.9.9.9.2" class="ltx_td ltx_align_center"><span
+class="math inline">35.19 ± 1.33</span></td>
+<td id="S6.T2.10.10.10.3" class="ltx_td ltx_align_center"><span
+class="math inline">27.38 ± 0.11</span></td>
+<td id="S6.T2.11.11.11.4" class="ltx_td ltx_align_center"><span
+class="math inline">64.35 ± 0.00</span></td>
+<td id="S6.T2.12.12.12.5" class="ltx_td ltx_align_center"><span
+class="math inline">32.45 ± 0.00</span></td>
+<td id="S6.T2.13.13.13.6" class="ltx_td ltx_align_center"><span
+class="math inline">51.89 ± 0.00</span></td>
+<td id="S6.T2.14.14.14.7" class="ltx_td ltx_align_center"><span
+class="math inline">18.61 ± 0.00</span></td>
+</tr>
+<tr id="S6.T2.21.21.21" class="odd ltx_tr">
+<th id="S6.T2.21.21.21.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row"><span
+id="S6.T2.21.21.21.8.1" class="ltx_text ltx_font_bold">RA</span></th>
+<td id="S6.T2.15.15.15.1" class="ltx_td ltx_align_center"><span
+class="math inline">41.07 ± 0.48</span></td>
+<td id="S6.T2.16.16.16.2" class="ltx_td ltx_align_center"><span
+class="math inline">33.56 ± 0.17</span></td>
+<td id="S6.T2.17.17.17.3" class="ltx_td ltx_align_center"><span
+class="math inline">27.03 ± 0.35</span></td>
+<td id="S6.T2.18.18.18.4" class="ltx_td ltx_align_center"><span
+class="math inline">64.00 ± 0.00</span></td>
+<td id="S6.T2.19.19.19.5" class="ltx_td ltx_align_center"><span
+class="math inline">49.33 ± 0.00</span></td>
+<td id="S6.T2.20.20.20.6" class="ltx_td ltx_align_center"><span
+class="math inline">51.98 ± 0.00</span></td>
+<td id="S6.T2.21.21.21.7" class="ltx_td ltx_align_center"><span
+class="math inline">27.60 ± 0.00</span></td>
+</tr>
+<tr id="S6.T2.28.28.28" class="even ltx_tr">
+<th id="S6.T2.28.28.28.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span
+id="S6.T2.28.28.28.8.1"
+class="ltx_text ltx_font_bold">transE</span></th>
+<td id="S6.T2.22.22.22.1"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">67.40 ± 1.60</span></td>
+<td id="S6.T2.23.23.23.2"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">60.19 ± 1.15</span></td>
+<td id="S6.T2.24.24.24.3"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">36.67 ± 0.99</span></td>
+<td id="S6.T2.25.25.25.4"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">29.40 ± 1.15</span></td>
+<td id="S6.T2.26.26.26.5"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">22.69 ± 0.49</span></td>
+<td id="S6.T2.27.27.27.6"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">76.44 ± 0.18</span></td>
+<td id="S6.T2.28.28.28.7"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">6.65 ± 0.20</span></td>
+</tr>
+<tr id="S6.T2.35.35.35" class="odd ltx_tr">
+<th id="S6.T2.35.35.35.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row"><span
+id="S6.T2.35.35.35.8.1"
+class="ltx_text ltx_font_bold">complEx</span></th>
+<td id="S6.T2.29.29.29.1" class="ltx_td ltx_align_center"><span
+class="math inline">37.16 ± 2.76</span></td>
+<td id="S6.T2.30.30.30.2" class="ltx_td ltx_align_center"><span
+class="math inline">42.72 ± 1.68</span></td>
+<td id="S6.T2.31.31.31.3" class="ltx_td ltx_align_center"><span
+class="math inline">37.80 ± 1.39</span></td>
+<td id="S6.T2.32.32.32.4" class="ltx_td ltx_align_center"><span
+class="math inline">53.91 ± 0.50</span></td>
+<td id="S6.T2.33.33.33.5" class="ltx_td ltx_align_center"><span
+class="math inline">27.42 ± 0.49</span></td>
+<td id="S6.T2.34.34.34.6" class="ltx_td ltx_align_center"><span
+class="math inline">72.83 ± 0.38</span></td>
+<td id="S6.T2.35.35.35.7" class="ltx_td ltx_align_center"><span
+class="math inline">8.68 ± 0.36</span></td>
+</tr>
+<tr id="S6.T2.42.42.42" class="even ltx_tr">
+<th id="S6.T2.42.42.42.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row"><span
+id="S6.T2.42.42.42.8.1"
+class="ltx_text ltx_font_bold">DistMult</span></th>
+<td id="S6.T2.36.36.36.1" class="ltx_td ltx_align_center"><span
+class="math inline">41.38 ± 2.49</span></td>
+<td id="S6.T2.37.37.37.2" class="ltx_td ltx_align_center"><span
+class="math inline">47.65 ± 1.68</span></td>
+<td id="S6.T2.38.38.38.3" class="ltx_td ltx_align_center"><span
+class="math inline">40.32 ± 0.89</span></td>
+<td id="S6.T2.39.39.39.4" class="ltx_td ltx_align_center"><span
+class="math inline">51.00 ± 0.54</span></td>
+<td id="S6.T2.40.40.40.5" class="ltx_td ltx_align_center"><span
+class="math inline">28.61 ± 1.47</span></td>
+<td id="S6.T2.41.41.41.6" class="ltx_td ltx_align_center"><span
+class="math inline">66.95 ± 0.40</span></td>
+<td id="S6.T2.42.42.42.7" class="ltx_td ltx_align_center"><span
+class="math inline">11.01 ± 0.49</span></td>
+</tr>
+<tr id="S6.T2.49.49.49" class="odd ltx_tr">
+<th id="S6.T2.49.49.49.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span
+id="S6.T2.49.49.49.8.1" class="ltx_text ltx_font_bold">GCN</span></th>
+<td id="S6.T2.43.43.43.1"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">66.79 ± 1.65</span></td>
+<td id="S6.T2.44.44.44.2"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">67.08 ± 2.94</span></td>
+<td id="S6.T2.45.45.45.3"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">53.02 ± 1.39</span></td>
+<td id="S6.T2.46.46.46.4"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">44.75 ± 1.07</span></td>
+<td id="S6.T2.47.47.47.5"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">18.67 ± 1.32</span></td>
+<td id="S6.T2.48.48.48.6"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">84.74 ± 0.21</span></td>
+<td id="S6.T2.49.49.49.7"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">37.07 ± 5.07</span></td>
+</tr>
+<tr id="S6.T2.56.56.56" class="even ltx_tr">
+<th id="S6.T2.56.56.56.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row"><span
+id="S6.T2.56.56.56.8.1" class="ltx_text ltx_font_bold">SAGE</span></th>
+<td id="S6.T2.50.50.50.1" class="ltx_td ltx_align_center"><span
+class="math inline">55.02 ± 4.03</span></td>
+<td id="S6.T2.51.51.51.2" class="ltx_td ltx_align_center"><span
+class="math inline">57.01 ± 3.74</span></td>
+<td id="S6.T2.52.52.52.3" class="ltx_td ltx_align_center"><span
+class="math inline">39.66 ± 0.72</span></td>
+<td id="S6.T2.53.53.53.4" class="ltx_td ltx_align_center"><span
+class="math inline">48.10 ± 0.81</span></td>
+<td id="S6.T2.54.54.54.5" class="ltx_td ltx_align_center"><span
+class="math inline">16.55 ± 2.40</span></td>
+<td id="S6.T2.55.55.55.6" class="ltx_td ltx_align_center"><span
+class="math inline">82.60 ± 0.36</span></td>
+<td id="S6.T2.56.56.56.7" class="ltx_td ltx_align_center"><span
+class="math inline">53.90 ± 4.74</span></td>
+</tr>
+<tr id="S6.T2.63.63.63" class="odd ltx_tr">
+<th id="S6.T2.63.63.63.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span
+id="S6.T2.63.63.63.8.1"
+class="ltx_text ltx_font_bold">Neo-GNN</span></th>
+<td id="S6.T2.57.57.57.1"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">80.42 ± 1.31</span></td>
+<td id="S6.T2.58.58.58.2"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">84.67 ± 2.16</span></td>
+<td id="S6.T2.59.59.59.3"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">73.93 ± 1.19</span></td>
+<td id="S6.T2.60.60.60.4"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">57.52 ± 0.37</span></td>
+<td id="S6.T2.61.61.61.5"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">49.13 ± 0.60</span></td>
+<td id="S6.T2.62.62.62.6"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">87.26 ± 0.84</span></td>
+<td id="S6.T2.63.63.63.7"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">63.57 ± 3.52</span></td>
+</tr>
+<tr id="S6.T2.70.70.70" class="even ltx_tr">
+<th id="S6.T2.70.70.70.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row"><span
+id="S6.T2.70.70.70.8.1" class="ltx_text ltx_font_bold">SEAL</span></th>
+<td id="S6.T2.64.64.64.1" class="ltx_td ltx_align_center"><span
+class="math inline">81.71 ± 1.30</span></td>
+<td id="S6.T2.65.65.65.2" class="ltx_td ltx_align_center"><span
+class="math inline">83.89 ± 2.15</span></td>
+<td id="S6.T2.66.66.66.3" class="ltx_td ltx_align_center"><span
+class="math inline">75.54 ± 1.32</span></td>
+<td id="S6.T2.67.67.67.4" class="ltx_td ltx_align_center"><span
+class="math inline">64.74 ± 0.43</span></td>
+<td id="S6.T2.68.68.68.5" class="ltx_td ltx_align_center"><span
+class="math inline">48.80 ± 3.16</span></td>
+<td id="S6.T2.69.69.69.6" class="ltx_td ltx_align_center"><span
+class="math inline">87.67 ± 0.32</span></td>
+<td id="S6.T2.70.70.70.7" class="ltx_td ltx_align_center"><span
+class="math inline">30.56 ± 3.86</span></td>
+</tr>
+<tr id="S6.T2.74.74.74" class="odd ltx_tr">
+<th id="S6.T2.74.74.74.5"
+class="ltx_td ltx_align_left ltx_th ltx_th_row"><span
+id="S6.T2.74.74.74.5.1"
+class="ltx_text ltx_font_bold">NBFnet</span></th>
+<td id="S6.T2.71.71.71.1" class="ltx_td ltx_align_center"><span
+class="math inline">71.65 ± 2.27</span></td>
+<td id="S6.T2.72.72.72.2" class="ltx_td ltx_align_center"><span
+class="math inline">74.07 ± 1.75</span></td>
+<td id="S6.T2.73.73.73.3" class="ltx_td ltx_align_center"><span
+class="math inline">58.73 ± 1.99</span></td>
+<td id="S6.T2.74.74.74.6" class="ltx_td ltx_align_center">OOM</td>
+<td id="S6.T2.74.74.74.7" class="ltx_td ltx_align_center">OOM</td>
+<td id="S6.T2.74.74.74.8" class="ltx_td ltx_align_center">OOM</td>
+<td id="S6.T2.74.74.74.4" class="ltx_td ltx_align_center"><span
+class="math inline">4.00 ± 0.58</span></td>
+</tr>
+<tr id="S6.T2.79.79.79" class="even ltx_tr">
+<th id="S6.T2.79.79.79.6"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t"><span
+id="S6.T2.79.79.79.6.1" class="ltx_text ltx_font_bold">ELPH</span></th>
+<td id="S6.T2.75.75.75.1"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">87.72 ± 2.13</span></td>
+<td id="S6.T2.76.76.76.2"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">93.44 ± 0.53</span></td>
+<td id="S6.T2.77.77.77.3"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">72.99 ± 1.43</span></td>
+<td id="S6.T2.78.78.78.4"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">66.32 ± 0.40</span></td>
+<td id="S6.T2.79.79.79.7"
+class="ltx_td ltx_align_center ltx_border_t">OOM</td>
+<td id="S6.T2.79.79.79.8"
+class="ltx_td ltx_align_center ltx_border_t">OOM</td>
+<td id="S6.T2.79.79.79.5"
+class="ltx_td ltx_align_center ltx_border_t"><span
+class="math inline">83.19 ± 2.12</span></td>
+</tr>
+<tr id="S6.T2.86.86.86" class="odd ltx_tr">
+<th id="S6.T2.86.86.86.8"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb"><span
+id="S6.T2.86.86.86.8.1" class="ltx_text ltx_font_bold">BUDDY</span></th>
+<td id="S6.T2.80.80.80.1"
+class="ltx_td ltx_align_center ltx_border_bb"><span
+class="math inline">88.00 ± 0.44</span></td>
+<td id="S6.T2.81.81.81.2"
+class="ltx_td ltx_align_center ltx_border_bb"><span
+class="math inline">92.93 ± 0.27</span></td>
+<td id="S6.T2.82.82.82.3"
+class="ltx_td ltx_align_center ltx_border_bb"><span
+class="math inline">74.10 ± 0.78</span></td>
+<td id="S6.T2.83.83.83.4"
+class="ltx_td ltx_align_center ltx_border_bb"><span
+class="math inline">65.94 ± 0.58</span></td>
+<td id="S6.T2.84.84.84.5"
+class="ltx_td ltx_align_center ltx_border_bb"><span
+class="math inline">49.85 ± 0.20</span></td>
+<td id="S6.T2.85.85.85.6"
+class="ltx_td ltx_align_center ltx_border_bb"><span
+class="math inline">87.56 ± 0.11</span></td>
+<td id="S6.T2.86.86.86.7"
+class="ltx_td ltx_align_center ltx_border_bb"><span
+class="math inline">78.51 ± 1.36</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T2.91.1.1"
+class="ltx_text" style="font-size:90%;">Table 2</span>: </span><span
+id="S6.T2.92.2" class="ltx_text" style="font-size:90%;">Results on link
+prediction benchmarks. The top three models are colored by <span
+id="S6.T2.92.2.1" class="ltx_text ltx_font_bold"
+style="color:#FF0000;">First</span>, <span id="S6.T2.92.2.2"
+class="ltx_text ltx_font_bold" style="color:#0000FF;">Second</span>,
+<span id="S6.T2.92.2.3" class="ltx_text ltx_font_bold"
+style="color:#800080;">Third</span>. Where possible, baseline results
+are taken directly from the OGB leaderboard.</span></figcaption>
+</figure>
+:::
+
+::: {#S7 .section .ltx_section}
+## [7 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
+
+::: {#S7.SS0.SSS0.Px1 .section .ltx_paragraph}
+##### Datasets, Baselines and Experimental Setup {#datasets-baselines-and-experimental-setup .ltx_title .ltx_title_paragraph}
+
+::: {#S7.SS0.SSS0.Px1.p1 .ltx_para}
+We report results for the most widely used Planetoid citation networks
+Cora ([mccallum2000automating,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib26){.ltx_ref}
+),
+Citeseer ([sen2008collective,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib35){.ltx_ref}
+) and
+Pubmed ([namata2012query,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib28){.ltx_ref}
+) and the OGB link prediction
+datasets ([hu2020open,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib18){.ltx_ref}
+). We report results for: Three heuristics that have been successfully
+used for LP, Adamic-Adar
+(AA) ([adamic2003friends,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib2){.ltx_ref}
+), Resource Allocation
+(RA) ([zhou2009predicting,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib53){.ltx_ref}
+) and Common Neighbors (CN); two of the most popular GNN architectures:
+Graph Convolutional Network
+(GCN) ([kipf2017,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib20){.ltx_ref}
+) and
+GraphSAGE ([Hamilton2017,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib15){.ltx_ref}
+); the state-of-the-art link prediction GNNs
+Neo-GNN ([yun2021neo,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib47){.ltx_ref}
+),
+SEAL ([zhang2018link,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib49){.ltx_ref}
+) and
+NBFNet ([zhu2021neural,](https://ar5iv.labs.arxiv.org/html/2209.15486#bib.bib54){.ltx_ref}
+). Additional details on datasets and the experimental setup are
+included in Appendix [[B.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2209.15486#A2.SS1 "B.1 Datasets and Their Properties ‣ Appendix B Additional Experimental Details ‣ Graph Neural Networks for Link Prediction with Subgraph Sketching"){.ltx_ref}

@@ -1,0 +1,2087 @@
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+We introduce the Conditional Independence Regression CovariancE (CIRCE),
+a measure of conditional independence for multivariate continuous-valued
+variables. CIRCE applies as a regularizer in settings where we wish to
+learn neural features $\varphi\operatorname{}{(X)}$ of data $X$ to
+estimate a target $Y$, while being conditionally independent of a
+distractor $Z$ given $Y$. Both $Z$ and $Y$ are assumed to be
+continuous-valued but relatively low dimensional, whereas $X$ and its
+features may be complex and high dimensional. Relevant settings include
+domain-invariant learning, fairness, and causal learning. The procedure
+requires just a single ridge regression from $Y$ to kernelized features
+of $Z$, which can be done in advance. It is then only necessary to
+enforce independence of $\varphi\operatorname{}{(X)}$ from residuals of
+this regression, which is possible with attractive estimation properties
+and consistency guarantees. By contrast, earlier measures of conditional
+feature dependence require multiple regressions for each step of feature
+learning, resulting in more severe bias and variance, and greater
+computational cost. When sufficiently rich features are used, we
+establish that CIRCE is zero if and only if
+$\varphi{(X)} \perp \perp Z \mid Y$. In experiments, we show superior
+performance to previous methods on challenging benchmarks, including
+learning conditionally invariant image features.
+:::
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para .ltx_noindent}
+We consider a learning setting where we have labels $Y$ that we would
+like to predict from features $X$, and we additionally observe some
+metadata $Z$ that we would like our prediction to be 'invariant' to. In
+particular, our aim is to learn a representation function $\varphi$ for
+the features such that $\varphi{(X)} \perp \perp Z \mid Y$. There are at
+least three motivating settings where this task arises.
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i1}
+
+    ::: {#S1.I1.i1.p1 .ltx_para}
+    Fairness. In this context, $Z$ is some protected attribute (e.g.,
+    race or sex) and the condition $\varphi{(X)} \perp \perp Z \mid Y$
+    is the equalized odds condition (Mehrabi et al.,
+    [2019](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib24){.ltx_ref}).
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i2}
+
+    ::: {#S1.I1.i2.p1 .ltx_para}
+    Domain invariant learning. In this case, $Z$ is a label for the
+    environment in which the data was collected (e.g., if we collect
+    data from multiple hospitals, $Z_{i}$ labels the hospital that the
+    $i$th datapoint is from). The condition
+    $\varphi{(X)} \perp \perp Z \mid Y$ is sometimes used as a target
+    for invariant learning (e.g., Long et al.,
+    [2018](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib19){.ltx_ref};
+    Tachet des Combes et al.,
+    [2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib36){.ltx_ref};
+    Goel et al.,
+    [2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib8){.ltx_ref};
+    Jiang & Veitch,
+    [2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib15){.ltx_ref}).
+    Wang & Veitch
+    ([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib38){.ltx_ref})
+    argue that this condition is well-motivated in cases where $Y$
+    causes $X$.
+    :::
+3.  [[3.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i3}
+
+    ::: {#S1.I1.i3.p1 .ltx_para .ltx_noindent}
+    Causal representation learning. Neural networks may learn
+    undesirable "shortcuts" for their tasks -- e.g., classifying images
+    based on the texture of the background. To mitigate this issue,
+    various schemes have been proposed to force the network to use
+    causally relevant factors in its decision (e.g., Veitch et al.,
+    [2021](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib37){.ltx_ref};
+    Makar et al.,
+    [2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib21){.ltx_ref};
+    Puli et al.,
+    [2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib27){.ltx_ref}).
+    The structural causal assumptions used in such approaches imply
+    conditional independence relationships between the features we would
+    like the network to use, and observed metadata that we may wish to
+    be invariant to. These approaches then try to learn causally
+    structured representations by enforcing this conditional
+    independence in a learned representation.
+    :::
+:::
+
+::: {#S1.p2 .ltx_para .ltx_noindent}
+In this paper, we will be largely agnostic to the motivating
+application, instead concerning ourselves with how to learn a
+representation $\varphi$ that satisfies the target condition. Our
+interest is in the (common) case where $X$ is some high-dimensional
+structured data -- e.g., text, images, or video -- and we would like to
+model the relationship between $X$ and (the relatively low-dimensional)
+$Y,Z$ using a neural network representation
+$\varphi\operatorname{}{(X)}$. There are a number of existing techniques
+for learning conditionally invariant representations using neural
+networks (e.g., in all the motivating applications mentioned above).
+Usually, however, they rely on the labels $Y$ being categorical with a
+small number of categories. We develop a method for conditionally
+invariant representation learning that is effective even when the labels
+$Y$ and attributes $Z$ are continuous or moderately high-dimensional.
+:::
+
+::: {#S1.p3 .ltx_para .ltx_noindent}
+To understand the challenge, it is helpful to contrast with the task of
+learning a representation $\varphi$ satisfying the marginal independence
+$\varphi{(X)} \perp \perp Z$. To accomplish this, we might define a
+neural network to predict $Y$ in the usual manner, interpret the
+penultimate layer as the representation $\varphi$, and then add a
+regularization term that penalizes some measure of dependence between
+$\varphi\operatorname{}{(X)}$ and $Z$. As $\varphi$ changes at each
+step, we'd typically compute an estimate based on the samples in each
+mini-batch (e.g., Beutel et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib2){.ltx_ref};
+Veitch et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib37){.ltx_ref}).
+The challenge for extending this procedure to conditional invariance is
+simply that it's considerably harder to measure. More precisely, as
+conditioning on $Y$ "splits" the available data,[^1^[[^1^[1]{.ltx_tag
+.ltx_tag_note}If $Y$ is categorical, naively we would measure a marginal
+independence for each level of
+$Y$.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote1 .ltx_note
+.ltx_role_footnote} we require large samples to assess conditional
+independence. When regularizing neural network training, however, we
+only have the samples available in each mini-batch: often not enough for
+a reliable estimate.
+:::
+
+::: {#S1.p4 .ltx_para .ltx_noindent}
+The main contribution of this paper is a technique that reduces the
+problem of learning a conditionally independent representation to the
+problem of learning a marginally independent representation, following a
+characterization of conditional independence due to Daudin
+([1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref}).
+We first construct a particular statistic $\zeta\operatorname{}{(Y,Z)}$
+such that enforcing the marginal independence
+$\varphi{(X)} \perp \perp \zeta{(Y,Z)}$ is (approximately) equivalent to
+enforcing $\varphi{(X)} \perp \perp Z \mid Y$. The construction is
+straightforward: given a fixed feature map $\psi\operatorname{}{(Y,Z)}$
+on $\mathcal{Y} \times \mathcal{Z}$ (which may be a kernel or random
+Fourier feature map), we define $\zeta\operatorname{}{(Y,Z)}$ as the
+conditionally centered features,
+${\zeta\operatorname{}{(Y,Z)}} = {{\psi\operatorname{}{(Y,Z)}} - {{\mathbb{E}}\operatorname{}{\lbrack{{\psi\operatorname{}{(Y,Z)}} \mid Y}\rbrack}}}$.
+We obtain a measure of conditional independence, the [Conditional
+Independence Regression CovariancE]{#S1.p4.15.1 .ltx_text
+.ltx_font_italic} (CIRCE), as the Hilbert-Schmidt Norm of the kernel
+covariance between $\varphi\operatorname{}{(X)}$ and
+$\zeta\operatorname{}{(Y,Z)}$. A key point is that the conditional
+feature mean
+${\mathbb{E}}\operatorname{}{\lbrack{{\psi\operatorname{}{(Y,Z)}} \mid Y}\rbrack}$
+can be estimated offline, in advance of any neural network training,
+using standard methods (Song et al.,
+[2009](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib32){.ltx_ref};
+Grunewalder et al.,
+[2012](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib12){.ltx_ref};
+Park & Muandet,
+[2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib26){.ltx_ref};
+Li et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref}).
+This makes CIRCE a suitable regularizer for any setting where the
+conditional independence relation $\varphi{(X)} \perp \perp Z \mid Y$
+should be enforced when learning $\varphi\operatorname{}{(X)}$. In
+particular, the learned relationship between $Z$ and $Y$ doesn't depend
+on the mini-batch size, sidestepping the tension between small
+mini-batches and the need for large samples to estimate conditional
+dependence. Moreover, when sufficiently expressive features (those
+corresponding to a *characteristic kernel*) are employed, then CIRCE is
+zero if and only if $\varphi{(X)} \perp \perp Z \mid Y$: this result may
+be of broader interest, for instance in causal structure learning Zhang
+et al.
+([2011](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib39){.ltx_ref})
+and hypothesis testing Fukumizu et al.
+([2008](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib6){.ltx_ref});
+Shah & Peters
+([2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib31){.ltx_ref});
+Huang et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib14){.ltx_ref}).
+:::
+
+::: {#S1.p5 .ltx_para .ltx_noindent}
+Our paper proceeds as follows: in Section [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2 "2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref},
+we introduce the relevant characterization of conditional independence
+from (Daudin,
+[1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref}),
+followed by our CIRCE criterion -- we establish that CIRCE is indeed a
+measure of conditional independence, and provide a consistent empirical
+estimate with finite sample guarantees. Next, in Section [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S3 "3 Related work ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref},
+we review alternative measures of conditional dependence. Finally, in
+Section [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4 "4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref},
+we demonstrate CIRCE in two practical settings: a series of
+counterfactual invariance benchmarks due to Quinzan et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib28){.ltx_ref}),
+and image data extraction tasks on which a "cheat" variable is observed
+during training.
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Efficient conditional independence regularizer {#efficient-conditional-independence-regularizer .ltx_title .ltx_title_section}
+
+::: {#S2.p1 .ltx_para .ltx_noindent}
+We begin by providing a general-purpose characterization of conditional
+independence. We then introduce CIRCE, a conditional independence
+criterion based on this characterization, which is zero if and only if
+conditional independence holds (under certain required conditions). We
+provide a finite sample estimate with convergence guarantees, and
+strategies for efficient estimation from data.
+:::
+
+::: {#S2.SS1 .section .ltx_subsection}
+### [2.1 ]{.ltx_tag .ltx_tag_subsection}Conditional independence {#conditional-independence .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS1.p1 .ltx_para}
+We begin with a natural definition of conditional independence for real
+random variables:
+:::
+
+::: {#S2.Thmtheorem1 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 2.1]{#S2.Thmtheorem1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#S2.Thmtheorem1.2.2 .ltx_text .ltx_font_bold}(Daudin, [1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref})[.]{#S2.Thmtheorem1.3.3 .ltx_text .ltx_font_bold} {#definition-2.1-daudin-1980. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S2.Thmtheorem1.p1 .ltx_para}
+$X$ and $Z$ are $Y$-conditionally independent, $X \perp \perp Z \mid Y$,
+if for all test functions $g \in L_{X\operatorname{}Y}^{2}$ and
+$h \in L_{Z\operatorname{}Y}^{2}$, i.e. for all square-integrable
+functions of $(X,Y)$ and $(Z,Y)$ respectively, we have almost surely in
+$Y$ that
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{{\mathbb{E}}_{X\operatorname{}Z}\left\lbrack {g\operatorname{}{(X,Y)}\operatorname{}h\operatorname{}{(Z,Y)}} \middle| Y \right\rbrack} = {{{\mathbb{E}}_{X}\left\lbrack {g\operatorname{}{(X,Y)}} \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}_{Z}\left\lbrack {h\operatorname{}{(Z,Y)}} \middle| Y \right\rbrack}}}.$$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+:::
+
+::: {#S2.SS1.p2 .ltx_para}
+The following classic result provides an equivalent formulation:
+:::
+
+::: {#S2.Thmtheorem2 .ltx_theorem .ltx_theorem_prop}
+###### [[Proposition 2.2]{#S2.Thmtheorem2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#S2.Thmtheorem2.2.2 .ltx_text .ltx_font_bold}(Daudin, [1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref})[.]{#S2.Thmtheorem2.3.3 .ltx_text .ltx_font_bold} {#proposition-2.2-daudin-1980. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S2.Thmtheorem2.p1 .ltx_para}
+$X$[ and $Z$ are $Y$-conditionally independent if and only if it holds
+for all test functions
+$g \in E_{1} = \left\{ {g \in L_{X\operatorname{}Y}^{2}}\mid{{{\mathbb{E}}_{X}\left\lbrack {g\operatorname{}{(X,Y)}} \middle| Y \right\rbrack} = 0} \right\}$
+and
+$h \in E_{2} = \left\{ {h \in L_{Z\operatorname{}Y}^{2}}\mid{{{\mathbb{E}}_{Z}\left\lbrack {h\operatorname{}{(Z,Y)}} \middle| Y \right\rbrack} = 0} \right\}$
+that]{#S2.Thmtheorem2.p1.5.4 .ltx_text .ltx_font_italic}
+
+  -- ---------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{{\mathbb{E}}{\lbrack{g\operatorname{}{(X,Y)}\operatorname{}h\operatorname{}{(Z,Y)}}\rbrack}} = 0}.$$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+:::
+
+::: {#S2.SS1.p3 .ltx_para}
+Daudin
+([1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref})
+notes that this condition can be further simplified (see
+[[Corollary]{.ltx_text .ltx_ref_tag} [A.3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A6.EGx11 "Corollary A.3 (Equation 3.9 of Daudin 1980). ‣ Appendix A Conditional independence definitions ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+for a proof):
+:::
+
+::: {#S2.Thmtheorem3 .ltx_theorem .ltx_theorem_prop}
+###### [[Proposition 2.3]{#S2.Thmtheorem3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#S2.Thmtheorem3.2.2 .ltx_text .ltx_font_bold}(Equation 3.9 of Daudin [1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref})[.]{#S2.Thmtheorem3.3.3 .ltx_text .ltx_font_bold} {#proposition-2.3-equation-3.9-of-daudin-1980. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S2.Thmtheorem3.p1 .ltx_para}
+$X$[ and $Z$ are $Y$-conditionally independent if and only if it holds
+for all $g \in L_{X}^{2}$ and
+$h \in E_{2} = \left\{ {h \in L_{Z\operatorname{}Y}^{2}}\mid{{{\mathbb{E}}_{Z}\left\lbrack {h\operatorname{}{(Z,Y)}} \middle| Y \right\rbrack} = 0} \right\}$
+that]{#S2.Thmtheorem3.p1.5.4 .ltx_text .ltx_font_italic}
+
+  -- -------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{{\mathbb{E}}{\lbrack{g\operatorname{}{(X)}\operatorname{}h\operatorname{}{(Z,Y)}}\rbrack}} = 0}.$$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+:::
+
+::: {#S2.SS1.p4 .ltx_para .ltx_noindent}
+An equivalent way of writing this last condition (see [[Lemma]{.ltx_text
+.ltx_ref_tag} [B.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A2.Thmtheorem1 "Lemma B.1. ‣ Appendix B CIRCE definition ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+for a formal proof) is:
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{{\text{for all~}\operatorname{}g} \in {L_{X}^{2}\operatorname{}\text{~and~}\operatorname{}h} \in L_{Z\operatorname{}Y}^{2}},{{{\mathbb{E}}\left\lbrack {g\operatorname{}{(X)}\operatorname{}\left( {{h\operatorname{}{(Z,Y)}} - {{\mathbb{E}}_{Z^{\prime}}\left\lbrack {h\operatorname{}{(Z^{\prime},Y)}} \middle| Y \right\rbrack}} \right)} \right\rbrack} = 0}}.$$      [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#S2.SS1.p5 .ltx_para .ltx_noindent}
+The reduction to $g$ not depending on $Y$ is crucial for our method:
+when we are learning the representation $\varphi\operatorname{}{(X)}$,
+then evaluating the conditional expectations
+${\mathbb{E}}_{X}\left\lbrack {g\operatorname{}{({\varphi\operatorname{}{(X)}},Y)}} \middle| Y \right\rbrack$
+from [[2.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem2 "Proposition 2.2 (Daudin, 1980). ‣ 2.1 Conditional independence ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+on every minibatch in gradient descent requires impractically many
+samples, but
+${\mathbb{E}}_{Z}\left\lbrack {h\operatorname{}{(Z,Y)}} \middle| Y \right\rbrack$
+does not depend on $X$ and so can be pre-computed before training the
+network.
+:::
+:::
+
+::: {#S2.SS2 .section .ltx_subsection}
+### [2.2 ]{.ltx_tag .ltx_tag_subsection}Conditional Independence Regression CovariancE (CIRCE) {#conditional-independence-regression-covariance-circe .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS2.p1 .ltx_para .ltx_noindent}
+The characterization ([[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.E4 "4 ‣ 2.1 Conditional independence ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
+of conditional independence is still impractical, as it requires
+checking all pairs of square-integrable functions $g$ and $h$. We will
+now transform this condition into an easy-to-estimate measure that
+characterizes conditional independence, using kernel methods.
+:::
+
+::: {#S2.SS2.p2 .ltx_para .ltx_noindent}
+A [kernel]{#S2.SS2.p2.20.1 .ltx_text .ltx_font_italic}
+$k\operatorname{}{(x,x^{\prime})}$ is a symmetric positive-definite
+function $k:{{\mathcal{X} \times \mathcal{X}}\rightarrow{\mathbb{R}}}$.
+A kernel can be represented as an inner product
+${k\operatorname{}{(x,x^{\prime})}} = \left\langle {\phi\operatorname{}{(x)}},{\phi\operatorname{}{(x^{\prime})}} \right\rangle_{\mathcal{H}}$
+for a [feature vector]{#S2.SS2.p2.20.2 .ltx_text .ltx_font_italic}
+${\phi\operatorname{}{(x)}} \in \mathcal{H}$, where $\mathcal{H}$ is a
+reproducing kernel Hilbert space (RKHS). These are spaces $\mathcal{H}$
+of functions $f:{\mathcal{X}\rightarrow{\mathbb{R}}}$, with the key
+*reproducing property*
+$\left\langle {\phi\operatorname{}{(x)}},f \right\rangle_{\mathcal{H}} = {f\operatorname{}{(x)}}$
+for any $f \in \mathcal{H}$. For $M$ points we denote
+$K_{X\operatorname{} \cdot}$ a row vector of
+$\phi\operatorname{}{(x_{i})}$, such that $K_{X\operatorname{}x}$ is an
+$M \times 1$ matrix with $k\operatorname{}{(x_{i},x)}$ entries and
+$K_{X\operatorname{}X}$ is an $M \times M$ matrix with
+$k\operatorname{}{(x_{i},x_{j})}$ entries. For two separable Hilbert
+spaces $\mathcal{G},\mathcal{F}$, a Hilbert-Schmidt operator
+$A:{\mathcal{G}\rightarrow\mathcal{F}}$ is a linear operator with a
+finite Hilbert-Schmidt norm
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\| A\|}_{{HS}\operatorname{}{(\mathcal{G},\mathcal{F})}}^{2} = {\sum_{j \in J}{\|{A\operatorname{}g_{j}}\|}_{\mathcal{F}}^{2}}},$$      [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where ${\{ g_{j}\}}_{j \in J}$ is an orthonormal basis of $\mathcal{G}$
+(for finite-dimensional Euclidean spaces, obtained from a linear kernel,
+$A$ is just a matrix and ${\parallel A\parallel}_{HS}$ its Frobenius
+norm). The Hilbert space
+${HS}\operatorname{}{(\mathcal{G},\mathcal{F})}$ includes in particular
+the rank-one operators $\psi \otimes \phi$ for $\psi \in \mathcal{F}$,
+$\phi \in \mathcal{G}$, representing outer products,
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${{{{\lbrack{\psi \otimes \phi}\rbrack}\operatorname{}g} = {\psi\operatorname{}\left\langle \phi,g \right\rangle_{\mathcal{G}}}},{\left\langle A,{\psi \otimes \phi} \right\rangle_{{HS}\operatorname{}{(\mathcal{G},\mathcal{F})}} = \left\langle \psi,{A\operatorname{}\phi} \right\rangle_{\mathcal{F}}}}.$$      [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+See Gretton
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib9){.ltx_ref},
+Lecture 5) for further details.
+:::
+
+::: {#S2.SS2.p3 .ltx_para}
+We next introduce a kernelized operator which (for RKHS functions $g$
+and $h$) reproduces the condition in ([[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.E4 "4 ‣ 2.1 Conditional independence ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}),
+which we call the Conditional Independence Regression CovariancE
+(CIRCE).
+:::
+
+::: {#S2.Thmtheorem4 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 2.4]{#S2.Thmtheorem4.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#S2.Thmtheorem4.2.2 .ltx_text .ltx_font_bold}(CIRCE operator)[.]{#S2.Thmtheorem4.3.3 .ltx_text .ltx_font_bold} {#definition-2.4-circe-operator. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S2.Thmtheorem4.p1 .ltx_para .ltx_noindent}
+Let $\mathcal{G}$ be an RKHS with feature map
+$\phi:{\mathcal{X}\rightarrow\mathcal{G}}$, and $\mathcal{F}$ an RKHS
+with feature map
+$\psi:{{({\mathcal{Z} \times \mathcal{Y}})}\rightarrow\mathcal{F}}$,
+with both kernels bounded:
+${\sup_{x}{\parallel{\phi\operatorname{}{(x)}}\parallel}} < \infty$,
+${\sup_{z,y}{\parallel{\psi\operatorname{}{(z,y)}}\parallel}} < \infty$.
+Let $X$, $Y$, and $Z$ be random variables taking values in
+$\mathcal{X}$, $\mathcal{Y}$, and $\mathcal{Z}$ respectively. The *CIRCE
+operator* is
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${C_{{X\operatorname{}Z} \mid Y}^{c} = {{\mathbb{E}}\left\lbrack {{\phi\operatorname{}{(X)}} \otimes \left( {{\psi\operatorname{}{(Z,Y)}} - {{\mathbb{E}}_{Z^{\prime}}\left\lbrack {\psi\operatorname{}{(Z^{\prime},Y)}} \middle| Y \right\rbrack}} \right)} \right\rbrack} \in {{HS}\operatorname{}{(\mathcal{G},\mathcal{F})}}}.$$      [(7)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+:::
+
+::: {#S2.SS2.p4 .ltx_para .ltx_noindent}
+For any two functions $g \in \mathcal{G}$ and $h \in \mathcal{F}$,
+[[Definition]{.ltx_text .ltx_ref_tag} [2.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem4 "Definition 2.4 (CIRCE operator). ‣ 2.2 Conditional Independence Regression CovariancE (CIRCE) ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+gives rise to the same expression as in ([[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.E4 "4 ‣ 2.1 Conditional independence ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}),
+
+  -- ------------------------------------------------------------------------------------ ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $\left\langle C_{{X\operatorname{}Z} \mid Y}^{c},{g \otimes h} \right\rangle_{HS}$   ${= {{\mathbb{E}}\left\lbrack {g\operatorname{}{(X)}\operatorname{}\left( {{h\operatorname{}{(Z,Y)}} - {{\mathbb{E}}_{Z^{\prime}}\left\lbrack {h\operatorname{}{(Z^{\prime},Y)}} \middle| Y \right\rbrack}} \right)} \right\rbrack}}.$      [(8)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------ ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#S2.SS2.p5 .ltx_para .ltx_noindent}
+The assumption that the kernels are bounded in [[Definition]{.ltx_text
+.ltx_ref_tag} [2.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem4 "Definition 2.4 (CIRCE operator). ‣ 2.2 Conditional Independence Regression CovariancE (CIRCE) ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+guarantees Bochner integrability (Steinwart & Christmann,
+[2008](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib34){.ltx_ref},
+Def. A.5.20), which allows us to exchange expectations with inner
+products as above: the argument is identical to that of Gretton
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib9){.ltx_ref},
+Lecture 5) for the case of the unconditional feature covariance. For
+unbounded kernels, Bochner integrability can still hold under
+appropriate conditions on the distributions over which we take
+expectations, e.g. a linear kernel works if the mean exists, and energy
+distance kernels may have well-defined feature (conditional) covariances
+when relevant moments exist (Sejdinovic et al.,
+[2013](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib30){.ltx_ref}).
+:::
+
+::: {#S2.SS2.p6 .ltx_para .ltx_noindent}
+Our goal now is to define a kernel statistic which is zero iff the CIRCE
+operator $C_{{X\operatorname{}Z} \mid Y}^{c}$ is zero. One option would
+be to seek the functions, subject to a bound such as
+${\| g\|}_{\mathcal{G}} \leq 1$ and ${\| f\|}_{\mathcal{F}} \leq 1$,
+that maximize ([[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.E8 "8 ‣ 2.2 Conditional Independence Regression CovariancE (CIRCE) ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref});
+this would correspond to computing the largest singular value of
+$C_{{X\operatorname{}Z} \mid Y}^{c}$. For unconditional covariances, the
+equivalent statistic corresponds to the Constrained Covariance, whose
+computation requires solving an eigenvalue problem (e.g. Gretton et al.,
+[2005a](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib10){.ltx_ref},
+Lemma 3). We instead follow the same procedure as for unconditional
+kernel dependence measures, and replace the spectral norm with the
+Hilbert-Schmidt norm (Gretton et al.,
+[2005b](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib11){.ltx_ref}):
+both are zero when $C_{{X\operatorname{}Z} \mid Y}^{c}$ is zero, but as
+we will see in [[Section]{.ltx_text .ltx_ref_tag} [2.3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.SS3 "2.3 Empirical CIRCE estimate and its use as a conditional independence regularizer ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+below, the Hilbert-Schmidt norm has a simple closed-form empirical
+expression, requiring no optimization.
+:::
+
+::: {#S2.SS2.p7 .ltx_para}
+Next, we show that for rich enough RKHSes $\mathcal{G},\mathcal{F}$
+(including, for instance, those with a Gaussian kernel), the
+Hilbert-Schmidt norm of $C_{{X\operatorname{}Z} \mid Y}^{c}$
+characterizes conditional independence.
+:::
+
+::: {#S2.Thmtheorem5 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 2.5]{#S2.Thmtheorem5.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#S2.Thmtheorem5.2.2 .ltx_text .ltx_font_bold} {#theorem-2.5. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S2.Thmtheorem5.p1 .ltx_para}
+[For $\mathcal{G}$ and $\mathcal{F}$ with $L^{2}$-universal kernels
+(see, e.g., Sriperumbudur et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib33){.ltx_ref}),]{#S2.Thmtheorem5.p1.3.3
+.ltx_text .ltx_font_italic}
+
+  -- ------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $$\parallel C_{{X\operatorname{}Z} \mid Y}^{c} \parallel_{HS} = 0\quad\textit{if and only if}\quad X \perp \perp Z \mid Y.$$      [(9)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+:::
+:::
+
+::: {#S2.SS2.p8 .ltx_para .ltx_noindent}
+The "if" direction is immediate from the definition of
+$C_{{X\operatorname{}Z} \mid Y}^{c}$. The "only if" direction uses the
+fact that the RKHS is dense in $L^{2}$, and therefore if ([[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.E8 "8 ‣ 2.2 Conditional Independence Regression CovariancE (CIRCE) ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
+is zero for all RKHS elements, it must be zero for all $L^{2}$
+functions. See [[Appendix]{.ltx_text .ltx_ref_tag} [B]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A2 "Appendix B CIRCE definition ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+for the proof. Therefore, minimizing an empirical estimate of
+${\parallel C_{{X\operatorname{}Z} \mid Y}^{c}\parallel}_{HS}$ will
+approximately enforce the conditional independence we need.
+:::
+
+::: {#S2.Thmtheorem6 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 2.6]{#S2.Thmtheorem6.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#S2.Thmtheorem6.2.2 .ltx_text .ltx_font_bold} {#definition-2.6. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S2.Thmtheorem6.p1 .ltx_para}
+For convenience, we define
+${{CIRCE}\operatorname{}{(X,Z,Y)}} = {\| C_{{X\operatorname{}Z} \mid Y}^{c}\|}_{HS}^{2}$.
+:::
+:::
+
+::: {#S2.SS2.p9 .ltx_para .ltx_noindent}
+In the next two sections, we construct a differentiable estimator of
+this quantity from samples.
+:::
+:::
+
+::: {#S2.SS3 .section .ltx_subsection}
+### [2.3 ]{.ltx_tag .ltx_tag_subsection}Empirical CIRCE estimate and its use as a conditional independence regularizer {#empirical-circe-estimate-and-its-use-as-a-conditional-independence-regularizer .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS3.p1 .ltx_para .ltx_noindent}
+To estimate CIRCE, we first need to estimate the conditional expectation
+${\mu_{{Z\operatorname{}Y}|Y}\operatorname{}{(y)}} = {{\mathbb{E}}_{Z}\left\lbrack {\left. {\psi\operatorname{}{(Z,y)}} \middle| Y \right. = y} \right\rbrack}$.
+We define[^2^[[^2^[2]{.ltx_tag .ltx_tag_note}We abuse notation in using
+$\psi$ to denote feature maps of ${(Y,Z)},$ $Y,$ and $Z$; in other
+words, we use the argument of the feature map to specify the feature
+space, to simplify
+notation.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote2 .ltx_note
+.ltx_role_footnote}
+${{\psi\operatorname{}{(Z,Y)}} = {{{\psi\operatorname{}{(Z)}} \otimes \psi}\operatorname{}{(Y)}}},$
+which for radial basis kernels (e.g. Gaussian, Laplace) is
+$L_{2}$-universal for $(Z,Y)$.[^3^[[^3^[3]{.ltx_tag
+.ltx_tag_note}Fukumizu et al.
+([2008](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib6){.ltx_ref},
+Section 2.2) show this kernel is *characteristic*, and Sriperumbudur
+et al.
+([2011](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib33){.ltx_ref},
+Figure 1 (3)) that being characteristic implies $L_{2}$ universality in
+this case.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote3 .ltx_note
+.ltx_role_footnote} Therefore,
+${\mu_{{Z\operatorname{}Y}|Y}\operatorname{}{(y)}} = {{{{\mathbb{E}}_{Z}\left\lbrack {\left. {\psi\operatorname{}{(Z)}} \middle| Y \right. = y} \right\rbrack} \otimes \psi}\operatorname{}{(y)}} = {{{\mu_{Z|Y}\operatorname{}{(y)}} \otimes \psi}\operatorname{}{(y)}}$.
+The CIRCE operator can be written as
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $C_{{X\operatorname{}Z} \mid Y}^{c} = {{\mathbb{E}}\left\lbrack {{{{\phi\operatorname{}{(X)}} \otimes \psi}\operatorname{}{(Y)}} \otimes \left( {{\psi\operatorname{}{(Z)}} - {\mu_{Z \mid Y}\operatorname{}{(Y)}}} \right)} \right\rbrack}$      [(10)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#S2.SS3.p2 .ltx_para .ltx_noindent}
+We need two datasets to compute the estimator: a holdout set of size $M$
+used to estimate conditional expectations, and the main set of size $B$
+(e.g., a mini-batch). The holdout dataset is used to estimate
+conditional expectation $\mu_{{Z\operatorname{}Y}|Y}$ with kernel ridge
+regression. This requires choosing the ridge parameter $\lambda$ and the
+kernel parameters for $Y$. We obtain both of these using leave-one-out
+cross-validation; we derive a closed form expression for the error by
+generalizing the result of Bachmann et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib1){.ltx_ref})
+to RKHS-valued "labels" for regression (see [[Equation]{.ltx_text
+.ltx_ref_tag} [32]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.E32 "32 ‣ Theorem C.1 (Leave-one-out for kernel mean embeddings). ‣ C.1 Estimating the conditional mean embedding ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}).
+:::
+
+::: {#S2.SS3.p3 .ltx_para .ltx_noindent}
+The following theorem defines an empirical estimator of the
+Hilbert-Schmidt norm of the empirical CIRCE operator, and establishes
+the consistency of this statistic as the number of training samples $B$,
+$M$ increases. The proof and a formal description of the conditions may
+be found in [[Section]{.ltx_text .ltx_ref_tag} [C.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.SS2 "C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+:::
+
+::: {#S2.Thmtheorem7 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 2.7]{#S2.Thmtheorem7.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#S2.Thmtheorem7.2.2 .ltx_text .ltx_font_bold} {#theorem-2.7. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#S2.Thmtheorem7.p1 .ltx_para}
+[The following estimator of CIRCE for $B$ points and $M$ holdout points
+(for the conditional expectation):]{#S2.Thmtheorem7.p1.2.2 .ltx_text
+.ltx_font_italic}
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${\hat{\text{𝐶𝐼𝑅𝐶𝐸}} = {\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}\left( {K_{Y\operatorname{}Y} \odot {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)} \right)}}.$$      [(11)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+
+[converges as
+$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{{({\beta - 1})}/{({2\operatorname{}{({\beta + p})}})}}}})}$,
+when the regression in [[Equation]{.ltx_text
+.ltx_ref_tag} [30]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.E30 "30 ‣ C.1 Estimating the conditional mean embedding ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+is well-specified. $K_{X\operatorname{}X}$ and $K_{Y\operatorname{}Y}$
+are kernel matrices of $X$ and $Y$; elements of
+$K_{Z\operatorname{}Z}^{c}$ are defined as
+$K_{z\operatorname{}z^{\prime}}^{c} = \left\langle {{\psi\operatorname{}{(z)}} - {\mu_{Z \mid Y}\operatorname{}{(y)}}},{{\psi\operatorname{}{(z^{\prime})}} - {\mu_{Z \mid Y}\operatorname{}{(y^{\prime})}}} \right\rangle$;
+$\beta \in {(1,2\rbrack}$ characterizes how well-specified the solution
+is and $p \in {(0,1\rbrack}$ describes the eigenvalue decay rate of the
+covariance operator over $Y$.]{#S2.Thmtheorem7.p1.12.10 .ltx_text
+.ltx_font_italic}
+:::
+:::
+
+::: {#S2.SS3.p4 .ltx_para .ltx_noindent}
+The notation $O_{p}\operatorname{}{(A)}$ roughly states that with any
+constant probability, the estimator is $O\operatorname{}{(A)}$.
+:::
+
+::: {#S2.SS3.p5 .ltx_para .ltx_noindent}
+[Remark.]{#S2.SS3.p5.4.1 .ltx_text .ltx_font_bold} For the smoothly
+well-specified case we have $\beta = 2$, and for a Gaussian kernel $p$
+is arbitrarily close to zero, giving a rate
+$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{1/4}}})}$. The $1/M^{1/4}$
+rate comes from conditional expectation estimation, where it is
+minimax-optimal for the well-specified case (Li et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref}).
+Using kernels whose eigenvalues decay slower than the Gaussian's would
+slow the convergence rate (see Li et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref},
+Theorem 2).
+:::
+
+::: {#S2.SS3.p6 .ltx_para .ltx_noindent}
+The algorithm is summarized in [[Algorithm]{.ltx_text
+.ltx_ref_tag} [2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#alg2 "Algorithm 2 ‣ Appendix D Random Fourier features ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
+We can further improve the computational complexity for large training
+sets with random Fourier features (Rahimi & Recht,
+[2007](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib29){.ltx_ref});
+see [[Appendix]{.ltx_text .ltx_ref_tag} [D]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A4 "Appendix D Random Fourier features ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
+:::
+
+<figure id="alg1" class="ltx_float ltx_float_algorithm ltx_framed_top">
+<div id="alg1.3" class="ltx_listing">
+<div id="alg1.l1" class="ltx_listingline">
+Holdout data <span
+class="math inline">{(<em>z</em><sub><em>i</em></sub>,<em>y</em><sub><em>i</em></sub>)}<sub><em>i</em> = 1</sub><sup><em>M</em></sup></span>,
+mini-batch <span
+class="math inline">{(<em>x</em><sub><em>i</em></sub>,<em>z</em><sub><em>i</em></sub>,<em>y</em><sub><em>i</em></sub>)}<sub><em>i</em> = 1</sub><sup><em>B</em></sup></span>
+</div>
+<div id="alg1.l2" class="ltx_listingline">
+<span id="alg1.l2.1" class="ltx_text ltx_font_bold">Holdout data</span>
+</div>
+<div id="alg1.l3" class="ltx_listingline">
+Leave-one-out (<a
+href="https://ar5iv.labs.arxiv.org/html/2212.08645#A3.E32"
+class="ltx_ref"
+title="32 ‣ Theorem C.1 (Leave-one-out for kernel mean embeddings). ‣ C.1 Estimating the conditional mean embedding ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"><span
+class="ltx_text ltx_ref_tag">Equation</span> <span
+class="ltx_text ltx_ref_tag">32</span></a>) for <span
+class="math inline"><em>λ</em></span> (ridge parameter) and <span
+class="math inline"><em>σ</em><sub><em>y</em></sub></span> (parameters
+of <span class="math inline"><em>Y</em></span> kernel):
+</div>
+<div id="alg1.l4" class="ltx_listingline">
+<span class="math inline">${\lambda,\sigma_{y}} =
+{\arg\operatorname{}\min\operatorname{}{\sum_{i = 1}^{M}\frac{\left\|
+{{\psi\operatorname{}{(z_{i})}} -
+{K_{y_{i}\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} +
+{\lambda\operatorname{}I}} \right)^{-
+1}\operatorname{}K_{Z\operatorname{} \cdot}}}
+\right\|_{\mathcal{H}_{z}}^{2}}{\left( {1 - \left(
+{K_{Y\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} +
+{\lambda\operatorname{}I}} \right)^{- 1}} \right)_{i\operatorname{}i}}
+\right)^{2}}}}$</span>
+</div>
+<div id="alg1.l5" class="ltx_listingline">
+<span
+class="math inline"><em>W</em><sub>1</sub> = (<em>K</em><sub><em>Y</em> <em>Y</em></sub>+<em>λ</em> <em>I</em>)<sup>−1</sup>, <em>W</em><sub>2</sub> = <em>W</em><sub>1</sub> <em>K</em><sub><em>Z</em> <em>Z</em></sub> <em>W</em><sub>1</sub></span>
+</div>
+<div id="alg1.l6" class="ltx_listingline">
+<span id="alg1.l6.1" class="ltx_text ltx_font_bold">Mini-batch</span>
+</div>
+<div id="alg1.l7" class="ltx_listingline">
+Compute kernel matrices <span
+class="math inline"><em>K</em><sub><em>x</em> <em>x</em></sub>, <em>K</em><sub><em>y</em> <em>y</em></sub>, <em>K</em><sub><em>y</em> <em>Y</em></sub>, <em>K</em><sub><em>y</em> <em>Z</em></sub></span>
+(<span class="math inline"><em>x</em>, <em>y</em>, <em>z</em></span>:
+mini-batch, <span class="math inline"><em>Y</em>, <em>Z</em></span>:
+holdout)
+</div>
+<div id="alg1.l8" class="ltx_listingline">
+<span
+class="math inline"><em>K̂</em><sup><em>c</em></sup> = <em>K</em><sub><em>y</em> <em>y</em></sub> ⊙ (<em>K</em><sub><em>z</em> <em>z</em></sub> − <em>K</em><sub><em>y</em> <em>Y</em></sub> <em>W</em><sub>1</sub> <em>K</em><sub><em>Z</em> <em>z</em></sub> − (<em>K</em><sub><em>y</em> <em>Y</em></sub><em>W</em><sub>1</sub><em>K</em><sub><em>Z</em> <em>z</em></sub>)<sup>⊤</sup>+<em>K</em><sub><em>y</em> <em>Y</em></sub> <em>W</em><sub>2</sub> <em>K</em><sub><em>Y</em> <em>y</em></sub>)</span>
+</div>
+<div id="alg1.l9" class="ltx_listingline">
+<span class="math inline">${CIRCE} = {\frac{1}{B\operatorname{}{({B -
+1})}}\operatorname{}{Tr}\operatorname{}\left(
+{K_{x\operatorname{}x}\operatorname{}{\hat{K}}^{c}} \right)}$</span>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg1.2.1.1"
+class="ltx_text ltx_font_bold">Algorithm 1</span> </span> Estimation of
+CIRCE</figcaption>
+</figure>
+
+::: {#S2.SS3.p7 .ltx_para .ltx_noindent}
+We can use of our empirical CIRCE as a regularizer for conditionally
+independent regularization learning, where the goal is to learn
+representations that are conditionally independent of a known distractor
+$Z$. We switch from $X$ to an [encoder]{#S2.SS3.p7.6.1 .ltx_text
+.ltx_font_italic} $\varphi_{\theta}\operatorname{}{(X)}$. If the task is
+to predict $Y$ using some loss
+$L\operatorname{}{({\varphi_{\theta}\operatorname{}{(X)}},Y)}$, the
+CIRCE regularized loss with the regularization weight $\gamma > 0$ is as
+follows:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{{\min\limits_{\theta}L}\operatorname{}{({\varphi_{\theta}\operatorname{}{(X)}},Y)}} + {\gamma\operatorname{}{CIRCE}\operatorname{}{({\varphi_{\theta}\operatorname{}{(X)}},Z,Y)}}}.$$      [(12)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para .ltx_noindent}
+We conduct experiments addressing two settings: (1) synthetic data of
+moderate dimension, to study effectiveness of CIRCE at enforcing
+conditional independence under established settings (as envisaged for
+instance in econometrics or epidemiology); and (2) high dimensional
+image data, with the goal of learning image representations that are
+robust to domain shifts. We compare performance over all experiments
+with HSCIC (Quinzan et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib28){.ltx_ref})
+and GCM (Shah & Peters,
+[2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib31){.ltx_ref}).
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Synthetic Data {#synthetic-data .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para .ltx_noindent}
+We first evaluate performance on the synthetic datasets proposed by
+Quinzan et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib28){.ltx_ref}):
+these use the structural causal model (SCM) shown in [[Figure]{.ltx_text
+.ltx_ref_tag} [1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F1 "Figure 1 ‣ 4.1 Synthetic Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref},
+and comprise 2 univariate and 2 multivariate cases (see
+[[Appendix]{.ltx_text .ltx_ref_tag} [E]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A5 "Appendix E Synthetic Data and Additional Results ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+for details). Given samples of $A$, $Y$ and $Z$, the goal is to learn a
+predictor $\hat{B} = {\varphi\operatorname{}{(A,Y,Z)}}$ that is
+counterfactually invariate to $Z$. Achieving this requires enforcing
+conditional independence $\varphi{(A,Y,Z)} \perp \perp Z|Y$. For all
+experiments on synthetic data, we used a fully connected network with 9
+hidden layers. The inputs of the network were $A$, $Y$ and $Z$. The task
+is to predict $B$ and the network is learned with the MSE loss. For each
+test case, we generated 10k examples, where 8k were used for training
+and 2k for evaluation. Data were normalized with zero mean and unit
+standard deviation. The rest of experimental details is provided in
+[[Appendix]{.ltx_text .ltx_ref_tag} [E]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A5 "Appendix E Synthetic Data and Additional Results ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
+:::
+
+::: {#S4.SS1.p2 .ltx_para .ltx_noindent}
+We report in-domain MSE loss, and measure the level of counterfactual
+invariance of the predictor using the VCF (Quinzan et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib28){.ltx_ref},
+eq. 4; lower is better). Given $X = {(A,Y,Z)}$,
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     ${\text{VCF}:={{\mathbb{E}}_{x \sim \mathbf{X}}\operatorname{}\left\lbrack {{\mathbb{V}}_{z^{\prime} \sim \mathbf{Z}}\operatorname{}\left\lbrack {{\mathbb{E}}_{{\hat{B}}_{z^{\prime}}^{*}|X}\operatorname{}\left\lbrack {\left. \hat{B} \middle| X \right. = x} \right\rbrack} \right\rbrack} \right\rbrack}}.$      [(13)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+
+$P_{{\hat{B}}_{z^{\prime}}^{*}|X}$ is the counterfactual distribution of
+$\hat{B}$ given $X = x$ and an intervention of setting $z$ to
+$z^{\prime}$.
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Image Data {#image-data .ltx_title .ltx_title_subsection}
+
+
+::: {#S4.SS2.p1 .ltx_para .ltx_noindent}
+We next evaluate our method on two high-dimensional image datasets:
+d-Sprites (Matthey et al.
+([2017](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib22){.ltx_ref}))
+which contains images of 2D shapes generated from six independent latent
+factors; and the Extended Yale-B Face dataset [^5^[[^5^[5]{.ltx_tag
+.ltx_tag_note}Google and DeepMind do not have access or handle the
+Yale-B Face dataset.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote5
+.ltx_note .ltx_role_footnote}(Georghiades et al.
+([2001](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib7){.ltx_ref}))
+of faces of 28 individuals under varying camera poses and illumination.
+We use both datasets with the causal graph in Figure [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F3 "Figure 3 ‣ 4.2 Image Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+where the image $X$ is directly caused by the target variable $Y$ and a
+distractor $Z$. There also exists a strong non-causal association
+between $Y$ and $Z$ in the training set (denoted by the dashed edge).
+:::
+
+::: {#S4.SS2.p2 .ltx_para .ltx_noindent}
+The basic setting is as follows: for the in-domain (train) samples, the
+observed $Y$ and $Z$ are correlated through the true $Y$ as
+
+  -- ----------------------------------------------------------------------------------------------- -------------- ------------------------------------------------ ----- -------------------------------------------------------- -- -----------------------------------------------------
+     ${{Y \sim P_{Y}},{\xi_{z} \sim {\mathcal{N}\operatorname{}{(0,\sigma_{z})}}}},$                 $Z$            ${= {{\beta\operatorname{}{(Y)}} + \xi_{z}}},$                                                                     [(14)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${{Y^{\prime} = {Y + \xi_{y}}},{\xi_{y} \sim {\mathcal{N}\operatorname{}{(0,\sigma_{y})}}}},$   $Z^{\prime}$   ${= {f_{z}\operatorname{}{(Y,Z,\xi_{z})}}},$     $X$   ${= {f_{x}\operatorname{}{(Y^{\prime},Z^{\prime})}}}.$      [(15)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------- -------------- ------------------------------------------------ ----- -------------------------------------------------------- -- -----------------------------------------------------
+
+$Y$ and $Z$ are observed; $f_{z}$ is the structural equation for
+$Z^{\prime}$ (in the simplest case $Z^{\prime} = Z$); $f_{x}$ is the
+generative process of $X$. $Y^{\prime}$ and $Z^{\prime}$ represent noise
+added during generation and are unobserved.
+:::
+
+::: {#S4.SS2.p3 .ltx_para .ltx_noindent}
+A regular predictor would take advantage of the association $\beta$
+between $Z$ and $Y$ during training, since this is a less noisy source
+of information on $Y$. For unseen out-of-distribution (OOD) regime,
+where $Y$ and $Z$ are uncorrelated, such solution would be incorrect.
+:::
+
+::: {#S4.SS2.p4 .ltx_para .ltx_noindent}
+Therefore, our task is to learn a predictor
+$\hat{Y} = {\varphi\operatorname{}{(X)}}$ that is conditionally
+independent of $Z$: $\varphi{(X)} \perp \perp Z|Y$, so that during the
+OOD/testing phase when the association between $Y$ and $Z$ ceases to
+exist, the model performance is not harmed as it would be if
+$\varphi\operatorname{}{(X)}$ relied on the "shortcut" $Z$ to predict
+$Y$. For all image experiments we use the AdamW (Loshchilov & Hutter
+([2019](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib20){.ltx_ref}))
+optimizer and anneal the learning rate with a cosine scheduler (details
+in [[Appendix]{.ltx_text .ltx_ref_tag} [F]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A6 "Appendix F Image Data Details ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}).
+We select the hyper-parameters of the optimizer and scheduler via a grid
+search to minimize the in-domain validation set loss.
+:::
+
+::: {#S4.SS2.SSS1 .section .ltx_subsubsection}
+#### [4.2.1 ]{.ltx_tag .ltx_tag_subsubsection}dSprites {#dsprites .ltx_title .ltx_title_subsubsection}
+
+::: {#S4.SS2.SSS1.p1 .ltx_para .ltx_noindent}
+Of the six independent generative factors in d-Sprites, we choose the
+$y$-coordinate of the object as our target $Y$ and the $x$-coordinate of
+the object in the image as our distractor variable $Z$. Our neural
+network consists of three convolutional layers interleaved with max
+pooling and leaky ReLU activations, followed by three fully-connected
+layers with 128, 64, 1 unit(s) respectively.
+:::
+
+::: {#S4.SS2.SSS1.p2 .ltx_para}
+[Linear dependence]{#S4.SS2.SSS1.p2.10.1 .ltx_text .ltx_font_bold} We
+sample images from the dataset as per the linear relation
+$Z^{\prime} = Z = {Y + \xi_{z}}$. We then translate all sampled images
+(both in-domain and OOD) vertically by $\xi_{y}$, resulting in an
+observed object coordinate of $(Z,{Y + \xi_{y}})$. In this case, linear
+residual methods, such as GCM, are able to sufficiently handle the
+dependence as the residual
+${Z - {{\mathbb{E}}\left\lbrack Z \middle| Y \right\rbrack}} = \xi_{z}$
+is correlated with $Z$ -- which is the observed $x$-coordinate. As a
+result, penalizing the cross-covariance between
+${\varphi\operatorname{}{(X)}} - {{\mathbb{E}}\left\lbrack {\varphi\operatorname{}{(X)}} \middle| Y \right\rbrack}$
+and $Z - {{\mathbb{E}}\left\lbrack Z \middle| Y \right\rbrack}$ will
+also penalize the network's dependence on the observed $x$-coordinate to
+predict $Y$.
+
+::: {#S4.SS2.SSS1.p3 .ltx_para .ltx_noindent}
+In [[Figure]{.ltx_text .ltx_ref_tag} [4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F4 "Figure 4 ‣ 4.2.1 dSprites ‣ 4.2 Image Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+we plot the in-domain and OOD losses over a range of regularization
+strengths and demonstrate that indeed GCM is able to perform quite well
+with a linear function relating $Z$ to $Y$. CIRCE is comparable to GCM
+with strong regularization and outperforms HSCIC. To get the optimal OOD
+baseline we train our network on an OOD training set where $Y$ and $Z$
+are uncorrelated.
+:::
+
+::: {#S4.SS2.SSS1.p4 .ltx_para .ltx_noindent}
+[Non-linear dependence]{#S4.SS2.SSS1.p4.19.1 .ltx_text .ltx_font_bold}
+To demonstrate the limitation of GCM, which simply regresses $Z$ on $Y$
+instead of $\psi\operatorname{}{(Z,Y)}$ on $Y$, we next address a more
+complex nonlinear dependence ${\beta\operatorname{}{(Y)}} = 0$ and
+$Z^{\prime} = {Y + {\alpha\operatorname{}Z^{2}}}$. The observed
+coordinate of the object in the image is
+$({Y + {\alpha\operatorname{}\xi_{z}^{2}}},{Y + \xi_{y}})$ . For a small
+$\alpha$, the unregularized network will again exploit the shortcut,
+i.e. the observed $x$-coordinate, in order to predict $Y$. The linear
+residual, if we don't use features of $Z$, is
+${Z - {{\mathbb{E}}\left\lbrack Z \middle| Y \right\rbrack}} = \xi_{z}$,
+which is uncorrelated with $Y + {\alpha\operatorname{}\xi_{z}^{2}}$,
+because ${{\mathbb{E}}{\lbrack\xi_{z}^{3}\rbrack}} = 0$ due to the
+symmetric and zero-mean distribution of $\xi_{z}$. As a result,
+penalizing cross-covariance with the linear residual (as done by GCM)
+will not penalize solutions that use the observed $x$-coordinate to
+predict $Y$. Whereas CIRCE which uses a feature map
+$\psi\operatorname{}{(Z)}$ can capture higher order features. Results
+are shown in [[Figure]{.ltx_text .ltx_ref_tag} [5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F5 "Figure 5 ‣ 4.2.1 dSprites ‣ 4.2 Image Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}:
+we see again that CIRCE performs best, followed by HSCIC, with GCM doing
+poorly. Curiously, GCM performance does still improve slightly on OOD
+data as regularization increases - we conjecture that the encoder
+$\varphi\operatorname{}{(X)}$ may extract non-linear features of the
+coordinates. However, GCM is numerical unstable for large regularization
+weights, which might arise from combining a ratio normalization and a
+max operation in the statistic.
+:::
+
+<figure id="S4.F5" class="ltx_figure">
+<img src="./circe_files/x2.png" id="S4.F5.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="685"
+height="201" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 5:
+</span>dSprites (non-linear). Blue: in-domain test loss; orange:
+out-of-domain loss (OOD); red: loss for OOD-trained encoder. Solid
+lines: median over 10 seeds; shaded areas: min/max values.</figcaption>
+</figure>
+:::
+
+::: {#S4.SS2.SSS2 .section .ltx_subsubsection}
+#### [4.2.2 ]{.ltx_tag .ltx_tag_subsubsection}Extended Yale-B {#extended-yale-b .ltx_title .ltx_title_subsubsection}
+
+::: {#S4.SS2.SSS2.p1 .ltx_para .ltx_noindent}
+Finally, we evaluate CIRCE as a regressor for supervised tasks on the
+natural image dataset of Extended Yale-B Faces. The task here is to
+estimate the camera pose $Y$ from image $X$ while being conditionally
+independent of the illumination $Z$ which is represented as the azimuth
+angle of the light source with respect to the subject. Since, these are
+natural images, we use the ResNet-18 (He et al.,
+[2016](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib13){.ltx_ref})
+model pre-trained on ImageNet (Deng et al.,
+[2009](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib4){.ltx_ref})
+to extract image features, followed by three fully-connected layers
+containing 128, 64 and 1 unit(s) respectively. Here we sample the
+training data according to the non-linear relation
+$Z^{\prime} = Z = {0.5\operatorname{}{({Y + {\varepsilon\operatorname{}Y^{2}}})}}$,
+where $\varepsilon$ is either $+ 1$ or $- 1$ with equal probability. In
+this case
+${{{\mathbb{E}}\left\lbrack Z \middle| Y \right\rbrack} = {{0.5\operatorname{}Y} + {0.5\operatorname{}Y^{2}\operatorname{}{{\mathbb{E}}\left\lbrack \varepsilon \middle| Y \right\rbrack}}} = {0.5\operatorname{}Y}},$
+and thus the linear residuals depend on $Y$. (In experiments, $Y$ and
+$\varepsilon$ are re-scaled to be in the same range. We avoid it here
+for simplicity.) Note that GCM can in principle find the correct
+solution using a linear decoder. Results are shown in
+[[Figure]{.ltx_text .ltx_ref_tag} [6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F6 "Figure 6 ‣ 4.2.2 Extended Yale-B ‣ 4.2 Image Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
+CIRCE shows a small advantage over HSCIC in OOD performance for the best
+regularizer choice. GCM suffers from numerical instability in this
+example, which leads to poor performance.
+:::
+
+::: {#Ax1 .section .ltx_appendix}
+## Appendices {#appendices .ltx_title .ltx_title_appendix}
+:::
+
+::: {#A1 .section .ltx_appendix}
+## [Appendix A ]{.ltx_tag .ltx_tag_appendix}Conditional independence definitions {#appendix-a-conditional-independence-definitions .ltx_title .ltx_title_appendix}
+
+::: {#A1.p1 .ltx_para}
+We first repeat the proof of the main theorem in Daudin
+[1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref},
+as the missing proofs we need for the alternative definitions of
+independence rely on the main one.
+:::
+
+::: {#A1.Thmtheorem1 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem A.1]{#A1.Thmtheorem1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#A1.Thmtheorem1.2.2 .ltx_text .ltx_font_bold}(Theorem 1 of Daudin [1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref})[.]{#A1.Thmtheorem1.3.3 .ltx_text .ltx_font_bold} {#theorem-a.1-theorem-1-of-daudin-1980. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A1.Thmtheorem1.p1 .ltx_para}
+[Define
+$E_{1} = {\{ g:{{g \in L_{X\operatorname{}Y}^{2}},{{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack} = 0}}\}}$,
+$E_{2} = {\{ h:{{h \in L_{Y\operatorname{}Z}^{2}},{{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack} = 0}}\}}$.
+Then, the following two conditions are
+equivalent:]{#A1.Thmtheorem1.p1.2.2 .ltx_text .ltx_font_italic}
+
+  -- ------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------- --
+     ${\mathbb{E}}\left\lbrack {g_{1}\operatorname{}h_{1}} \right\rbrack$      $= 0$                                                                                                                             ${{{\forall g_{1}} \in E_{1}},{{\forall h_{1}} \in E_{2}}},$                                   
+     ${\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack$   $= {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$   ${{{\forall g} \in L_{X\operatorname{}Y}^{2}},{{\forall h} \in L_{Y\operatorname{}Z}^{2}}}.$   
+  -- ------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------- --
+:::
+:::
+
+::: {#A1.6 .ltx_proof}
+###### Proof. {#proof. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A1.1.p1 .ltx_para .ltx_noindent}
+[Necessary condition:]{#A1.1.p1.1.1 .ltx_text .ltx_font_italic}
+${{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}\Longrightarrow{{\mathbb{E}}{\lbrack{g_{1}\operatorname{}h_{1}}\rbrack}} = 0$
+:::
+
+::: {#A1.2.p2 .ltx_para .ltx_noindent}
+Because $E_{1} \subseteq L_{X\operatorname{}Y}^{2}$ and
+$E_{2} \subseteq L_{Y\operatorname{}Z}^{2}$, for $g_{1} \in E_{1}$ and
+$h_{1} \in E_{2}$ we have
+:::
+
+::: {#A1.3.p3 .ltx_para .ltx_noindent}
+  -- ------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+                         ${{\mathbb{E}}\left\lbrack {g_{1}\operatorname{}h_{1}} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g_{1} \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h_{1} \middle| Y \right\rbrack}} = 0$   
+     $\Longrightarrow$   ${{{\mathbb{E}}{\lbrack{g_{1}\operatorname{}h_{1}}\rbrack}} = {{\mathbb{E}}_{Y}{\lbrack{{\mathbb{E}}\left\lbrack {g_{1}\operatorname{}h_{1}} \middle| Y \right\rbrack}\rbrack}} = 0}.$                                        
+  -- ------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+::: {#A1.4.p4 .ltx_para .ltx_noindent}
+[Sufficient condition:]{#A1.4.p4.1.1 .ltx_text .ltx_font_italic}
+${{\mathbb{E}}{\lbrack{g_{1}\operatorname{}h_{1}}\rbrack}} = 0\Longrightarrow{{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$
+:::
+
+::: {#A1.5.p5 .ltx_para .ltx_noindent}
+Let
+$g^{\prime} = {g - {{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}}$
+where $g \in L_{X\operatorname{}Y}^{2}$ and
+$h^{\prime} = {h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$
+where $h \in L_{X\operatorname{}Y}^{2}$. Then, $g^{\prime} \in E_{1}$
+and $h^{\prime} \in E_{2}$
+
+  -- --------------------------------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${\mathbb{E}}{\lbrack{g^{\prime}\operatorname{}h^{\prime}}\rbrack}$   $= {{\mathbb{E}}\left\lbrack {{({g - {{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}})}\operatorname{}{({h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}})}} \right\rbrack}$                                                                                                                                                                                                                                       
+                                                                           $= {{\mathbb{E}}\left\lbrack {{{g\operatorname{}h} - {h\operatorname{}{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}} - {g\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} + {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} \right\rbrack}$                                                                             
+                                                                           $= {{\mathbb{E}}_{Y}\left\lbrack {{\mathbb{E}}\left\lbrack \left( {{{g\operatorname{}h} - {h\operatorname{}{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}} - {g\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} + {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} \right) \middle| Y \right\rbrack} \right\rbrack}$      
+                                                                           ${= {{\mathbb{E}}_{Y}\left\lbrack {{{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} - {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} \right\rbrack} = 0}.$                                                                                                                                                                    [(16)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A1.6.p6 .ltx_para}
+Let $B$ be a Borel set of the image space of $Y$, $g* = gI_{B}$ where
+$I_{B}$ is an indicator function of $B$. We have
+${\int{g^{*2}\operatorname{}{dP}}} = {\int{g^{2}\operatorname{}I_{B}\operatorname{}{dP}}} = {\int_{B}{g^{2}\operatorname{}{dP}}} \leq {\int{g^{2}\operatorname{}{dP}}} < \infty$,
+therefore $g^{*} \in L_{X\operatorname{}Y}^{2}$. Using
+[[Equation]{.ltx_text .ltx_ref_tag} [16]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A1.E16 "16 ‣ Proof. ‣ Appendix A Conditional independence definitions ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref},
+
+  -- ----- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+           ${\mathbb{E}}_{Y}\left\lbrack {{{\mathbb{E}}\left\lbrack {g^{*}\operatorname{}h} \middle| Y \right\rbrack} - {{{\mathbb{E}}\left\lbrack g^{*} \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} \right\rbrack$                                     
+     $=$   ${\mathbb{E}}_{Y}\left\lbrack {{{\mathbb{E}}\left\lbrack {g\operatorname{}h\operatorname{}I_{B}} \middle| Y \right\rbrack} - {{{\mathbb{E}}\left\lbrack {g\operatorname{}I_{B}} \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} \right\rbrack$   
+     $=$   ${{\int_{B}{{{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack}\operatorname{}{dP}}} - {\int_{B}{{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}\operatorname{}{dP}}}} = 0$                        
+  -- ----- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+
+So
+${{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$
+almost surely. ∎
+:::
+:::
+
+::: {#A1.Thmtheorem2 .ltx_theorem .ltx_theorem_corollary}
+###### [[Corollary A.2]{#A1.Thmtheorem2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#A1.Thmtheorem2.2.2 .ltx_text .ltx_font_bold}(Equation 3.8 of Daudin [1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref})[.]{#A1.Thmtheorem2.3.3 .ltx_text .ltx_font_bold} {#corollary-a.2-equation-3.8-of-daudin-1980. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A1.Thmtheorem2.p1 .ltx_para}
+[The following two conditions are equivalent:]{#A1.Thmtheorem2.p1.1.1
+.ltx_text .ltx_font_italic}
+
+  -- ------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------- --
+     ${\mathbb{E}}\left\lbrack {g\operatorname{}h_{1}} \right\rbrack$          $= 0$                                                                                                                             ${{{\forall g} \in L_{X\operatorname{}Y}^{2}},{{\forall h_{1}} \in E_{2}}},$                   
+     ${\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack$   $= {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$   ${{{\forall g} \in L_{X\operatorname{}Y}^{2}},{{\forall h} \in L_{Y\operatorname{}Z}^{2}}}.$   
+  -- ------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------- --
+:::
+:::
+
+::: {#A1.10 .ltx_proof}
+###### Proof. {#proof.-1 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A1.7.p1 .ltx_para .ltx_noindent}
+[Necessary condition]{#A1.7.p1.1.1 .ltx_text .ltx_font_italic} is
+identical to the previous proof.
+:::
+
+::: {#A1.8.p2 .ltx_para .ltx_noindent}
+[Sufficient condition:]{#A1.8.p2.1.1 .ltx_text .ltx_font_italic}
+${{\mathbb{E}}{\lbrack{g\operatorname{}h_{1}}\rbrack}} = 0\Longrightarrow{{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$
+:::
+
+::: {#A1.9.p3 .ltx_para .ltx_noindent}
+Let
+$h^{\prime} = {h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$
+where $h \in L_{Y\operatorname{}Z}^{2}$, then $h^{\prime} \in E_{2}$
+
+  -- ------------------------------------------------------------ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${\mathbb{E}}{\lbrack{g\operatorname{}h^{\prime}}\rbrack}$   $= {{\mathbb{E}}{\lbrack{g\operatorname{}{({h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}})}}\rbrack}}$                                                                                                                                               
+                                                                  $= {{\mathbb{E}}{\lbrack{{g\operatorname{}h} - {g\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}}\rbrack}}$                                                                                                                                 
+                                                                  $= {{\mathbb{E}}_{Y}\left\lbrack {{\mathbb{E}}\left\lbrack \left( {{g\operatorname{}h} - {g\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} \right) \middle| Y \right\rbrack} \right\rbrack}$                                               
+                                                                  $= {{\mathbb{E}}_{Y}\left\lbrack {{{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} - {{\mathbb{E}}\left\lbrack {g\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}} \middle| Y \right\rbrack}} \right\rbrack}$          
+                                                                  ${= {{\mathbb{E}}_{Y}\left\lbrack {{{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} - {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} \right\rbrack} = 0}.$   
+  -- ------------------------------------------------------------ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+::: {#A1.10.p4 .ltx_para}
+Using the same argument as for [[Theorem]{.ltx_text
+.ltx_ref_tag} [A.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A6.EGx5 "Theorem A.1 (Theorem 1 of Daudin 1980). ‣ Appendix A Conditional independence definitions ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref},
+${{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$
+almost surely. ∎
+:::
+:::
+
+::: {#A1.Thmtheorem3 .ltx_theorem .ltx_theorem_corollary}
+###### [[Corollary A.3]{#A1.Thmtheorem3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#A1.Thmtheorem3.2.2 .ltx_text .ltx_font_bold}(Equation 3.9 of Daudin [1980](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib3){.ltx_ref})[.]{#A1.Thmtheorem3.3.3 .ltx_text .ltx_font_bold} {#corollary-a.3-equation-3.9-of-daudin-1980. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A1.Thmtheorem3.p1 .ltx_para}
+[The following two conditions are equivalent:]{#A1.Thmtheorem3.p1.1.1
+.ltx_text .ltx_font_italic}
+
+  -- --------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------- --
+     ${\mathbb{E}}\left\lbrack {g^{\prime}\operatorname{}h_{1}} \right\rbrack$   $= 0$                                                                                                                             ${{{\forall g^{\prime}} \in L_{X}^{2}},{{\forall h_{1}} \in E_{2}}},$                          
+     ${\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack$     $= {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$   ${{{\forall g} \in L_{X\operatorname{}Y}^{2}},{{\forall h} \in L_{Y\operatorname{}Z}^{2}}}.$   
+  -- --------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------- --
+:::
+:::
+
+::: {#A1.15 .ltx_proof}
+###### Proof. {#proof.-2 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A1.11.p1 .ltx_para .ltx_noindent}
+[Necessary condition:]{#A1.11.p1.2.1 .ltx_text .ltx_font_italic} As
+$E_{2} \subseteq L_{Y\operatorname{}Z}^{2}$ and
+$L_{X}^{2} \subseteq L_{X\operatorname{}Y}^{2}$,
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $${{{\mathbb{E}}\left\lbrack {g^{\prime}\operatorname{}h_{1}} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g^{\prime} \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h_{1} \middle| Y \right\rbrack}} = 0}.$$   
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+::: {#A1.12.p2 .ltx_para .ltx_noindent}
+[Sufficient condition:]{#A1.12.p2.1.1 .ltx_text .ltx_font_italic}
+${{\mathbb{E}}{\lbrack{g^{\prime}\operatorname{}h_{1}}\rbrack}} = 0\Longrightarrow{{\mathbb{E}}\left\lbrack {g\operatorname{}h} \middle| Y \right\rbrack} = {{{\mathbb{E}}\left\lbrack g \middle| Y \right\rbrack}\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$
+:::
+
+::: {#A1.13.p3 .ltx_para .ltx_noindent}
+Take a simple function
+$g_{a} = {\sum_{i = 1}^{n}{a_{i}\operatorname{}I_{A_{i}}}}$ for an
+integrable Borel set $A_{i}$ in $X\operatorname{}Y$. As integrable
+simple functions are dense in $L_{X\operatorname{}Y}^{2}$, we only need
+to prove the condition for all $g_{a}$.
+:::
+
+::: {#A1.14.p4 .ltx_para .ltx_noindent}
+In our case, the indicator function decomposes as
+$I_{A_{i}} = {I_{A_{i}^{X}}\operatorname{}I_{A_{i}^{Y}}}$, and therefore
+for $g_{i} = {a_{i}\operatorname{}I_{A_{i}^{X}}}$
+
+  -- ------------------------------------------------------------------------- --
+     $${g_{a} = {\sum\limits_{i}^{n}{g_{i}\operatorname{}I_{A_{i}^{Y}}}}}.$$   
+  -- ------------------------------------------------------------------------- --
+
+Therefore,
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${{{\mathbb{E}}{\lbrack{g_{a}\operatorname{}h_{1}}\rbrack}} = {{\mathbb{E}}\left\lbrack {\sum\limits_{i = 1}^{n}{I_{A_{i}^{Y}}\operatorname{}{{\mathbb{E}}\left\lbrack {g_{i}\operatorname{}h_{1}} \middle| Y \right\rbrack}}} \right\rbrack} = {{\mathbb{E}}\left\lbrack {\sum\limits_{i = 1}^{n}{I_{A_{i}^{Y}} \cdot 0}} \right\rbrack} = 0}.$   
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+As simple functions are dense in $L_{X\operatorname{}Y}^{2}$, we
+immediately have
+${{\mathbb{E}}{\lbrack{g\operatorname{}h_{1}}\rbrack}} = 0$
+${{\forall g} \in L_{X\operatorname{}Y}^{2}},{h_{1} \in E_{2}}$.
+Applying [[Corollary]{.ltx_text .ltx_ref_tag} [A.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A6.EGx9 "Corollary A.2 (Equation 3.8 of Daudin 1980). ‣ Appendix A Conditional independence definitions ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+concludes the proof.
+:::
+
+::: {#A1.15.p5 .ltx_para}
+∎
+:::
+:::
+:::
+
+::: {#A2 .section .ltx_appendix}
+## [Appendix B ]{.ltx_tag .ltx_tag_appendix}CIRCE definition {#appendix-b-circe-definition .ltx_title .ltx_title_appendix}
+
+::: {#A2.p1 .ltx_para}
+First, we need a more convenient function class:
+:::
+
+::: {#A2.Thmtheorem1 .ltx_theorem .ltx_theorem_lemma}
+###### [[Lemma B.1]{#A2.Thmtheorem1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A2.Thmtheorem1.2.2 .ltx_text .ltx_font_bold} {#lemma-b.1. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A2.Thmtheorem1.p1 .ltx_para}
+[The function class
+$E_{2} = \left\{ {{h \in L_{Z\operatorname{}Y}^{2}},{{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack} = 0}} \right\}$
+coincides with the function class
+$E_{2}^{\prime} = \left\{ {{h^{\prime} = {h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}},{h \in L_{Z\operatorname{}Y}^{2}}} \right\}$.]{#A2.Thmtheorem1.p1.2.2
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#A2.2 .ltx_proof}
+###### Proof. {#proof.-3 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A2.1.p1 .ltx_para .ltx_noindent}
+$E_{2} \subseteq E_{2}^{\prime}$: any $h \in E_{2}$ is in
+$L_{Z\operatorname{}Y}^{2}$ and has the form
+$h = {h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}$ by
+construction because the last term is zero.
+:::
+
+::: {#A2.2.p2 .ltx_para}
+$E_{2}^{\prime} \subseteq E_{2}$: first, any
+$h^{\prime} \in E_{2}^{\prime}$ satisfies
+${{\mathbb{E}}\left\lbrack h^{\prime} \middle| Y \right\rbrack} = 0$ by
+construction. Second,
+
+  -- ----------------------------------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $\int{{(h^{\prime})}^{2}\operatorname{}{d\mu}\operatorname{}{(Z,Y)}}$   $= {\int{{({h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}})}^{2}\operatorname{}{d\mu}\operatorname{}{(Z,Y)}}}$                                                                                                                                [(17)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                                             $= {\int{\left( {{h^{2} - {2\operatorname{}h\operatorname{}{{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}}} + \left( {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack} \right)^{2}} \right)\operatorname{}{d\mu}\operatorname{}{(Z,Y)}}}$      [(18)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                                             ${= {\int{\left( {h^{2} - \left( {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack} \right)^{2}} \right)\operatorname{}{d\mu}\operatorname{}{(Z,Y)}}} < {+ \infty}},$                                                                                  [(19)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+
+as $h \in L_{Z\operatorname{}Y}^{2}$ and the second term is
+non-positive. ∎
+:::
+:::
+
+::: {#A2.7 .ltx_proof}
+###### Proof of [[Equation]{.ltx_text .ltx_ref_tag} [9]{.ltx_text .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.E9 "9 ‣ Theorem 2.5. ‣ 2.2 Conditional Independence Regression CovariancE (CIRCE) ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}. {#proof-of-equation-9. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A2.3.p1 .ltx_para .ltx_noindent}
+For the "if" direction, we simply "pull out" the $Y$ expectation in the
+definition of the CIRCE operator and apply conditional independence:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+     $${C_{{X\operatorname{}Z} \mid Y}^{c} = {{\mathbb{E}}_{Y}\left\lbrack {{{\mathbb{E}}_{X}{\lbrack{{\phi\operatorname{}{(X)}} \mid Y}\rbrack}} \otimes \underset{0}{\underbrace{\left( {{{\mathbb{E}}_{Z}⁡{\lbrack{{\psi{(Z,Y)}}\mid Y}\rbrack}}-{{\mathbb{E}}_{Z^{\prime}}⁡{\lbrack{{\psi{(Z^{\prime},Y)}}\mid Y}\rbrack}}} \right)}}} \right\rbrack} = 0}.$$   
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+:::
+
+::: {#A2.4.p2 .ltx_para .ltx_noindent}
+For the other direction, first,
+${\| C_{X\operatorname{}Q}^{c}\|}_{HS} = 0$ implies that for any
+$g \in \mathcal{G}$ and $h \in \mathcal{F}$,
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{\mathbb{E}}\left\lbrack {g\operatorname{}\left( {h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}} \right)} \right\rbrack} = 0$$      [(20)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+by Cauchy-Schwarz.
+:::
+
+::: {#A2.5.p3 .ltx_para .ltx_noindent}
+Now, we use that that an $L_{2}$-universal kernel is dense in $L^{2}$ by
+definition (see Sriperumbudur et al.
+([2011](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib33){.ltx_ref})).
+Therefore, for any $g \in L_{X}^{2}$ and
+$h \in L_{Z\operatorname{}Y}^{2}$, for any $\epsilon > 0$ we can find
+$g_{\epsilon} \in \mathcal{G}$ and $h_{\epsilon} \in \mathcal{F}$ such
+that
+
+  -- -------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{{\|{g - g_{\epsilon}}\|}_{2} \leq \epsilon},{{\|{h - h_{\epsilon}}\|}_{2} \leq \epsilon}}.$$      [(21)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+For the $L^{2}$ function, we can now write the conditional independence
+condition as
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${\mathbb{E}}\left\lbrack {g\operatorname{}\left( {h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}} \right)} \right\rbrack$   $= {{\mathbb{E}}\left\lbrack {{({g \pm g_{\epsilon}})}\operatorname{}\left( {{h \pm h_{\epsilon}} - {{\mathbb{E}}\left\lbrack {h \pm \left. h_{\epsilon} \middle| Y \right.} \right\rbrack}} \right)} \right\rbrack}$                                                                                                                                                                            [(22)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                                                                                                             $= {0 + {{\mathbb{E}}\left\lbrack {{({g - g_{\epsilon}})}\operatorname{}\left( {h - h_{\epsilon} - {{\mathbb{E}}\left\lbrack {h - \left. h_{\epsilon} \middle| Y \right.} \right\rbrack}} \right)} \right\rbrack}}$                                                                                                                                                                              [(23)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                                                                                                             ${{+ {{\mathbb{E}}\left\lbrack {g_{\epsilon}\operatorname{}\left( {h - h_{\epsilon} - {{\mathbb{E}}\left\lbrack {h - \left. h_{\epsilon} \middle| Y \right.} \right\rbrack}} \right)} \right\rbrack}} - {{\mathbb{E}}\left\lbrack {{({g - g_{\epsilon}})}\operatorname{}\left( {h_{\epsilon} - {{\mathbb{E}}\left\lbrack h_{\epsilon} \middle| Y \right\rbrack}} \right)} \right\rbrack}}.$      [(24)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+The first term is zero because
+${\| C_{X\operatorname{}Q}^{c}\|}_{HS} = 0$. For the rest, we need to
+apply Cauchy-Schwarz:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${\mathbb{E}}\left\lbrack {{({g - g_{\epsilon}})}\operatorname{}\left( {h - h_{\epsilon}} \right)} \right\rbrack$                                                                      $\leq {{\|{g - g_{\epsilon}}\|}_{2}\operatorname{}{\|{h - h_{\epsilon}}\|}_{2}} \leq \epsilon^{2}$         [(25)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${\mathbb{E}}\left\lbrack {{({g - g_{\epsilon}})}\operatorname{}\left( {{\mathbb{E}}\left\lbrack {h - \left. h_{\epsilon} \middle| Y \right.} \right\rbrack} \right)} \right\rbrack$   ${\leq {{\|{g - g_{\epsilon}}\|}_{2}\operatorname{}{\|{h - h_{\epsilon}}\|}_{2}} \leq \epsilon^{2}},$      [(26)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+where in the last inequality we used that
+${{\mathbb{E}}\left\lbrack \left( {{\mathbb{E}}\left\lbrack X \middle| H \right\rbrack} \right)^{2} \right\rbrack} \leq {{\mathbb{E}}\left\lbrack X^{2} \right\rbrack}$
+for conditional expectations.
+:::
+
+::: {#A2.6.p4 .ltx_para .ltx_noindent}
+Similarly, also using the reverse triangle inequality,
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${{{\mathbb{E}}\left\lbrack {g_{\epsilon}\operatorname{}\left( {h - h_{\epsilon}} \right)} \right\rbrack} \leq {\epsilon\operatorname{}{\| g_{\epsilon}\|}_{2}} \leq {\epsilon\operatorname{}\left( {{\| g\|}_{2} + \epsilon} \right)}}.$      [(27)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A2.7.p5 .ltx_para}
+Repeating this calculation for the rest of the terms, we can finally
+apply the triangle inequality to show that
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $\left| {{\mathbb{E}}\left\lbrack {g\operatorname{}\left( {h - {{\mathbb{E}}\left\lbrack h\mid Y \right\rbrack}} \right)} \right\rbrack} \right|$   $\leq {{2\operatorname{}\epsilon^{2}} + {2\operatorname{}\epsilon\operatorname{}\left( {{\| g\|}_{2} + \epsilon} \right)} + {2\operatorname{}\epsilon\operatorname{}\left( {{\| h\|}_{2} + \epsilon} \right)}}$      [(28)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                                                                                                                         ${= {2\operatorname{}\epsilon\operatorname{}\left( {{3\operatorname{}\epsilon} + {\| g\|}_{2} + {\| h\|}_{2}} \right)}}.$                                                                                            [(29)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+As ${\| g\|}_{2}$ and ${\| h\|}_{2}$ are fixed and finite, we can make
+the bound arbitrary small, and hence
+${{\mathbb{E}}\left\lbrack {g\operatorname{}\left( {h - {{\mathbb{E}}\left\lbrack h \middle| Y \right\rbrack}} \right)} \right\rbrack} = 0$.
+∎
+:::
+:::
+:::
+
+::: {#A3 .section .ltx_appendix}
+## [Appendix C ]{.ltx_tag .ltx_tag_appendix}Proofs for estimators {#appendix-c-proofs-for-estimators .ltx_title .ltx_title_appendix}
+
+::: {#A3.SS1 .section .ltx_subsection}
+### [C.1 ]{.ltx_tag .ltx_tag_subsection}Estimating the conditional mean embedding {#c.1-estimating-the-conditional-mean-embedding .ltx_title .ltx_title_subsection}
+
+::: {#A3.SS1.p1 .ltx_para .ltx_noindent}
+We will construct an estimate of the term
+${\mathbb{E}}_{Z}\left\lbrack {\psi\operatorname{}{(Z,Y)}} \middle| Y \right\rbrack$
+that appears inside CIRCE, as a function of $Y$. We summarize the
+established results on conditional feature mean estimation: see
+(Grunewalder et al.,
+[2012](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib12){.ltx_ref};
+Park & Muandet,
+[2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib26){.ltx_ref};
+Mollenhauer & Koltai,
+[2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib25){.ltx_ref};
+Klebanov et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib17){.ltx_ref};
+Li et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref})
+for further details. To learn
+${\mathbb{E}}\left\lbrack {\psi\operatorname{}{(Q)}} \middle| Y \right\rbrack$
+for some feature map ${\psi\operatorname{}{(q)}} \in \mathcal{H}_{Q}$
+and random variable $Q$ (both to be specified shortly), we can minimize
+the following loss:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{{\hat{\mu}}_{Q|{Y,\lambda}}\operatorname{}{(y)}} = {{\underset{F \in \mathcal{G}_{Q\operatorname{}Y}}{\arg\operatorname{}\min}\operatorname{}{\sum\limits_{i = 1}^{N}\left\| {{\psi\operatorname{}{(q_{i})}} - {F\operatorname{}{(y_{i})}}} \right\|_{\mathcal{H}_{Q}}^{2}}} + {\lambda\operatorname{}{\| F\|}_{\mathcal{G}_{Q\operatorname{}Y}}^{2}}}},$$      [(30)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+where $\mathcal{G}_{Q\operatorname{}Y}$ is the space of functions from
+$Y$ to $\mathcal{H}_{Q}$. The above solution is said to be
+[well-specified]{#A3.SS1.p1.14.1 .ltx_text .ltx_font_italic} when there
+exists a Hilbert-Schmidt operator
+$A^{*} \in {H\operatorname{}S\operatorname{}{(\mathcal{H}_{Y},\mathcal{H}_{Q})}}$
+such that
+${F^{*}\operatorname{}{(y)}} = {A^{*}\operatorname{}\psi\operatorname{}{(y)}}$
+for all $y \in \mathcal{Y}$, where $\mathcal{H}_{Y}$ is the RKHS on
+$\mathcal{Y}$ with feature map $\psi\operatorname{}{(y)}$ (Li et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref}).
+:::
+
+::: {#A3.SS1.p2 .ltx_para .ltx_noindent}
+We now consider the case relevant to our setting, where ${Q:={(Z,Y)}}.$
+We define[^6^[[^6^[6]{.ltx_tag .ltx_tag_note}We abuse notation in using
+$\psi$ to denote feature maps of ${(Y,Z)},$ $Y,$ and $Z$; in other
+words, we use the argument of the feature map to specify the feature
+space, to simplify
+notation.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote6 .ltx_note
+.ltx_role_footnote}
+${{\psi\operatorname{}{(Z,Y)}} = {{{\psi\operatorname{}{(Z)}} \otimes \psi}\operatorname{}{(Y)}}},$
+which for radial basis kernels (e.g. Gaussian, Laplace) is
+$L_{2}$-universal for $(Z,Y)$.[^7^[[^7^[7]{.ltx_tag
+.ltx_tag_note}Fukumizu et al.
+([2008](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib6){.ltx_ref},
+Section 2.2) show this kernel is *characteristic*, and Sriperumbudur
+et al.
+([2011](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib33){.ltx_ref},
+Figure 1 (3)) that being characteristic implies $L_{2}$ universality in
+this case.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote7 .ltx_note
+.ltx_role_footnote} We then write
+${{\mathbb{E}}_{Z}\left\lbrack {\left. {\psi\operatorname{}{(Z,y)}} \middle| Y \right. = y} \right\rbrack} = {{{{\mathbb{E}}_{Z}\left\lbrack {\left. {\psi\operatorname{}{(Z)}} \middle| Y \right. = y} \right\rbrack} \otimes \psi}\operatorname{}{(y)}}$.
+The conditional feature mean
+${\mathbb{E}}\left\lbrack {\psi\operatorname{}{(Z)}} \middle| Y \right\rbrack$
+can be found with kernel ridge regression (Grunewalder et al.,
+[2012](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib12){.ltx_ref};
+Li et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref}):
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${\mu_{Z|Y}\operatorname{}{(y)}} \equiv {{{\mathbb{E}}\left\lbrack {\psi\operatorname{}{(Z)}} \middle| Y \right\rbrack}\operatorname{}{(y)}} \approx {K_{y\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} + {\lambda\operatorname{}I}} \right)^{- 1}\operatorname{}K_{Z\operatorname{} \cdot}}$      [(31)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+where $K_{Z\operatorname{} \cdot}$ indicates a "matrix" with rows
+$\psi\operatorname{}{(z_{i})}$,
+${{(K_{Y\operatorname{}Y})}_{i,j} = {k\operatorname{}{(y_{i},y_{j})}}},$
+and ${{(K_{y\operatorname{}Y})}_{i} = {k\operatorname{}{(y,y_{i})}}}.$
+Note that we have used the argument of $k$ to identify which feature
+space it pertains to -- i.e., the kernel on $Z$ need not be the same as
+that on $Y$.
+:::
+
+::: {#A3.SS1.p3 .ltx_para}
+We can find good choices for the $Y$ kernel and the ridge parameter
+$\lambda$ by minimizing the leave-one-out cross-validation error. In
+kernel ridge regression, this is almost computationally free, based on
+the following version of a classic result for scalar-valued ridge
+regression. The proof generalizes the proof of Theorem 3.2 of Bachmann
+et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib1){.ltx_ref})
+to RKHS-valued outputs.
+:::
+
+::: {#A3.Thmtheorem1 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem C.1]{#A3.Thmtheorem1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#A3.Thmtheorem1.2.2 .ltx_text .ltx_font_bold}(Leave-one-out for kernel mean embeddings)[.]{#A3.Thmtheorem1.3.3 .ltx_text .ltx_font_bold} {#theorem-c.1-leave-one-out-for-kernel-mean-embeddings. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A3.Thmtheorem1.p1 .ltx_para}
+[Denote the predictor trained on the full dataset as $F_{\mathcal{S}}$,
+and the one trained without the $i$-th point as $F_{- i}$. For
+$\lambda > 0$ and
+$A \equiv {K_{Y\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} + {\lambda\operatorname{}I}} \right)^{- 1}}$,
+the leave-one-out (LOO) error for [[Equation]{.ltx_text
+.ltx_ref_tag} [30]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.E30 "30 ‣ C.1 Estimating the conditional mean embedding ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+is]{#A3.Thmtheorem1.p1.5.5 .ltx_text .ltx_font_italic}
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${{\frac{1}{N}\operatorname{}{\sum\limits_{i = 1}^{N}\left\| {{\psi\operatorname{}{(z_{i})}} - {F_{- i}\operatorname{}{(y_{i})}}} \right\|_{\mathcal{H}_{Z}}^{2}}} = {\frac{1}{N}\operatorname{}{\sum\limits_{i = 1}^{N}\frac{\left\| {{\psi\operatorname{}{(z_{i})}} - {F_{\mathcal{S}}\operatorname{}{(y_{i})}}} \right\|_{\mathcal{H}_{Z}}^{2}}{{({1 - A_{i\operatorname{}i}})}^{2}}}}}.$$      [(32)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+:::
+:::
+
+::: {#A3.SS1.2 .ltx_proof}
+###### Proof. {#proof.-4 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A3.SS1.1.p1 .ltx_para .ltx_noindent}
+Denote the full dataset
+$\mathcal{S} = {\{{(y_{i},z_{i})}\}}_{i = 1}^{M}$; the dataset missing
+the $i$-th point is denoted $\mathcal{S}_{- i}$. Prediction on the full
+dataset takes the form
+${F\operatorname{}{(Y)}} = {A\operatorname{}K_{Z\operatorname{} \cdot}}$.
+:::
+
+::: {#A3.SS1.2.p2 .ltx_para}
+Consider the prediction obtained without the $M$-th point (w.l.o.g.) but
+evaluated on $y_{M}$: $F_{- M}\operatorname{}{(y_{M})}$. Define a new
+dataset
+$\mathcal{Z} = {\mathcal{S}_{- M} \cup \left\{ {(y_{M},{F_{- M}\operatorname{}{(y_{M})}})} \right\}}$
+and compute the loss for it:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${L_{\mathcal{Z}}\operatorname{}{(F_{- M})}} = {{\sum\limits_{i = 1}^{M - 1}\left\| {{\psi\operatorname{}{(z_{i})}} - {F_{- M}\operatorname{}{(y_{i})}}} \right\|_{\mathcal{H}_{Z}}^{2}} + \left\| {{F_{- M}\operatorname{}{(y_{M})}} - {F_{- M}\operatorname{}{(y_{M})}}} \right\|_{\mathcal{H}_{Z}}^{2} + {\lambda\operatorname{}{\| F_{- M}\|}_{\mathcal{G}_{Z\operatorname{}Y}}^{2}}}$      [(33)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${= {L_{\mathcal{S}_{- M}}\operatorname{}{(F_{- M})}} \leq {L_{\mathcal{S}_{- M}}\operatorname{}{(F)}} \leq {{L_{\mathcal{S}_{- M}}\operatorname{}{(F)}} + \left\| {{F_{- M}\operatorname{}{(y_{M})}} - {F\operatorname{}{(y_{M})}}} \right\|_{\mathcal{H}_{Z}}^{2}} \leq {L_{\mathcal{Z}}\operatorname{}{(F)}}},$                                                                              [(34)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+where the first inequality is due to $F_{- M}$ minimizing
+$L_{\mathcal{S}_{- M}}$. Therefore, $F_{- M}$ also minimizes
+$L_{\mathcal{Z}}$. As $A$ in the prediction expression
+${F_{\mathcal{S}}\operatorname{}{(Y)}} = {A\operatorname{}K_{Z \cdot}}$
+depends only on $Y$, and not on $Z$, $F_{- M}$ has to have the same form
+as the full prediction:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${{F_{- M}\operatorname{}{(Y)}} = {A\operatorname{}K_{\overset{\sim}{Z}\operatorname{} \cdot}}},{K_{{\overset{\sim}{z}}_{i}, \cdot} = \begin{cases}      [(35)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     {{\psi\operatorname{}{(z_{i})}},} & {{i < M},} \\                                                                                                         
+     {{F_{- M}\operatorname{}{(y_{M})}},} & {{i = M}.}                                                                                                         
+     \end{cases}}$$                                                                                                                                            
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+
+This allows us to solve for $F_{- M}\operatorname{}{(y_{M})}$:
+
+  -- ----------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $F_{- M}\operatorname{}{(y_{M})}$   $= {K_{y_{M}\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} + {\lambda\operatorname{}I}} \right)^{- 1}\operatorname{}K_{\overset{\sim}{Z}\operatorname{} \cdot}} = {\sum\limits_{i = 1}^{M}{A_{M\operatorname{}i}\operatorname{}\psi\operatorname{}{(z_{i})}}}$      [(36)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                         $= {{{\sum\limits_{i = 1}^{M - 1}{A_{M\operatorname{}i}\operatorname{}\psi\operatorname{}{(z_{i})}}} + {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{i})}}} \pm {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{M})}}}$                                [(37)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                         $= {{{\sum\limits_{i = 1}^{M}{A_{M\operatorname{}i}\operatorname{}\psi\operatorname{}{(z_{i})}}} - {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{M})}}} + {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{i})}}}$                                      [(38)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                         $= {{{F_{\mathcal{S}}\operatorname{}{(y_{M})}} - {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{M})}}} + {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{i})}}}$                                                                                        [(39)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                         ${= {{{F_{\mathcal{S}}\operatorname{}{(y_{M})}} - {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{M})}}} + {A_{M\operatorname{}M}\operatorname{}F_{- M}\operatorname{}{(y_{M})}}}}.$                                                                                  [(40)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+As $A_{M\operatorname{}M}$ is a scalar, we can solve for
+$F_{- M}\operatorname{}{(y_{M})}$:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${F_{- M}\operatorname{}{(y_{M})}} = \frac{{F_{\mathcal{S}}\operatorname{}{(y_{M})}} - {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{M})}}}{1 - A_{M\operatorname{}M}}$      [(41)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+Therefore,
+
+  -- ---------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${\psi\operatorname{}{(z_{M})}} - {F_{- M}\operatorname{}{(y_{M})}}$   $= \frac{{{{({1 - A_{M\operatorname{}M}})}\operatorname{}\psi\operatorname{}{(z_{M})}} - {F_{\mathcal{S}}\operatorname{}{(y_{M})}}} + {A_{M\operatorname{}M}\operatorname{}\psi\operatorname{}{(z_{M})}}}{1 - A_{M\operatorname{}M}}$      [(42)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+                                                                            ${= \frac{{\psi\operatorname{}{(z_{M})}} - {F_{\mathcal{S}}\operatorname{}{(y_{M})}}}{1 - A_{M\operatorname{}M}}}.$                                                                                                                        [(43)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+Taking the norm and summing this result over all points (not just $M$)
+gives the LOO error. ∎
+:::
+:::
+:::
+
+::: {#A3.SS2 .section .ltx_subsection}
+### [C.2 ]{.ltx_tag .ltx_tag_subsection}CIRCE estimators {#c.2-circe-estimators .ltx_title .ltx_title_subsection}
+
+::: {#A3.Thmtheorem2 .ltx_theorem .ltx_theorem_lemma}
+###### [[Lemma C.2]{#A3.Thmtheorem2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem2.2.2 .ltx_text .ltx_font_bold} {#lemma-c.2. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A3.Thmtheorem2.p1 .ltx_para}
+[For $B$ points and
+$K_{z\operatorname{}z^{\prime}}^{c} = \left\langle {{\psi\operatorname{}{(z)}} - {{{\mathbb{E}}\left\lbrack Z \middle| Y \right\rbrack}\operatorname{}{(y)}}},{{\psi\operatorname{}{(z^{\prime})}} - {{{\mathbb{E}}\left\lbrack Z \middle| Y \right\rbrack}\operatorname{}{(y^{\prime})}}} \right\rangle$,
+the CIRCE estimator]{#A3.Thmtheorem2.p1.2.2 .ltx_text .ltx_font_italic}
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${\hat{{\| C_{{XZ}\mid Y}^{c}\|}^{2}}}_{HS} = {\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}{({K_{Y\operatorname{}Y} \odot K_{Z\operatorname{}Z}^{c}})}} \right)}$$      [(44)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+[has $O\operatorname{}{({1/B})}$ bias and
+$O_{p}\operatorname{}{({1/\sqrt{B}})}$ deviation from the mean for any
+fixed probability of the deviation. ]{#A3.Thmtheorem2.p1.4.2 .ltx_text
+.ltx_font_italic}
+:::
+:::
+
+::: {#A3.SS2.1 .ltx_proof}
+###### Proof. {#proof.-5 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A3.SS2.1.p1 .ltx_para}
+The bias is straightforward:
+
+  -- ----- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+           $\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{{\mathbb{E}}\left\lbrack {{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}{({K_{Y\operatorname{}Y} \odot K_{Z\operatorname{}Z}^{c}})}} \right)} \right\rbrack}$                                                                                                                                                                                                                                                                     
+     $=$   ${\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{{\mathbb{E}}\left\lbrack {\sum\limits_{{i,j} \neq i}{K_{x_{i}\operatorname{}x_{j}}\operatorname{}K_{y_{i}\operatorname{}y_{j}}\operatorname{}K_{z_{i}\operatorname{}z_{j}}^{c}}} \right\rbrack}} + {\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{{\mathbb{E}}\left\lbrack {\sum\limits_{i}{K_{x_{i}\operatorname{}x_{i}}\operatorname{}K_{y_{i}\operatorname{}y_{i}}\operatorname{}K_{z_{i}\operatorname{}z_{i}}^{c}}} \right\rbrack}}$   
+     $=$   ${\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{\sum\limits_{{i,j} \neq i}{{\mathbb{E}}_{x\operatorname{}x^{\prime}\operatorname{}y\operatorname{}y^{\prime}\operatorname{}z\operatorname{}z^{\prime}}\left\lbrack {K_{x\operatorname{}x^{\prime}}\operatorname{}K_{y\operatorname{}y^{\prime}}\operatorname{}K_{z\operatorname{}z^{\prime}}^{c}} \right\rbrack}}} + {O\operatorname{}\left( \frac{1}{B} \right)}$                                                                                
+     $=$   ${{\| C_{X\operatorname{}Q}^{c}\|}_{HS}^{2} + {O\operatorname{}\left( \frac{1}{B} \right)}}.$                                                                                                                                                                                                                                                                                                                                                                                                            
+  -- ----- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+For the variance, first note that our estimator has bounded differences.
+Denote
+$K_{T\operatorname{}T} = {K_{Y\operatorname{}Y} \odot K_{Z\operatorname{}Z}^{c}}$
+and $t = {(y,z)}$, if we switch one datapoint $(x_{i},t_{i})$ to
+$(x_{i}^{\prime},t_{i}^{\prime})$ and denote the vectors with switch
+coordinates as $X^{i},T^{i}$
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $\left| {{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{T\operatorname{}T}} \right)} - {{Tr}\operatorname{}\left( {K_{X^{i}\operatorname{}X^{i}}\operatorname{}K_{T^{i}\operatorname{}T^{i}}} \right)}} \right|$                                                                                                                                                                                                                            
+     $= \left| {{{K_{x_{i}\operatorname{}x_{i}}\operatorname{}K_{t_{i}\operatorname{}t_{i}}} - {K_{x_{i}^{\prime}\operatorname{}x_{i}^{\prime}}\operatorname{}K_{t_{i}^{\prime}\operatorname{}t_{i}^{\prime}}}} + {2\operatorname{}{\sum\limits_{j \neq i}\left( {{K_{x_{j}\operatorname{}x_{i}}\operatorname{}K_{t_{j}\operatorname{}t_{i}}} - {K_{x_{j}\operatorname{}x_{i}^{\prime}}\operatorname{}K_{t_{j}\operatorname{}t_{i}^{\prime}}}} \right)}}} \right|$   
+     ${\leq {{({2 + {4\operatorname{}{({B - 1})}}})}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{t\operatorname{}\max}} \leq {{({{4\operatorname{}B} - 2})}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{y\operatorname{}\max}\operatorname{}K_{z\operatorname{}\max}^{c}}}.$                                                                                                                                                                 
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+Therefore, for any index $i$
+
+  -- -------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+              $\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}\left| {{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}\left( {K_{Y\operatorname{}Y} \odot K_{Z\operatorname{}Z}^{c}} \right)} \right)} - {{Tr}\operatorname{}\left( {K_{X^{i}\operatorname{}X^{i}}\operatorname{}\left( {K_{Y^{i}\operatorname{}Y^{i}} \odot K_{Z^{i}\operatorname{}Z^{i}}^{c}} \right)} \right)}} \right|$   
+     $\leq$   ${\frac{{4\operatorname{}B} - 2}{B\operatorname{}{({B - 1})}}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{y\operatorname{}\max}\operatorname{}K_{z\operatorname{}\max}^{c}}.$                                                                                                                                                                                                            
+  -- -------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+We can now use McDiarmid's inequality (McDiarmid,
+[1989](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib23){.ltx_ref})
+with
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $${c = c_{i} = {\frac{{4\operatorname{}B} - 2}{B\operatorname{}{({B - 1})}}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{y\operatorname{}\max}\operatorname{}K_{z\operatorname{}\max}^{c}}},$$   
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+meaning that for any $\epsilon > 0$
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${P\operatorname{}\left( {\left| {\frac{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{T\operatorname{}T}} \right)}{B\operatorname{}{({B - 1})}} - {{\mathbb{E}}\frac{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{T\operatorname{}T}} \right)}{B\operatorname{}{({B - 1})}}}} \right| \geq \epsilon} \right)} \leq {2\operatorname{}{\exp\left( {- \frac{2\operatorname{}\epsilon^{2}}{B\operatorname{}c^{2}}} \right)}}$   
+     ${= {2\operatorname{}{\exp\left( {- \frac{2\operatorname{}\epsilon^{2}\operatorname{}B\operatorname{}{({B - 1})}^{2}}{{({{4\operatorname{}B} - 2})}^{2}\operatorname{}K_{x\operatorname{}\max}^{2}\operatorname{}K_{y\operatorname{}\max}^{2}\operatorname{}K_{z\operatorname{}\max}^{2\operatorname{}c}}} \right)}}}.$                                                                                                                                              
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+Therefore, for any fixed probability the deviation $\epsilon$ from the
+mean decays as $O\operatorname{}{({1/\sqrt{B}})}$. ∎
+:::
+:::
+
+::: {#A3.Thmtheorem3 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition C.3]{#A3.Thmtheorem3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem3.2.2 .ltx_text .ltx_font_bold} {#definition-c.3. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A3.Thmtheorem3.p1 .ltx_para .ltx_noindent}
+A $(\beta,p)$-kernel for a given data distribution satisfies the
+following conditions (see Fischer & Steinwart
+([2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib5){.ltx_ref});
+Li et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref})
+for precise definition using interpolation spaces):
+:::
+
+::: {#A3.Thmtheorem3.p2 .ltx_para}
+1.  [[(EVD)]{.ltx_tag .ltx_tag_item}]{#A3.I1.ix1}
+
+    ::: {#A3.I1.ix1.p1 .ltx_para}
+    Eigenvalues $\mu_{i}$ of the covariance operator
+    $C_{Y\operatorname{}Y}$ decay as
+    $\mu_{i} \leq {c \cdot i^{- {1/p}}}$.
+    :::
+2.  [[(EMB)]{.ltx_tag .ltx_tag_item}]{#A3.I1.ix2}
+
+    ::: {#A3.I1.ix2.p1 .ltx_para}
+    For $\alpha \in {(p,1\rbrack}$, the inclusion map
+    $\lbrack{\mathcal{H}_{Y}^{\alpha}\hookrightarrow{L_{\infty}\operatorname{}{(\pi)}}}\rbrack$
+    is continuous and bounded by $A$.
+    :::
+3.  [[(SRC)]{.ltx_tag .ltx_tag_item}]{#A3.I1.ix3}
+
+    ::: {#A3.I1.ix3.p1 .ltx_para .ltx_noindent}
+    $F \in {\lbrack\mathcal{G}\rbrack}^{\beta}$ for
+    $\beta \in {\lbrack 1,2\rbrack}$ (note that $\beta < 1$ would
+    include the misspecified setting).
+    :::
+:::
+:::
+
+::: {#A3.Thmtheorem4 .ltx_theorem .ltx_theorem_lemma}
+###### [[Lemma C.4]{#A3.Thmtheorem4.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem4.2.2 .ltx_text .ltx_font_bold} {#lemma-c.4. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A3.Thmtheorem4.p1 .ltx_para .ltx_noindent}
+[Consider the well-specified case of conditional expectation estimation
+(see Li et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref}).
+For bounded kernels over $X,Z,Y$ and a $(\beta,p)$-kernel over $Y$,
+${F\operatorname{}{(y)}} = {{{\mathbb{E}}\left\lbrack {\psi\operatorname{}{(Z)}} \middle| Y \right\rbrack}\operatorname{}{(y)}}$,
+bounded ${\| F\|} \leq C_{F}$, and $M$ points used to estimate $F$,
+define the conditional expectation estimate as]{#A3.Thmtheorem4.p1.7.7
+.ltx_text .ltx_font_italic}
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{\hat{F}\operatorname{}{(y)}} = {K_{y\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} + {\lambda_{M}\operatorname{}I}} \right)^{- 1}\operatorname{}K_{Z\operatorname{} \cdot}}},$$      [(45)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+[where
+$\lambda_{M} = {\Theta\operatorname{}{({1/M^{\beta + p}})}}$.]{#A3.Thmtheorem4.p1.8.1
+.ltx_text .ltx_font_italic}
+:::
+
+::: {#A3.Thmtheorem4.p2 .ltx_para}
+[Then, the estimator
+${{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}{\hat{K}}_{Z\operatorname{}Z}^{c}} \right)}/{({B\operatorname{}{({B - 1})}})}$
+of the "true" CIRCE estimator (i.e., with the actual conditional
+expectation) deviates from the true value as
+$O_{p}\operatorname{}{({1/M^{{({\beta - 1})}/{({2\operatorname{}{({\beta + p})}})}}})}$.]{#A3.Thmtheorem4.p2.2.2
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#A3.SS2.8 .ltx_proof}
+###### Proof. {#proof.-6 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A3.SS2.2.p1 .ltx_para .ltx_noindent}
+First, decompose the difference:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{Z\operatorname{}Z}^{c}} \right)} - {{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}{\hat{K}}_{Z\operatorname{}Z}^{c}} \right)}} = {{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}\left( {K_{Z\operatorname{}Z}^{c} - K_{Z\operatorname{}Z}^{c}} \right)} \right)}$                                                                          [(46)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${= {{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}\left\lbrack {\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right) \odot K_{Y\operatorname{}Y}} \right\rbrack} \right)} = {{Tr}\operatorname{}\left( {\left\lbrack {K_{X\operatorname{}X} \odot K_{Y\operatorname{}Y}} \right\rbrack\operatorname{}\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)} \right)}},$      [(47)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+where in the last line we used that all matrices are symmetric.
+:::
+
+::: {#A3.SS2.3.p2 .ltx_para .ltx_noindent}
+Let's concentrate on the difference:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)_{i\operatorname{}j} = {\left\langle {{\hat{F}\operatorname{}{(y_{i})}} - {F\operatorname{}{(y_{i})}}},{\psi\operatorname{}{(z_{j})}} \right\rangle + \left\langle {{\hat{F}\operatorname{}{(y_{j})}} - {F\operatorname{}{(y_{j})}}},{\psi\operatorname{}{(z_{i})}} \right\rangle}$      [(48)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${+ \left\langle {F\operatorname{}{(y_{i})}},{F\operatorname{}{(y_{j})}} \right\rangle} - \left\langle {\hat{F}\operatorname{}{(y_{i})}},{{\hat{F}\operatorname{}{(y_{j})}} \pm {F\operatorname{}{(y_{j})}}} \right\rangle$                                                                                                                                             [(49)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $= {\left\langle {{\hat{F}\operatorname{}{(y_{i})}} - {F\operatorname{}{(y_{i})}}},{\psi\operatorname{}{(z_{j})}} \right\rangle + \left\langle {{\hat{F}\operatorname{}{(y_{j})}} - {F\operatorname{}{(y_{j})}}},{\psi\operatorname{}{(z_{i})}} \right\rangle}$                                                                                                         [(50)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${+ \left\langle {{F\operatorname{}{(y_{i})}} - {\hat{F}\operatorname{}{(y_{i})}}},{F\operatorname{}{(y_{j})}} \right\rangle} - \left\langle {\hat{F}\operatorname{}{(y_{i})}},{{\hat{F}\operatorname{}{(y_{j})}} - {F\operatorname{}{(y_{j})}}} \right\rangle$                                                                                                         [(51)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${= {\left\langle {{F\operatorname{}{(y_{i})}} - {\hat{F}\operatorname{}{(y_{i})}}},{{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}} \right\rangle + \left\langle {{F\operatorname{}{(y_{j})}} - {\hat{F}\operatorname{}{(y_{j})}}},{{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}} \right\rangle}}.$                                [(52)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A3.SS2.4.p3 .ltx_para .ltx_noindent}
+As we're working in the well-specified case, by definition the operator
+$F \in \mathcal{G}$, where $\mathcal{G}$ is a vector-valued RKHS (Li
+et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref},
+Definition 1). This implies that for the function
+${{\lbrack{K_{x}\operatorname{}h}\rbrack}\operatorname{}{( \cdot )}} = {K\operatorname{}{( \cdot ,x)}\operatorname{}h}$
+(where $h \in \mathcal{H}_{y}$),
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${\left\langle {F\operatorname{}{(x)}},h \right\rangle = \left\langle F,{K_{x}\operatorname{}h} \right\rangle_{\mathcal{G}}}.$$      [(53)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A3.SS2.5.p4 .ltx_para .ltx_noindent}
+We can now re-write the difference as
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)_{i\operatorname{}j} = \left\langle {F - \hat{F}},{{K_{y_{i}}\operatorname{}\left( {{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}} \right)} + {K_{y_{j}}\operatorname{}\left( {{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}} \right)}} \right\rangle_{\mathcal{G}}}.$      [(54)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A3.SS2.6.p5 .ltx_para .ltx_noindent}
+We can use the triangle inequality and then Cauchy-Schwarz to obtain
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $\left| \left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)_{i\operatorname{}j} \right| \leq {{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {\left\| {K_{y_{i}}\operatorname{}\left( {{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}} \right)} \right\|_{\mathcal{G}} + \left\| {K_{y_{j}}\operatorname{}\left( {{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}} \right)} \right\|_{\mathcal{G}}} \right)}$      [(55)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $= {{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {{k\operatorname{}{(y_{i},y_{i})}\operatorname{}{\|{{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}}\|}_{\mathcal{H}_{Z}}} + {k\operatorname{}{(y_{j},y_{j})}\operatorname{}{\|{{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}}\|}_{\mathcal{H}_{Z}}}} \right)}$                                                                                                                           [(56)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${\leq {C_{1}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {C_{2} + {C_{3}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}}} \right)}},$                                                                                                                                                                                                                                                                                                                       [(57)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+for some positive constants $C_{1,2,3}$ (since the kernels over both $z$
+and $y$ are bounded, $F$ is bounded too and hence
+${\|\hat{F}\|} \leq {{\|{\hat{F} - F}\|} + {\| F\|}}$.
+:::
+
+::: {#A3.SS2.7.p6 .ltx_para .ltx_noindent}
+As all kernels are bounded,
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $\frac{\left| {{Tr}\operatorname{}\left( {\left\lbrack {K_{X\operatorname{}X} \odot K_{Y\operatorname{}Y}} \right\rbrack\operatorname{}\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)} \right)} \right|}{B\operatorname{}{({B - 1})}} \leq {C_{1}\operatorname{}C_{4}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {C_{2} + {C_{3}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}}} \right)}$      [(58)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+for positive constants $C_{1}$ to $C_{4}$.
+:::
+
+::: {#A3.SS2.8.p7 .ltx_para}
+Now we can use Theorem 2 of Li et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref})
+with $\gamma = 1$ and
+$\lambda = {\Theta\operatorname{}{({1/M^{\beta + p}})}}$, which shows
+that
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${{P\operatorname{}\left( {{\|{F - \hat{F}}\|}_{\mathcal{G}} \leq {\tau\operatorname{}\sqrt{K}\operatorname{}M^{- \frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}}} \right)} \geq {1 - {4\operatorname{}e^{- \tau}}}},$      [(59)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+for some positive constant $K$, which gives us the
+$O_{p}\operatorname{}{({1/M^{\frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}})}$
+deviation. ∎
+:::
+:::
+
+::: {#A3.SS2.p1 .ltx_para}
+Now we can combine the two lemmas to prove [[Theorem]{.ltx_text
+.ltx_ref_tag} [2.7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem7 "Theorem 2.7. ‣ 2.3 Empirical CIRCE estimate and its use as a conditional independence regularizer ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}:
+:::
+
+::: {#A3.SS2.9 .ltx_proof}
+###### Proof of [[Theorem]{.ltx_text .ltx_ref_tag} [2.7]{.ltx_text .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem7 "Theorem 2.7. ‣ 2.3 Empirical CIRCE estimate and its use as a conditional independence regularizer ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}. {#proof-of-theorem-2.7. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A3.SS2.9.p1 .ltx_para}
+Combining [[Lemma]{.ltx_text .ltx_ref_tag} [C.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem2 "Lemma C.2. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+and [[Lemma]{.ltx_text .ltx_ref_tag} [C.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem4 "Lemma C.4. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+and using a union bound, we obtain the
+$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{\frac{\beta}{2\operatorname{}{({\beta + p})}}}}})}$
+rate. ∎
+:::
+:::
+
+::: {#A3.Thmtheorem5 .ltx_theorem .ltx_theorem_corollary}
+###### [[Corollary C.5]{#A3.Thmtheorem5.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem5.2.2 .ltx_text .ltx_font_bold} {#corollary-c.5. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A3.Thmtheorem5.p1 .ltx_para}
+[For $B$ points and $M$ holdout points, the CIRCE
+estimator]{#A3.Thmtheorem5.p1.2.2 .ltx_text .ltx_font_italic}
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{\hat{\text{𝐶𝐼𝑅𝐶𝐸}} = {\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{Tr}\operatorname{}\left( {{\overset{\sim}{K}}_{X\operatorname{}X}\operatorname{}\left( {{\overset{\sim}{K}}_{Y\operatorname{}Y} \odot {\hat{\overset{\sim}{K}}}_{Z\operatorname{}Z}^{c}} \right)} \right)}},{\overset{\sim}{A} = {A - {{diag}\operatorname{}{(A)}}}}},$$      [(60)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+[converges as
+$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{\frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}}})}$.]{#A3.Thmtheorem5.p1.3.1
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#A3.SS2.10 .ltx_proof}
+###### Proof. {#proof.-7 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A3.SS2.10.p1 .ltx_para}
+This follows from the previous two proofs. ∎
+:::
+:::
+
+::: {#A3.Thmtheorem6 .ltx_theorem .ltx_theorem_corollary}
+###### [[Corollary C.6]{#A3.Thmtheorem6.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem6.2.2 .ltx_text .ltx_font_bold} {#corollary-c.6. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#A3.Thmtheorem6.p1 .ltx_para}
+[For $B$ points and $M$ holdout points, the CIRCE
+estimator]{#A3.Thmtheorem6.p1.2.2 .ltx_text .ltx_font_italic}
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${\hat{\text{𝐶𝐼𝑅𝐶𝐸}} = {\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{Tr}\operatorname{}\left( {H\operatorname{}K_{X\operatorname{}X}\operatorname{}H\operatorname{}\left( {K_{Y\operatorname{}Y} \odot {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)} \right)}},{H = {I - {\frac{1}{B}\operatorname{}1_{B}\operatorname{}1_{B}^{\top}}}}$$      [(61)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+[has bias of $O\operatorname{}{({1/B})}$ and converges as
+$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{\frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}}})}$.]{#A3.Thmtheorem6.p1.4.2
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#A3.SS2.11 .ltx_proof}
+###### Proof. {#proof.-8 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A3.SS2.11.p1 .ltx_para}
+This follows from the previous two proofs and the fact that $K^{c}$ is a
+centered matrix, meaning that in expectation
+${H\operatorname{}K^{c}\operatorname{}H} = K^{c}$. ∎
+:::
+:::
+
+::: {#A3.SS2.p2 .ltx_para .ltx_noindent}
+This estimator can be less biased in practice, as
+${\hat{K}}_{Z\operatorname{}Z}^{c}$ is typically biased due to
+conditional expectation estimation, and
+$H\operatorname{}{\hat{K}}^{c}\operatorname{}H$ re-centers it.
+:::
+:::
+:::
+
+::: {#A4 .section .ltx_appendix}
+## [Appendix D ]{.ltx_tag .ltx_tag_appendix}Random Fourier features {#appendix-d-random-fourier-features .ltx_title .ltx_title_appendix}
+
+::: {#A4.p1 .ltx_para .ltx_noindent}
+Random Fourier features (RFF) Rahimi & Recht
+([2007](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib29){.ltx_ref})
+allow to approximate a kernel
+${k\operatorname{}{(x_{1},x_{2})}} \approx {\frac{1}{D}\operatorname{}{\sum_{i = 1}^{D}{r_{i}\operatorname{}{(x_{1})}^{\top}\operatorname{}r_{i}\operatorname{}{(x_{2})}}}}$,
+and therefore $K = {R\operatorname{}R^{\top}}$.
+:::
+
+::: {#A4.p2 .ltx_para .ltx_noindent}
+The algorithm to estimate CIRCE with RFF is provided in
+[[Algorithm]{.ltx_text .ltx_ref_tag} [2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#alg2 "Algorithm 2 ‣ Appendix D Random Fourier features ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
+We sample $D_{0}$ points every $L$ iterations, but in every batch only
+use $D$ of them to reduce computational costs. It takes
+$O\operatorname{}{({{D_{0}\operatorname{}M^{2}} + {D_{0}^{2}\operatorname{}M}})}$
+to compute $W_{1}^{r}$ and $W_{2}^{r}$ every $L$ iterations. At each
+iteration, it takes
+$O\operatorname{}{({{B\operatorname{}D^{2}} + {B^{2}\operatorname{}D}})}$
+to compute CIRCE. Therefore, average (per iteration) cost of RFF
+estimation becomes
+$O\operatorname{}{({{\frac{D_{0}}{L}\operatorname{}M^{2}} + {\frac{D_{0}^{2}}{L}\operatorname{}M} + {B\operatorname{}D^{2}} + {B^{2}\operatorname{}D}})}$.
+:::
+
+<figure id="alg2" class="ltx_float ltx_float_algorithm ltx_framed_top">
+<div id="alg2.3" class="ltx_listing">
+<div id="alg2.l1" class="ltx_listingline">
+Holdout data <span
+class="math inline">{(<em>z</em><sub><em>i</em></sub>,<em>y</em><sub><em>i</em></sub>)}<sub><em>i</em> = 1</sub><sup><em>M</em></sup></span>,
+mini-batch <span
+class="math inline">{(<em>x</em><sub><em>i</em></sub>,<em>z</em><sub><em>i</em></sub>,<em>y</em><sub><em>i</em></sub>)}<sub><em>i</em> = 1</sub><sup><em>B</em></sup></span>
+</div>
+<div id="alg2.l2" class="ltx_listingline">
+<span id="alg2.l2.1" class="ltx_text ltx_font_bold">Holdout data</span>
+</div>
+<div id="alg2.l3" class="ltx_listingline">
+Leave-one-out (<a
+href="https://ar5iv.labs.arxiv.org/html/2212.08645#A3.E32"
+class="ltx_ref"
+title="32 ‣ Theorem C.1 (Leave-one-out for kernel mean embeddings). ‣ C.1 Estimating the conditional mean embedding ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"><span
+class="ltx_text ltx_ref_tag">Equation</span> <span
+class="ltx_text ltx_ref_tag">32</span></a>) for <span
+class="math inline"><em>λ</em></span> (ridge parameter) and <span
+class="math inline"><em>σ</em><sub><em>y</em></sub></span> (parameters
+of <span class="math inline"><em>Y</em></span> kernel):
+</div>
+<div id="alg2.l4" class="ltx_listingline">
+<span class="math inline">${\lambda,\sigma_{y}} =
+{\arg\operatorname{}\min\operatorname{}{\sum_{i = 1}^{M}\frac{\left\|
+{{\psi\operatorname{}{(z_{i})}} -
+{K_{y_{i}\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} +
+{\lambda\operatorname{}I}} \right)^{-
+1}\operatorname{}K_{Z\operatorname{} \cdot}}}
+\right\|_{\mathcal{H}_{z}}^{2}}{\left( {1 - \left(
+{K_{Y\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} +
+{\lambda\operatorname{}I}} \right)^{- 1}} \right)_{i\operatorname{}i}}
+\right)^{2}}}}$</span>
+</div>
+<div id="alg2.l5" class="ltx_listingline">
+<span
+class="math inline"><em>W</em><sub>1</sub> = (<em>K</em><sub><em>Y</em> <em>Y</em></sub>+<em>λ</em> <em>I</em>)<sup>−1</sup>, <em>W</em><sub>2</sub> = <em>W</em><sub>1</sub> <em>K</em><sub><em>Z</em> <em>Z</em></sub> <em>W</em><sub>1</sub></span>
+</div>
+<div id="alg2.l6" class="ltx_listingline">
+<span id="alg2.l6.1" class="ltx_text ltx_font_bold">Every <span
+class="math inline"><em>L</em></span> mini-batches</span>
+</div>
+<div id="alg2.l7" class="ltx_listingline">
+Sample <span class="math inline"><em>D</em><sub>0</sub></span> RFF <span
+class="math inline"><em>R</em> (⋅)</span>
+</div>
+<div id="alg2.l8" class="ltx_listingline">
+<span
+class="math inline"><em>W</em><sub>1</sub><sup><em>r</em></sup> = <em>R</em> (<em>Y</em>)<sup>⊤</sup> <em>W</em><sub>1</sub> <em>R</em> (<em>Z</em>), <em>W</em><sub>2</sub><sup><em>r</em></sup> = <em>R</em> (<em>Z</em>)<sup>⊤</sup> <em>W</em><sub>2</sub> <em>R</em> (<em>Z</em>)</span>
+</div>
+<div id="alg2.l9" class="ltx_listingline">
+<span id="alg2.l9.1" class="ltx_text ltx_font_bold">Mini-batch</span>
+</div>
+<div id="alg2.l10" class="ltx_listingline">
+Use <span class="math inline"><em>D</em></span> random RFF out of <span
+class="math inline"><em>D</em><sub>0</sub></span>
+</div>
+<div id="alg2.l11" class="ltx_listingline">
+Compute <span
+class="math inline"><em>R</em> (<em>y</em>), <em>R</em> (<em>z</em>)</span>
+(mini-batch)
+</div>
+<div id="alg2.l12" class="ltx_listingline">
+<span
+class="math inline"><em>K̂</em><sup><em>c</em></sup> = <em>K</em><sub><em>y</em> <em>y</em></sub> ⊙ (<em>K</em><sub><em>z</em> <em>z</em></sub> − <em>R</em> (<em>y</em>) <em>W</em><sub>1</sub><sup><em>r</em></sup> <em>R</em> (<em>z</em>)<sup>⊤</sup> − (<em>R</em>(<em>y</em>)<em>W</em><sub>1</sub><sup><em>r</em></sup><em>R</em>(<em>z</em>)<sup>⊤</sup>)<sup>⊤</sup>+<em>R</em> (<em>y</em>) <em>W</em><sub>2</sub><sup><em>r</em></sup> <em>R</em> (<em>y</em>)<sup>⊤</sup>)</span>
+</div>
+<div id="alg2.l13" class="ltx_listingline">
+<span class="math inline">${{CIRCE} = {\frac{1}{B\operatorname{}{({B -
+1})}}\operatorname{}{Tr}\operatorname{}\left(
+{H\operatorname{}K_{x\operatorname{}x}\operatorname{}H\operatorname{}{\hat{K}}^{c}}
+\right)}},{H = {I -
+{\frac{1}{B}\operatorname{}1_{B}\operatorname{}1_{B}^{\top}}}}$</span>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg2.2.1.1"
+class="ltx_text ltx_font_bold">Algorithm 2</span> </span> Estimation of
+CIRCE with random Fourier features</figcaption>
+</figure>
+:::
+
+::: {#A5 .section .ltx_appendix}
+## [Appendix E ]{.ltx_tag .ltx_tag_appendix}Synthetic Data and Additional Results {#appendix-e-synthetic-data-and-additional-results .ltx_title .ltx_title_appendix}
+
+::: {#A5.p1 .ltx_para .ltx_noindent}
+We used Adam (Kingma & Ba,
+[2014](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib16){.ltx_ref})
+for optimization with batch size 256, and trained the network for 100
+epochs. For experiments on univariate datasets, the learning rate was
+1e-4 and weight decay was $0.3$; for experiments on multivariate
+datasets, the learning rate was 3e-4 and weight decay was $0.1$. We
+implemented CIRCE with random Fourier features (Rahimi & Recht,
+[2007](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib29){.ltx_ref})
+(see [[Appendix]{.ltx_text .ltx_ref_tag} [D]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A4 "Appendix D Random Fourier features ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
+of dimension 512 for Gaussian kernels. We swept over the
+hyperparameters, including RBF scale, regularization weight for ridge
+regression, and regularization weight for the conditional independence
+regularization strength.
+:::
+
+::: {#A5.p2 .ltx_para .ltx_noindent}
+All synthetic datasets are using the same causal structure as shown in
+[[Figure]{.ltx_text .ltx_ref_tag} [1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F1 "Figure 1 ‣ 4.1 Synthetic Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
+Hyperparameters sweep is listed in [[Table]{.ltx_text
+.ltx_ref_tag} [2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A5.T2 "Table 2 ‣ Appendix E Synthetic Data and Additional Results ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+and it is the same for all test cases.
+:::
+
+<figure id="A5.T2" class="ltx_table">
+<table id="A5.T2.4"
+class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="A5.T2.4.5.1" class="header ltx_tr">
+<th id="A5.T2.4.5.1.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt">Parameter</th>
+<th colspan="2" id="A5.T2.4.5.1.2"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt">Values</th>
+</tr>
+<tr id="A5.T2.4.6.2" class="odd ltx_tr">
+<th id="A5.T2.4.6.2.1" class="ltx_td ltx_th ltx_th_row"></th>
+<th id="A5.T2.4.6.2.2"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_t">CIRCE
+and HSCIC</th>
+<th id="A5.T2.4.6.2.3"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_t">GCM</th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="A5.T2.3.3" class="odd ltx_tr">
+<th id="A5.T2.1.1.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t">conditional
+independence <span class="math inline"><em>γ</em></span></th>
+<td id="A5.T2.2.2.2" class="ltx_td ltx_align_center ltx_border_t">log
+space between <span class="math inline">[1, 10<sup>4</sup>]</span>;</td>
+<td id="A5.T2.3.3.3" class="ltx_td ltx_align_center ltx_border_t">log
+space between <span
+class="math inline">[10<sup>−2</sup>, 10<sup>−0.5</sup>]</span></td>
+</tr>
+<tr id="A5.T2.4.4" class="even ltx_tr">
+<th id="A5.T2.4.4.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row">ridge regression <span
+class="math inline"><em>λ</em></span></th>
+<td colspan="2" id="A5.T2.4.4.2" class="ltx_td ltx_align_center">{
+0.001, 0.01, 0.1, 1 }</td>
+</tr>
+<tr id="A5.T2.4.7.1" class="odd ltx_tr">
+<th id="A5.T2.4.7.1.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb">RBF
+scale</th>
+<td colspan="2" id="A5.T2.4.7.1.2"
+class="ltx_td ltx_align_center ltx_border_bb">{ 0.001, 0.01, 0.1, 1
+}</td>
+</tr>
+</tbody>
+</table>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 2:
+</span>Hyperparameters for CIRCE, HSCIC and GCM on synthetic
+datasets.</figcaption>
+</figure>
+
+::: {#A5.SS1 .section .ltx_subsection}
+### [E.1 ]{.ltx_tag .ltx_tag_subsection}Univariate Cases {#e.1-univariate-cases .ltx_title .ltx_title_subsection}
+
+::: {#A5.SS1.p1 .ltx_para .ltx_noindent}
+Structural causal model for univariate case 1:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+     ${Y,\epsilon_{Z}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                                                          
+     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                                                             
+     $Z = {Y^{2} + \epsilon_{Z}}$                                                                                                                                                         
+     $A = {{0.5\operatorname{}Z\operatorname{}\epsilon_{A}} + {2\operatorname{}Y}}$                                                                                                       
+     $B = {{0.5\operatorname{}{\exp{({- {A\operatorname{}Y}})}}\operatorname{}{\sin{({2\operatorname{}A\operatorname{}Y})}}} + {5\operatorname{}Z} + {0.2\operatorname{}\epsilon_{B}}}$   
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+
+Structural causal model for univariate case 2:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+     ${Y,\epsilon_{Z}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                                                          
+     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                                                             
+     $Z = {Y^{2} + \epsilon_{Z}}$                                                                                                                                                         
+     $A = {{{\exp{({- {0.5\operatorname{}Z^{2}}})}}\operatorname{}{\sin{2\operatorname{}Z}}} + {2\operatorname{}Y} + {0.2\operatorname{}\epsilon_{A}}}$                                   
+     $B = {{{\sin{({2\operatorname{}A\operatorname{}Y})}}\operatorname{}{\exp{({- {0.5\operatorname{}A\operatorname{}Y}})}}} + {5\operatorname{}Z} + {0.2\operatorname{}\epsilon_{B}}}$   
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+:::
+:::
+
+::: {#A5.SS2 .section .ltx_subsection}
+### [E.2 ]{.ltx_tag .ltx_tag_subsection}Multivariate Cases {#e.2-multivariate-cases .ltx_title .ltx_title_subsection}
+
+::: {#A5.SS2.p1 .ltx_para .ltx_noindent}
+Structural causal model for multivariate case 1:
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${Y,\epsilon_{Z_{i}}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                       
+     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                              
+     $Z_{i} = {Y^{2} + \epsilon_{Z_{i}}}$                                                                                                                  
+     $A = {{\exp{({- {0.5\operatorname{}Z_{1}}})}} + {\sum\limits_{i}{Z_{i}\operatorname{}{\sin{(Y)}}}} + {0.1\operatorname{}\epsilon_{A}}}$               
+     $B = {{{\exp{({- {0.5\operatorname{}Z_{2}}})}}\operatorname{}{({\sum\limits_{i}Z_{i}})}} + {A\operatorname{}Y} + {0.1\operatorname{}\epsilon_{B}}}$   
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+Structural causal model for multivariate case 2:
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${Y_{i},\epsilon_{Z}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                           
+     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                                  
+     $Z = {{Y^{T}\operatorname{}Y} + \epsilon_{Z}}$                                                                                                            
+     $A = {{\exp{({- {0.5\operatorname{}Z}})}} + {\sin\operatorname{}{\sum\limits_{i}{Y_{i}\operatorname{}Z}}} + {0.1\operatorname{}\epsilon_{A}}}$            
+     $B = {{{\exp{({- {0.5\operatorname{}Z}})}}\operatorname{}Z} + {\sum\limits_{i}Y_{i}} + Z + {A\operatorname{}Y_{1}} + {0.1\operatorname{}\epsilon_{B}}}$   
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+:::
+:::
+
+::: {#A6 .section .ltx_appendix}
+## [Appendix F ]{.ltx_tag .ltx_tag_appendix}Image Data Details {#appendix-f-image-data-details .ltx_title .ltx_title_appendix}
+
+<figure id="A6.F7" class="ltx_figure">
+<img src="./circe_files/x4.png" id="A6.F7.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="685"
+height="201" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 7:
+</span>dSprites with nonlinear dependence. CIRCE used holdout data in
+training. Blue: in-domain test loss; orange: out-of-domain loss (OOD);
+red: loss for OOD-trained encoder. Solid lines: median over 10 seeds;
+shaded areas: min/max values.</figcaption>
+</figure>
+
+::: {#A6.p1 .ltx_para .ltx_noindent}
+For both dSpritres and Yale-B, we choose the following training
+hyperparameters over the validation set and [without]{#A6.p1.1.1
+.ltx_text .ltx_font_italic} regularization: weight decay (1e-4, 1e-2),
+learning rate (1e-4, 1e-3, 1e-2) and length of training (200 or 500
+epochs). These parameters are used for all runs (including the
+regularized ones). For dSprites the batch size was 1024. For Yale-B the
+batch size was 256. The results for both standard
+([[Corollary]{.ltx_text .ltx_ref_tag} [C.5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem5 "Corollary C.5. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
+and centered ([[Corollary]{.ltx_text .ltx_ref_tag} [C.6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem6 "Corollary C.6. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
+CIRCE estimators were similar for dSprites (the reported one is
+standard), but the centered version was more stable for Yale-B (the
+reported one is centered). This is likely due to the bias arising from
+conditional expectation estimation. For dSprites, the training set
+contained 589824 points, and the holdout set size was 5898 points. For
+Yale-B, the training set contained 11405 points, and the holdout set
+size was 1267 points.
+:::
+
+::: {#A6.p2 .ltx_para .ltx_noindent}
+All kernels were Gaussian:
+${k\operatorname{}{(x,x^{\prime})}} = {\exp{({- {{\|{x - x^{\prime}}\|}^{2}/{({2\operatorname{}\sigma^{2}})}}})}}$.
+For $Y$, $\sigma^{2}$ from $\lbrack 1.0,0.1,0.01,0.001\rbrack$ and ridge
+regression parameter $\lambda$ from
+$\lbrack 0.01,0.1,1.0,10.0,100.0\rbrack$. The other two kernels had
+$\sigma^{2} = 0.01$ for linear and y-cone dependencies; for the
+nonlinear case, the kernel over $Z$ had $\sigma^{2} = 1$ due to a
+different scaling of the distractor in that case.
+:::
+
+::: {#A6.p3 .ltx_para .ltx_noindent}
+We additionally tested a setting in which the $M$ holdout points used
+for conditional expectation estimation are not removed from the training
+data for CIRCE. As shown in [[Figure]{.ltx_text
+.ltx_ref_tag} [7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A6.F7 "Figure 7 ‣ Appendix F Image Data Details ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+for dSprites with non-linear dependence, this has little effect on the
+performance.
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2212.08644){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./circe_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2212.08645){.ar5iv-text-button
+.ar5iv-severity-error} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2212.08645){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2212.08645){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2212.08646){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Thu Jan 5 13:50:42 2023 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+:::

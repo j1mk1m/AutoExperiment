@@ -1,0 +1,785 @@
+# On Representing Linear Programs by Graph Neural Networks
+
+Abstract.
+Learning to optimize is a rapidly growing area that aims to solve
+optimization problems or improve existing optimization algorithms using
+machine learning (ML). In particular, the graph neural network (GNN) is
+considered a suitable ML model for optimization problems whose variables
+and constraints are permutation--invariant, for example, the linear
+program (LP). While the literature has reported encouraging numerical
+results, this paper establishes the theoretical foundation of applying
+GNNs to solving LPs. Given any size limit of LPs, we construct a GNN
+that maps different LPs to different outputs. We show that properly
+built GNNs can reliably predict feasibility, boundedness, and an optimal
+solution for each LP in a broad class. Our proofs are based upon the
+recently--discovered connections between the Weisfeiler--Lehman
+isomorphism test and the GNN. To validate our results, we train a simple
+GNN and present its accuracy in mapping LPs to their feasibilities and
+solutions.
+
+## 1. Introduction
+
+Applying machine learning (ML) techniques to
+accelerate optimization, also known as *Learning to Optimize (L2O)*, is
+attracting increasing attention recently. It has been reported in the
+literature that L2O shows great potentials on both continuous
+optimization
+and combinatorial optimization problems. Many of the L2O works train a
+parameterized model that takes the optimization problem as input and
+outputs information useful to the classic algorithms, such as a good
+initial solution and branching decisions, and some
+even directly generate an approximate optimal
+solution \[gregor2010learning\].
+
+In these works, one is building an ML model to
+approximate the mapping from an explicit optimization instance either to
+its key properties or directly to its solution. The accuracy of this
+approximation is called the representation power or expressive power of
+the model. When the approximation is accurate, the model can solve the
+problem or provide useful information to guide an optimization
+algorithm. This paper tries to address a fundamental but open
+theoretical problem for linear programming (LP):
+
+(P0) Which neural network can represent LP and predict its key properties and solution?   
+
+To clarify, by solution we mean the optimal solution. We hope the answer
+to this question paves the way toward answering this question for other
+optimization types.
+
+
+#### Linear Programming (LP)
+
+LP is an important
+type of optimization problem with a long history and a wide range of
+applications, such as scheduling \[hanssmann1960linear\], signal
+processing \[candes2005decoding\], machine
+learning \[dedieu2022solving\], etc. A general LP problem is defined as:
+
+  (1.1)      $\begin{array}{r}                                                                                                                                 
+             {{{{\min\limits_{x \in {\mathbb{R}}^{n}}{c^{\top}\operatorname{}x}},{{\text{s.t.}\operatorname{}A\operatorname{}x} \circ b},l} \leq x \leq u},}   
+             \end{array}$                                                                                                                                      
+
+where $A \in {\mathbb{R}}^{m \times n}$, $c \in {\mathbb{R}}^{n}$,
+$b \in {\mathbb{R}}^{m}$,
+$l \in {({{\mathbb{R}} \cup {\{{- \infty}\}}})}^{n}$,
+$u \in {({{\mathbb{R}} \cup {\{{+ \infty}\}}})}^{n}$, and
+$\circ \in {\{ \leq , = , \geq \}}^{m}$. Any LP problems must follow one
+of the following three cases \[bertsimas1997introduction\]:
+
+-   Infeasible. The feasible set
+    $\mathcal{X}_{F}:={\{{x \in {\mathbb{R}}^{n}}:{{{{A\operatorname{}x} \circ b},l} \leq x \leq u}\}}$
+    is empty. In another word, there is no point in ${\mathbb{R}}^{n}$
+    that satisfies the constraints in LP.
+
+-   Unbounded. The feasible set is
+    non-empty, but the objective value can be arbitrarily good, i.e.,
+    lower unbounded. For any $R > 0$, there exists an
+    $x \in \mathcal{X}_{F}$ such that
+    ${c^{\top}\operatorname{}x} < {- R}$.
+
+-   Feasible and bounded. There
+    exists $x^{\ast} \in \mathcal{X}_{F}$ such that
+    ${c^{\top}\operatorname{}x^{\ast}} \leq {c^{\top}\operatorname{}x}$
+    for all $x \in \mathcal{X}_{F}$. Such $x^{\ast}$ is named as an
+    optimal solution, and $c^{\top}\operatorname{}x^{\ast}$ is the
+    optimal objective value.
+
+Thus, considering ([P0]) on the LP problem ([1.1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.E1)), an
+ideal ML model is expected to be able to predict the three key
+characteristics of LP: *feasibility, boundedness, and one of its optimal
+solutions* (if exist), by taking the LP features $(A,b,c,l,u, \circ )$
+as input.
+
+[]{#S1.SS0.SSS0.Px1.p3 label="S1.SS0.SSS0.Px1.p3"} Such input has strong
+mathematical structure. If we swap the position of the $i,j$-th variable
+in ([1.1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.E1)), elements
+in vectors $b,c,l,u, \circ$ and columns of matrix $A$ will be reordered.
+The reordered features $(\hat{A},b,\hat{c},\hat{l},\hat{u},\hat{\circ})$
+actually represent an exact equivalent LP problem with the original one
+$(A,b,c,l,u, \circ )$. Such property is named as *permutation
+invariance*. If we do not explicitly restrict ML models with a
+permutation invariant structure, the models may overfit the
+variable/constraint orders of instances in the training set. Motivated
+by this point, we adopt *Graph Neural Networks (GNNs)* that are
+permutation invariant naturally.
+
+
+#### GNN in L2O
+
+[]{#S1.SS0.SSS0.Px2.p1 label="S1.SS0.SSS0.Px2.p1"} GNN is a type of
+neural network defined on graphs and widely applied in many areas, for
+example, recommender systems, traffic, chemistry, etc
+\[wu2020comprehensive, zhou2020graph\]. Solving optimization problems
+with GNN is a recent arising topic in the literature \[peng2021graph,
+ijcai2021-595\]. Many graph-related optimization problems, like minimum
+vertex cover, traveling salesman problem, vehicle routing problem, can
+be represented and solved approximately with GNN due to their problem
+structure \[khalil2017learning, kool2018attention, joshi2019efficient,
+drori2020learning\]. Besides that, one may solve a general LP or
+mixed-integer linear programming (MILP) with the help of GNN.
+\[gasse2019exact\] proposed to represent an MILP problem with a
+bipartite graph, then applied a message-passing GNN[]{#footnote1
+label="footnote1"}^1^^1^1We will abbreviate message-passing GNN as GNN
+in this paper for simplicity. on this graph to guide a classic MILP
+solver. Since that, many approaches have been proposed to guide MILP or
+LP solvers with GNN \[nair2020solving, gupta2020hybrid,
+ding2020accelerating, shen2021learning, gupta2022lookback,
+khalil2022mip, liu2022learning, paulus2022learning, qu2022improved,
+li2022learning\]. Although encouraging empirical results have been
+observed, theoretical foundations are still lack for this approach.
+Specifying ([P0](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.Ex1)),
+we ask:
+
+::: {#S1.Ex2Xa.2.1.1.1}
+  -- -- -- ----------------------------------------------------------------------------------------------------------- --
+           []{#S1.Ex2X.2.1.1.1 label="S1.Ex2X.2.1.1.1"}Are there GNNs that can predict the feasibility, boundedness,   
+           and an optimal solution (if exists), for all LPs?                                                           
+  -- -- -- ----------------------------------------------------------------------------------------------------------- --
+:::
+
+[]{#S1.SS0.SSS0.Px3 label="S1.SS0.SSS0.Px3"}
+
+## 2. Preliminaries
+
+[]{#S2.p1 label="S2.p1"} In this section, we present concepts and
+definitions that will be used throughout this paper. We first describe
+how to represent an LP with a weighted bipartite graph, then we define
+GNN on those LP-induced graphs, and finally we further clarify question
+([P1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.Ex2)) with strict
+mathematical definitions.
+
+[]{#S2.SS1 label="S2.SS1"}
+
+### 2.1. LP represented as weighted bipartite graph
+
+[]{#S2.SS1.p1 label="S2.SS1.p1"} Before representing LPs with graphs, we
+first define the graph that we will adopt in this paper: *weighted
+bipartite graph*. A weighted bipartite graph $G = {({V \cup W},E)}$
+consists of a vertex set $V \cup W$ that are divided into two groups $V$
+and $W$ with ${V \cap W} = \varnothing$, and a collection $E$ of
+weighted edges, where each edge connects exactly one vertex in $V$ and
+one vertex in $W$. Note that there is no edge connecting vertices in the
+same vertex group. $E$ can also be viewed as a function
+$E:{{V \times W}\rightarrow{\mathbb{R}}}$. We use $\mathcal{G}_{m,n}$ to
+denote the collection of all weighted bipartite graphs
+$G = {({V \cup W},E)}$ with ${|V|} = m$ and ${|W|} = n$. We always write
+$V = {\{ v_{1},v_{2},\ldots,v_{m}\}}$,
+$W = {\{ w_{1},w_{2},\ldots,w_{n}\}}$, and
+$E_{i,j} = {E\operatorname{}{(v_{i},w_{j})}}$, for
+${i \in {\{ 1,2,\ldots,m\}}},{j \in {\{ 1,2,\ldots,n\}}}$.
+
+[]{#S2.SS1.p2 label="S2.SS1.p2"} One can equip each vertex with a
+feature vector. Throughout this paper, we denote
+$h_{i}^{V} \in \mathcal{H}^{V}$ as the feature vector of vertex
+$v_{i} \in V$ and denote $h_{j}^{W} \in \mathcal{H}^{W}$ as the feature
+vector of vertex $w_{j} \in W$, where $\mathcal{H}^{V},\mathcal{H}^{W}$
+are feature spaces. Then we define
+${\mathcal{H}_{m}^{V}:={(\mathcal{H}^{V})}^{m}},{\mathcal{H}_{n}^{W}:={(\mathcal{H}^{W})}^{n}}$
+and concatenate all the vertex features together as
+$H = {(h_{1}^{V},h_{2}^{V},\ldots,h_{m}^{V},h_{1}^{W},h_{2}^{W},\ldots,h_{n}^{W})} \in {\mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$.
+Finally, a weighted bipartite graph with vertex features is defined as a
+tuple
+${(G,H)} \in {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$.
+
+[]{#S2.SS1.p3 label="S2.SS1.p3"} With the concepts described above, one
+can represent an LP
+([1.1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.E1)) as a
+graph \[gasse2019exact\]. Each vertex in $W$ represents a variable in LP
+and each vertex in $V$ represents a constraint. The graph topology is
+defined with the matrix $A$ in the linear constraint. More specifically,
+let us set
+
+-   []{#S2.I1.i1 label="S2.I1.i1"}•
+
+    []{#S2.I1.i1.p1 label="S2.I1.i1.p1"} Vertex $v_{i}$ represents the
+    $i$-th constraint in ${A\operatorname{}x} \circ b$, and vertex
+    $w_{j}$ represents the $j$-th variable $x_{j}$.
+
+-   []{#S2.I1.i2 label="S2.I1.i2"}•
+
+    []{#S2.I1.i2.p1 label="S2.I1.i2.p1"} Information of constraints is
+    involved in the feature of $v_{i}$:
+    $h_{i}^{V} = {(b_{i}, \circ_{i})}$.
+
+-   []{#S2.I1.i3 label="S2.I1.i3"}•
+
+    []{#S2.I1.i3.p1 label="S2.I1.i3.p1"} The space of constraint
+    features is defined as
+    $\mathcal{H}^{V}:={{\mathbb{R}} \times {\{ \leq , = , \geq \}}}$.
+
+-   []{#S2.I1.i4 label="S2.I1.i4"}•
+
+    []{#S2.I1.i4.p1 label="S2.I1.i4.p1"} Information of variables is
+    involved in the feature of $w_{i}$:
+    $h_{j}^{W} = {(c_{j},l_{j},u_{j})}$.
+
+-   []{#S2.I1.i5 label="S2.I1.i5"}•
+
+    []{#S2.I1.i5.p1 label="S2.I1.i5.p1"} The space of variable features
+    is defined as
+    $\mathcal{H}^{W}:={{\mathbb{R}} \times {({{\mathbb{R}} \cup {\{{- \infty}\}}})} \times {({{\mathbb{R}} \cup {\{{+ \infty}\}}})}}$.
+
+-   []{#S2.I1.i6 label="S2.I1.i6"}•
+
+    []{#S2.I1.i6.p1 label="S2.I1.i6.p1"} The edge connecting $v_{i}$ and
+    $w_{j}$ has weight $E_{i,j} = A_{i,j}$.
+
+Then an LP is represented as a graph
+${(G,H)} \in {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$.
+In the rest of this paper, we coin such graphs as *LP-induced Graphs* or
+*LP-Graphs* for simplicity. We present an LP instance and its
+corresponding LP-graph in
+Figure [1](https://ar5iv.labs.arxiv.org/html/2209.12288#S2.F1).
+
+<figure id="S2.F1">
+<p><span id="S2.F1.1" label="S2.F1.1"></span><span> <span
+id="S2.F1.1.p1" label="S2.F1.1.p1"></span><span> <span id="S2.Ex1"
+label="S2.Ex1"></span><span> <span> <span><span
+class="math display">$$\begin{array}{cl}
+\min\limits_{x \in {\mathbb{R}}^{3}} &amp; {{x_{1} + x_{2} +
+{2\operatorname{}x_{3}}},} \\
+\text{s.t.} &amp; {{{x_{1} + {2\operatorname{}x_{2}} + x_{3}} \geq 1},}
+\\
+&amp; {{{{2\operatorname{}x_{1}} + x_{2} + x_{3}} \geq 1},} \\
+&amp; {{x_{1} \geq {- 2}},} \\
+&amp; {{x_{2} \geq {- 2}},} \\
+&amp; {{{- 3} \leq x_{3} \leq 3}.}
+\end{array}$$</span></span> </span> </span> </span></span></p>
+<p><span id="S2.F1.2" label="S2.F1.2"></span><span> <span
+id="S2.F1.2.p1" label="S2.F1.2.p1"></span><span> </span></span></p>
+<figcaption><span><span id="S2.F1.4.1.1"
+label="S2.F1.4.1.1"></span><span>Figure 1</span>. </span><span
+id="S2.F1.5.2" label="S2.F1.5.2"></span><span>An example of
+LP-graph</span></figcaption>
+</figure>
+
+[]{#S2.SS2 label="S2.SS2"}
+
+### 2.2. Graph neural networks for LP
+
+[]{#S2.SS2.p1 label="S2.SS2.p1"} Now we define GNNs on LP-graphs. The
+GNNs in this paper always take an LP-Graph as input and the output has
+two cases:
+
+-   []{#S2.I2.i1 label="S2.I2.i1"}•
+
+    []{#S2.I2.i1.p1 label="S2.I2.i1.p1"} The output is a single real
+    number. In this case, GNN is a function
+    ${\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow{\mathbb{R}}$
+    and usually used to predict the properties of the whole graph.
+
+-   []{#S2.I2.i2 label="S2.I2.i2"}•
+
+    []{#S2.I2.i2.p1 label="S2.I2.i2.p1"} Each vertex in $W$ has an
+    output. Consequently, GNN is a function
+    ${\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow{\mathbb{R}}^{n}$.
+    Since $W$ represents variables in LP, GNN is used to predict
+    properties of each variable in this case.
+
+Now we define the GNN structure precisely. First we encode the input
+features into the embedding space with learnable functions
+$f_{in}^{V}:{\mathcal{H}^{V}\rightarrow{\mathbb{R}}^{d_{0}}}$ and
+$f_{in}^{W}:{\mathcal{H}^{W}\rightarrow{\mathbb{R}}^{d_{0}}}$
+
+::: {#S2.E1}
+  ------- -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+  (2.1)      ${{h_{i}^{0,V} = {f_{in}^{V}\operatorname{}{(h_{i}^{V})}}},{{h_{j}^{0,W} = {f_{in}^{W}\operatorname{}{(h_{j}^{W})}}},{{i = {1,2,\ldots,m}},{j = {1,2,\ldots,n}}}}},$   
+  ------- -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+where ${h_{i}^{0,V},h_{j}^{0,W}} \in {\mathbb{R}}^{d_{0}}$ are initial
+embedded vertex features, $d_{0}$ is their dimension. Then we choose
+learnable functions
+${f_{l}^{V},f_{l}^{W}}:{{\mathbb{R}}^{d_{l - 1}}\rightarrow{\mathbb{R}}^{d_{l}}}$
+and
+${g_{l}^{V},g_{l}^{W}}:{{{\mathbb{R}}^{d_{l - 1}} \times {\mathbb{R}}^{d_{l}}}\rightarrow{\mathbb{R}}^{d_{l}}}$
+and update the hidden states with[]{#footnote2
+label="footnote2"}^2^^2^2Note that the update rules in
+([2.2](https://ar5iv.labs.arxiv.org/html/2209.12288#S2.E2)) and
+([2.3](https://ar5iv.labs.arxiv.org/html/2209.12288#S2.E3)) follow a
+message-passing way, where each vertex only collects information from
+its neighbors. Since $E_{i,j} = 0$ if there is no connection between
+vertices $v_{i}$ and $w_{j}$, the sum operator in
+([2.2](https://ar5iv.labs.arxiv.org/html/2209.12288#S2.E2)) can be
+rewritten as $\sum_{j \in {\mathcal{N}\operatorname{}{(v_{i})}}}$, where
+$\mathcal{N}\operatorname{}{(v_{i})}$ denotes the set of neighbors of
+vertex $v_{i}$.:
+
+::: {#A7.EGx1}
+  ------- -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+  (2.2)      ${{h_{i}^{l,V} = {g_{l}^{V}\operatorname{}\left( h_{i}^{{l - 1},V},{\sum\limits_{j = 1}^{n}{E_{i,j}\operatorname{}f_{l}^{W}\operatorname{}{(h_{j}^{{l - 1},W})}}} \right)}},{i = {1,2,\ldots,m}}},$   
+  (2.3)      ${{h_{j}^{l,W} = {g_{l}^{W}\operatorname{}\left( h_{j}^{{l - 1},W},{\sum\limits_{i = 1}^{m}{E_{i,j}\operatorname{}f_{l}^{V}\operatorname{}{(h_{i}^{{l - 1},V})}}} \right)}},{j = {1,2,\ldots,n}}},$   
+  ------- -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+where ${h_{i}^{l,V},h_{j}^{l,W}} \in {\mathbb{R}}^{d_{l}}$ are vertex
+features are layer $l\operatorname{}{({1 \leq l \leq L})}$ and their
+dimensions are $d_{1},\cdots,d_{L}$ respectively. The output layer of
+the single-output GNN is defined with learnable function
+$f_{\text{out}}:{{{\mathbb{R}}^{d_{L}} \times {\mathbb{R}}^{d_{L}}}\rightarrow{\mathbb{R}}}$
+
+::: {#S2.E4}
+  ------- -- ---------------------------------------------------------------------------------------------------------------------------------------- --
+  (2.4)      ${y_{out} = {f_{\text{out}}\operatorname{}\left( {\sum\limits_{i = 1}^{m}h_{i}^{L,V}},{\sum\limits_{j = 1}^{n}h_{j}^{L,W}} \right)}}.$   
+  ------- -- ---------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+The output of the vertex-output GNN is defined with learnable function
+$f_{\text{out}}^{W}:{{{\mathbb{R}}^{d_{L}} \times {\mathbb{R}}^{d_{L}} \times {\mathbb{R}}^{d_{L}}}\rightarrow{\mathbb{R}}}$
+
+::: {#S2.E5}
+  ------- -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+  (2.5)      ${{{y_{out}\operatorname{}{(w_{j})}} = {f_{\text{out}}^{W}\operatorname{}\left( {\sum\limits_{i = 1}^{m}h_{i}^{L,V}},{\sum\limits_{j = 1}^{n}h_{j}^{L,W}},h_{j}^{L,W} \right)}},{j = {1,2,\cdots,n}}}.$   
+  ------- -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+We denote collections of single-output GNNs and vertex-output GNNs with
+$\mathcal{F}_{\text{GNN}}$ and $\mathcal{F}_{\text{GNN}}^{W}$
+respectively.
+
+::: {#S2.E6}
+  -- -- ---------------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+        $\mathcal{F}_{\text{GNN}} =$       ${\{ F:{{\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow\left. {\mathbb{R}} \middle| {{F\operatorname{}\text{~yields~}\operatorname{}(\operatorname{}\operatorname{})},{(\operatorname{}\operatorname{})},{(\operatorname{}\operatorname{})},{(\operatorname{}\operatorname{})}} \right.}\}},$       
+        $\mathcal{F}_{\text{GNN}}^{W} =$   ${\{ F:{{\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow\left. {\mathbb{R}}^{n} \middle| {{F\operatorname{}\text{~yields~}\operatorname{}(\operatorname{}\operatorname{})},{(\operatorname{}\operatorname{})},{(\operatorname{}\operatorname{})},{(\operatorname{}\operatorname{})}} \right.}\}}.$   
+  -- -- ---------------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+In practice, all the learnable functions in GNN
+$f_{in}^{V},f_{in}^{W},f_{\text{out}},f_{\text{out}}^{W},{\{ f_{l}^{V},f_{l}^{W},g_{l}^{V},g_{l}^{W}\}}_{l = 0}^{L}$
+are usually parameterized with multi-linear perceptrons (MLP). In our
+theoretical analysis, we assume for simplicity that those functions may
+take all continuous functions on given domains, following the settings
+in \[azizian2020expressive\]\*Section C.1. Thanks to the universal
+approximation properties of MLP \[hornik1989multilayer,
+cybenko1989approximation\], one can extend our theoretical results by
+taking those learnable functions as large enough MLPs.
+
+[]{#S2.SS3 label="S2.SS3"}
+
+### 2.3. Revisiting question ([P1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.Ex2))
+
+[]{#S2.SS3.p1 label="S2.SS3.p1"} With the definitions of LP-Graph and
+GNN defined above, we revisit question
+([P1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.Ex2)) and give a
+more precise mathematical description here. First we define three
+mappings that respectively describe the feasibility, optimal objective
+value and an optimal solution of an LP.
+
+[]{#S2.SS3.SSS0.Px1 label="S2.SS3.SSS0.Px1"}
+
+#### Feasibility mapping
+
+[]{#S2.SS3.SSS0.Px1.p1 label="S2.SS3.SSS0.Px1.p1"} The feasibility
+mapping is a classification function
+
+::: {#S2.E7}
+  ------- -- -------------------------------------------------------------------------------------------------------------------------- --
+  (2.7)      ${\Phi_{\text{feas}}:{{\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow{\{ 0,1\}}}},$   
+  ------- -- -------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+where ${\Phi_{\text{feas}}\operatorname{}{(G,H)}} = 1$ if the LP
+associated with $(G,H)$ is feasible and
+${\Phi_{\text{feas}}\operatorname{}{(G,H)}} = 0$ otherwise.
+
+[]{#S2.SS3.SSS0.Px2 label="S2.SS3.SSS0.Px2"}
+
+#### Optimal objective value mapping
+
+[]{#S2.SS3.SSS0.Px2.p1 label="S2.SS3.SSS0.Px2.p1"} Denote
+
+::: {#S2.E8}
+  ------- -- ---------------------------------------------------------------------------------------------------------------------------------------------------------- --
+  (2.8)      ${\Phi_{\text{obj}}:{{\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow{{\mathbb{R}} \cup {\{\infty,{- \infty}\}}}}},$   
+  ------- -- ---------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+as the optimal objective value mapping, i.e., for any
+${(G,H)} \in {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$,
+$\Phi_{\text{obj}}\operatorname{}{(G,H)}$ is the optimal objective value
+of the LP problem associated with $(G,H)$.
+
+[]{#S2.Thmtheorem1 label="S2.Thmtheorem1"} []{#S2.Thmtheorem1.1.1.1
+label="S2.Thmtheorem1.1.1.1"}Remark 2.1[]{#S2.Thmtheorem1.2.2
+label="S2.Thmtheorem1.2.2"}.
+
+[]{#S2.Thmtheorem1.p1 label="S2.Thmtheorem1.p1"}
+[]{#S2.Thmtheorem1.p1.5.5 label="S2.Thmtheorem1.p1.5.5"}The optimal
+objective value of a LP problem can be a real number or
+$\infty/ - \infty$. The "$\infty$" case corresponds to infeasible
+problems, while the "$- \infty$" case consists of LP problems whose
+objective function is unbounded from below in the feasible region. The
+preimage of all finite real numbers under $\Phi_{\text{𝑜𝑏𝑗}}$,
+$\Phi_{\text{𝑜𝑏𝑗}}^{- 1}\operatorname{}{({\mathbb{R}})}$, actually
+describes all LPs with finite optimal objective value.
+
+[]{#S2.Thmtheorem2 label="S2.Thmtheorem2"} []{#S2.Thmtheorem2.1.1.1
+label="S2.Thmtheorem2.1.1.1"}Remark 2.2[]{#S2.Thmtheorem2.2.2
+label="S2.Thmtheorem2.2.2"}.
+
+[]{#S2.Thmtheorem2.p1 label="S2.Thmtheorem2.p1"}
+[]{#S2.Thmtheorem2.p1.10.10 label="S2.Thmtheorem2.p1.10.10"}In the case
+that a LP problem has finite optimal objective value, it is possible
+that the problem admits multiple optimal solutions. However, the optimal
+solution with the smallest $\ell_{2}$-norm must be unique. In fact, if
+$x \neq x^{\prime}$ are two different solutions with
+${\| x\|} = {\| x^{\prime}\|}$. Then
+$\frac{1}{2}\operatorname{}{({x + x^{\prime}})}$ is also an optimal
+solution due to the convexity of LPs, and it holds that
+${\|{\frac{1}{2}\operatorname{}{({x + x^{\prime}})}}\|}^{2} < {{\frac{1}{2}\operatorname{}{\| x\|}^{2}} + {\frac{1}{2}\operatorname{}{\| x^{\prime}\|}^{2}}} = {\| x\|}^{2} = {\| x^{\prime}\|}^{2}$,
+i.e.,
+${\|{\frac{1}{2}\operatorname{}{({x + x^{\prime}})}}\|} < {\| x\|} = {\| x^{\prime}\|}$,
+where the inequality is strict since $x \neq x^{\prime}$. Therefore, $x$
+and $x^{\prime}$ cannot be optimal solutions with the smallest
+$\ell_{2}$-norm.
+
+[]{#S2.SS3.SSS0.Px3 label="S2.SS3.SSS0.Px3"}
+
+#### Optimal solution mapping
+
+[]{#S2.SS3.SSS0.Px3.p1 label="S2.SS3.SSS0.Px3.p1"} For any
+${(G,H)} \in {\Phi_{\text{obj}}^{- 1}\operatorname{}{({\mathbb{R}})}}$,
+we have remarked before that the LP problem associated with $(G,H)$ has
+a unique optimal solution with the smallest $\ell_{2}$-norm. Let
+
+::: {#S2.E9}
+  ------- -- --------------------------------------------------------------------------------------------------------------- --
+  (2.9)      ${\Phi_{\text{solu}}:{{\Phi_{\text{obj}}^{- 1}\operatorname{}{({\mathbb{R}})}}\rightarrow{\mathbb{R}}^{n}}},$   
+  ------- -- --------------------------------------------------------------------------------------------------------------- --
+:::
+
+be the mapping that maps
+${(G,H)} \in {\Phi_{\text{obj}}^{- 1}\operatorname{}{({\mathbb{R}})}}$
+to the optimal solution with the smallest $\ell_{2}$-norm.
+
+[]{#S2.SS3.SSS0.Px4 label="S2.SS3.SSS0.Px4"}
+
+#### Invariance and Equivariance
+
+[]{#S2.SS3.SSS0.Px4.p1 label="S2.SS3.SSS0.Px4.p1"} We denote
+$S_{m},S_{n}$ as the group consisting of all permutations on vertex
+groups $V,W$ respectively. In another word, $S_{m}$ involves all
+permutations on the constraints of LP and $S_{n}$ involves all
+permutations on the variables. In this paper, we say a function
+$F:{{\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow{\mathbb{R}}}$
+is invariant if it satisfies
+
+::: {#S2.Ex2}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${{{F\operatorname{}{(G,H)}} = {F\operatorname{}\left( {{(\sigma_{V},\sigma_{W})} \ast {(G,H)}} \right)}},{{{\forall\sigma_{V}} \in S_{m}},{\sigma_{W} \in S_{n}}}},$   
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+and a function
+$F_{W}:{{\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}\rightarrow{\mathbb{R}}^{n}}$
+is equivariant if it satisfies
+
+::: {#S2.Ex3}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $\left. \sigma_{W}{(F_{W}{(G,H)})} = F_{W}\left( {(\sigma_{V},\sigma_{W})} \ast {(G,H)}) \right. \right),\forall\sigma_{V} \in S_{m},\sigma_{W} \in S_{n},$   
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+where ${(\sigma_{V},\sigma_{W})} \ast {(G,H)}$ is the permuted graph
+obtained from reordering indices in $(G,H)$ using
+$(\sigma_{V},\sigma_{W})$, which is the group action
+$S_{m} \times S_{n}$ on
+$\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}$.
+One can check that $\Phi_{\text{feas}}$ and $\Phi_{\text{obj}}$ and any
+$F \in \mathcal{F}_{\text{GNN}}$ are invariant, $\Phi_{\text{solu}}$ and
+any $F_{W} \in \mathcal{F}_{\text{GNN}}^{W}$ are equivariant.
+
+[]{#S2.SS3.SSS0.Px4.p2 label="S2.SS3.SSS0.Px4.p2"} Question
+([P1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.Ex2)) actually
+asks: are there GNNs that can accurately approximate
+$\Phi_{\text{feas}}$, $\Phi_{\text{obj}}$ and $\Phi_{\text{solu}}$? More
+precisely, does there exist $F \in \mathcal{F}_{GNN}$ that is
+arbitrarily close to $\Phi_{\text{feas}}$ and $\Phi_{\text{obj}}$? And
+does there exist $F_{W} \in \mathcal{F}_{GNN}^{W}$ that is arbitrarily
+close to $\Phi_{\text{solu}}$?
+
+[]{#S3 label="S3"}
+
+## 3. Main results
+
+[]{#S3.p1 label="S3.p1"} This section presents our main theorems that
+answer question
+([P1](https://ar5iv.labs.arxiv.org/html/2209.12288#S1.Ex2)). As we state
+in the introduction, representation power is built upon separation power
+in our paper. We first present with the following theorem that GNN has
+strong enough separation power to represent LP.
+
+[]{#S3.Thmtheorem1 label="S3.Thmtheorem1"} []{#S3.Thmtheorem1.1.1.1
+label="S3.Thmtheorem1.1.1.1"}Theorem 3.1[]{#S3.Thmtheorem1.2.2
+label="S3.Thmtheorem1.2.2"}.
+
+[]{#S3.Thmtheorem1.p1 label="S3.Thmtheorem1.p1"}
+[]{#S3.Thmtheorem1.p1.2.2 label="S3.Thmtheorem1.p1.2.2"}For any two LP
+problems respectively corresponding to
+${{(G,H)},{(\hat{G},\hat{H})}} \in {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$,
+if
+${{F\operatorname{}{(G,H)}} = {F\operatorname{}{(\hat{G},\hat{H})}}},{{\forall F} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}}$,
+then they share some common characteristics:
+
+-   []{#S3.I1.ix1 label="S3.I1.ix1"}(i)
+
+    []{#S3.I1.ix1.p1 label="S3.I1.ix1.p1"} []{#S3.I1.ix1.p1.1.1
+    label="S3.I1.ix1.p1.1.1"}Both LP problems are feasible or both are
+    infeasible, i.e.,
+    ${\Phi_{\text{𝑓𝑒𝑎𝑠}}\operatorname{}{(G,H)}} = {\Phi_{\text{𝑓𝑒𝑎𝑠}}\operatorname{}{(\hat{G},\hat{H})}}$[]{#S3.I1.ix1.p1.1.2
+    label="S3.I1.ix1.p1.1.2"}.
+
+-   []{#S3.I1.ix2 label="S3.I1.ix2"}(ii)
+
+    []{#S3.I1.ix2.p1 label="S3.I1.ix2.p1"} []{#S3.I1.ix2.p1.1.1
+    label="S3.I1.ix2.p1.1.1"}The two LP problems have the same optimal
+    objective value, i.e.,
+    ${\Phi_{\text{𝑜𝑏𝑗}}\operatorname{}{(G,H)}} = {\Phi_{\text{𝑜𝑏𝑗}}\operatorname{}{(\hat{G},\hat{H})}}$[]{#S3.I1.ix2.p1.1.2
+    label="S3.I1.ix2.p1.1.2"}.
+
+-   []{#S3.I1.ix3 label="S3.I1.ix3"}(iii)
+
+    []{#S3.I1.ix3.p1 label="S3.I1.ix3.p1"} []{#S3.I1.ix3.p1.1.1
+    label="S3.I1.ix3.p1.1.1"}If both problems are feasible with finite
+    optimal objective value, then they have the same optimal solution
+    with the smallest $\ell_{2}$[]{#S3.I1.ix3.p1.1.2
+    label="S3.I1.ix3.p1.1.2"}-norm, up to a permutation.
+
+[]{#S3.Thmtheorem1.p1.4.2 label="S3.Thmtheorem1.p1.4.2"}Furthermore, if
+${{F_{W}\operatorname{}{(G,H)}} = {F_{W}\operatorname{}{(\hat{G},\hat{H})}}},{{\forall F_{W}} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}^{W}}$,
+then (iii) holds without taking permutations, i.e.,
+${\Phi_{\text{𝑠𝑜𝑙𝑢}}\operatorname{}{(G,H)}} = {\Phi_{\text{𝑠𝑜𝑙𝑢}}\operatorname{}{(\hat{G},\hat{H})}}$.
+
+[]{#S3.p2 label="S3.p2"} This theorem demonstrates that the function
+spaces $\mathcal{F}_{GNN}$ and $\mathcal{F}_{GNN}^{W}$ are rich enough
+to distinguish the characteristics of LP. Given two LP instances
+${(G,H)},{(\hat{G},\hat{H})}$, as long as their feasibility or
+boundedness are different, there must exist $F \in \mathcal{F}_{GNN}$
+that can distinguish them:
+${F\operatorname{}{(G,H)}} \neq {F\operatorname{}{(\hat{G},\hat{H})}}$.
+Moreover, as long as their optimal solutions with the smallest
+$\ell_{2}$-norm are different, there must exist
+$F_{W} \in \mathcal{F}_{GNN}^{W}$ that can distinguish them:
+${F_{W}\operatorname{}{(G,H)}} \neq {F_{W}\operatorname{}{(\hat{G},\hat{H})}}$.
+
+[]{#S3.p3 label="S3.p3"} With Theorem
+[3.1](https://ar5iv.labs.arxiv.org/html/2209.12288#S3.Thmtheorem1)
+served as a foundation, we can prove that GNN universally approximates
+the three mappings $\Phi_{\text{feas}}$, $\Phi_{\text{obj}}$ and
+$\Phi_{\text{solu}}$. Before presenting those results, we first define
+some concepts of the space
+$\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}$.
+
+[]{#S3.SS0.SSS0.Px1 label="S3.SS0.SSS0.Px1"}
+
+#### Topology and measure
+
+[]{#S3.SS0.SSS0.Px1.p1 label="S3.SS0.SSS0.Px1.p1"} Let us define the
+topology and the measure on
+$\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}$,
+where $\mathcal{H}^{V} = {{\mathbb{R}} \times {\{ \leq , = , \geq \}}}$
+and
+$\mathcal{H}^{W} = {{\mathbb{R}} \times {({{\mathbb{R}} \cup {\{{- \infty}\}}})} \times {({{\mathbb{R}} \cup {\{{+ \infty}\}}})}}$.
+Throughout this paper, we consider
+$\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}$
+as a topology space with product topology and measurable space with
+product measure. It's enough to define the topology and measure of each
+part separately. Since each graph in this paper (without vertex
+features) can be represented with matrix
+$A \in {\mathbb{R}}^{m \times n}$, the graph space $\mathcal{G}_{m,n}$
+is isomorphic to the Euclidean space ${\mathbb{R}}^{m \times n}$:
+$\mathcal{G}_{m,n} \cong {\mathbb{R}}^{m \times n}$ and we equip
+$\mathcal{G}_{m,n}$ with the standard Euclidean topology and the
+standard Lebesgue measure. The real spaces $\mathbb{R}$ in
+$\mathcal{H}^{W}$ and $\mathcal{H}^{V}$ are also equipped with the
+standard Euclidean topology and Lebesgue measure. All the discrete
+spaces $\{ \leq , = , \geq \}$, $\{{- \infty}\}$, and $\{{+ \infty}\}$
+have the discrete topology, and all unions are disjoint unions. We equip
+those spaces with a discrete measure
+${\mu\operatorname{}{(S)}} = {|S|}$, where $|S|$ is the number of
+elements in a discrete space $S$. This finishes the whole definition and
+we denote $\text{Meas}\operatorname{}{( \cdot )}$ as the measure on
+$\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}$.
+
+[]{#S3.Thmtheorem2 label="S3.Thmtheorem2"} []{#S3.Thmtheorem2.1.1.1
+label="S3.Thmtheorem2.1.1.1"}Theorem 3.2[]{#S3.Thmtheorem2.2.2
+label="S3.Thmtheorem2.2.2"}.
+
+[]{#S3.Thmtheorem2.p1 label="S3.Thmtheorem2.p1"}
+[]{#S3.Thmtheorem2.p1.3.3 label="S3.Thmtheorem2.p1.3.3"}Let
+$X \subset {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$
+be measurable with finite measure. For any $\epsilon > 0$, there exists
+some $F \in \mathcal{F}_{\text{𝐺𝑁𝑁}}$, such that
+
+::: {#S3.Ex1}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+     ${{\text{𝑀𝑒𝑎𝑠}\operatorname{}\left( \left\{ {{(G,H)} \in X}:{{\mathbb{I}}_{{F\operatorname{}{(G,H)}} > {1/2}} \neq {\Phi_{\text{𝑓𝑒𝑎𝑠}}\operatorname{}{(G,H)}}} \right\} \right)} < \epsilon},$   
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
+:::
+
+[]{#S3.Thmtheorem2.p1.7.4 label="S3.Thmtheorem2.p1.7.4"}where
+${\mathbb{I}}_{\cdot}$ is the indicator function, i.e.,
+${\mathbb{I}}_{{F\operatorname{}{(G,H)}} > {1/2}} = 1$ if
+${F\operatorname{}{(G,H)}} > {1/2}$ and
+${\mathbb{I}}_{{F\operatorname{}{(G,H)}} > {1/2}} = 0$ otherwise.
+
+[]{#S3.SS0.SSS0.Px1.p2 label="S3.SS0.SSS0.Px1.p2"} This theorem shows
+that GNN is a good classifier for LP instances in $X$ as long as $X$ has
+finite measure. If we use ${F\operatorname{}{(G,H)}} > {1/2}$ as the
+criteria to predict the feasibility, the classification error rate is
+controlled by ${\epsilon/\text{Meas}}\operatorname{}{(X)}$, where
+$\epsilon$ can be arbitrarily small. Furthermore, we show that GNN can
+perfectly fit any dataset with finite samples, which is presented in the
+following corollary.
+
+[]{#S3.Thmtheorem3 label="S3.Thmtheorem3"} []{#S3.Thmtheorem3.1.1.1
+label="S3.Thmtheorem3.1.1.1"}Corollary 3.3[]{#S3.Thmtheorem3.2.2
+label="S3.Thmtheorem3.2.2"}.
+
+[]{#S3.Thmtheorem3.p1 label="S3.Thmtheorem3.p1"}
+[]{#S3.Thmtheorem3.p1.2.2 label="S3.Thmtheorem3.p1.2.2"}For any
+$\mathcal{D} \subset {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$
+with finite instances, there exists $F \in \mathcal{F}_{\text{𝐺𝑁𝑁}}$
+that
+
+::: {#S3.Ex2}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------- --
+     ${{{\mathbb{I}}_{{F\operatorname{}{(G,H)}} > {1/2}} = {\Phi_{\text{𝑓𝑒𝑎𝑠}}\operatorname{}{(G,H)}}},{{\forall{(G,H)}} \in \mathcal{D}}}.$   
+  -- ----------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+[]{#S3.SS0.SSS0.Px1.p3 label="S3.SS0.SSS0.Px1.p3"} Besides feasibility,
+GNN can also approximate the optimal objective value and the optimal
+solution with the smallest $\ell_{2}$-norm up to any given precision.
+The following theorems provide formal statements.
+
+[]{#S3.Thmtheorem4 label="S3.Thmtheorem4"} []{#S3.Thmtheorem4.1.1.1
+label="S3.Thmtheorem4.1.1.1"}Theorem 3.4[]{#S3.Thmtheorem4.2.2
+label="S3.Thmtheorem4.2.2"}.
+
+[]{#S3.Thmtheorem4.p1 label="S3.Thmtheorem4.p1"}
+[]{#S3.Thmtheorem4.p1.3.3 label="S3.Thmtheorem4.p1.3.3"}Let
+$X \subset {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$
+be measurable with finite measure. For any $\epsilon > 0$, there exists
+$F_{1} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}$ such that
+
+::: {#S3.E1}
+  ------- -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+  (3.1)      ${{\text{𝑀𝑒𝑎𝑠}\operatorname{}\left( \left\{ {{(G,H)} \in X}:{{\mathbb{I}}_{{F_{1}\operatorname{}{(G,H)}} > {1/2}} \neq {\mathbb{I}}_{{\Phi_{\text{𝑜𝑏𝑗}}\operatorname{}{(G,H)}} \in {\mathbb{R}}}} \right\} \right)} < \epsilon}.$   
+  ------- -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+[]{#S3.Thmtheorem4.p1.5.2 label="S3.Thmtheorem4.p1.5.2"}For any
+${\epsilon,\delta} > 0$, there exists
+$F_{2} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}$ such that
+
+::: {#S3.E2}
+  ------- -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+  (3.2)      ${{\text{𝑀𝑒𝑎𝑠}\operatorname{}\left( \left\{ {{(G,H)} \in {X \cap {\Phi_{\text{𝑜𝑏𝑗}}^{- 1}\operatorname{}{({\mathbb{R}})}}}}:{{|{{F_{2}\operatorname{}{(G,H)}} - {\Phi_{\text{𝑜𝑏𝑗}}\operatorname{}{(G,H)}}}|} > \delta} \right\} \right)} < \epsilon}.$   
+  ------- -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+[]{#S3.SS0.SSS0.Px1.p4 label="S3.SS0.SSS0.Px1.p4"} Recall the definition
+of $\Phi_{\text{obj}}$ in
+([2.8](https://ar5iv.labs.arxiv.org/html/2209.12288#S2.E8)) that it can
+take $\{{\pm \infty}\}$ as its value. Thus,
+${\Phi_{\text{obj}}\operatorname{}{(G,H)}} \in {\mathbb{R}}$ means the
+LP corresponding to $(G,H)$ is feasible and bounded with a finite
+optimal objective value, and inequality
+([3.1](https://ar5iv.labs.arxiv.org/html/2209.12288#S3.E1)) illustrates
+that GNN can identify those feasible and bounded LPs among the whole set
+$X$, up to a given precision $\epsilon$. Inequality
+([3.2](https://ar5iv.labs.arxiv.org/html/2209.12288#S3.E2)) shows that
+GNN can also approximate the optimal value. The measure of the set of LP
+instances of which the optimal value cannot be approximated with
+$\delta$-precision is controlled by $\epsilon$. The following corollary
+gives the results on dataset with finite instances.
+
+[]{#S3.Thmtheorem5 label="S3.Thmtheorem5"} []{#S3.Thmtheorem5.1.1.1
+label="S3.Thmtheorem5.1.1.1"}Corollary 3.5[]{#S3.Thmtheorem5.2.2
+label="S3.Thmtheorem5.2.2"}.
+
+[]{#S3.Thmtheorem5.p1 label="S3.Thmtheorem5.p1"}
+[]{#S3.Thmtheorem5.p1.2.2 label="S3.Thmtheorem5.p1.2.2"}Let
+$\mathcal{D} \subset {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$
+be a finite dataset. There exists $F_{1} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}$
+such that
+
+::: {#S3.Ex3}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${{{\mathbb{I}}_{{F_{1}\operatorname{}{(G,H)}} > {1/2}} = {\mathbb{I}}_{{\Phi_{\text{𝑜𝑏𝑗}}\operatorname{}{(G,H)}} \in {\mathbb{R}}}},{{\forall{(G,H)}} \in \mathcal{D}}}.$   
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+[]{#S3.Thmtheorem5.p1.4.2 label="S3.Thmtheorem5.p1.4.2"}For any
+$\delta > 0$, there exists $F_{2} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}$, such
+that
+
+::: {#S3.Ex4}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${{{|{{F_{2}\operatorname{}{(G,H)}} - {\Phi_{\text{𝑜𝑏𝑗}}\operatorname{}{(G,H)}}}|} < \delta},{{\forall{(G,H)}} \in {\mathcal{D} \cap {\Phi_{\text{𝑜𝑏𝑗}}^{- 1}\operatorname{}{({\mathbb{R}})}}}}}.$   
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+[]{#S3.SS0.SSS0.Px1.p5 label="S3.SS0.SSS0.Px1.p5"} Finally, we show that
+GNN is able to represent the solution mapping $\Phi_{\text{solu}}$.
+
+[]{#S3.Thmtheorem6 label="S3.Thmtheorem6"} []{#S3.Thmtheorem6.1.1.1
+label="S3.Thmtheorem6.1.1.1"}Theorem 3.6[]{#S3.Thmtheorem6.2.2
+label="S3.Thmtheorem6.2.2"}.
+
+[]{#S3.Thmtheorem6.p1 label="S3.Thmtheorem6.p1"}
+[]{#S3.Thmtheorem6.p1.4.4 label="S3.Thmtheorem6.p1.4.4"}Let
+$X \subset {\Phi_{\text{𝑜𝑏𝑗}}^{- 1}\operatorname{}{({\mathbb{R}})}} \subset {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$
+be measurable with finite measure and be closed under actions in
+$S_{m} \times S_{n}$. For any ${\epsilon,\delta} > 0$, there exists some
+$F_{W} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}^{W}$, such that
+
+::: {#S3.Ex5}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${{\text{𝑀𝑒𝑎𝑠}\operatorname{}\left( \left\{ {{(G,H)} \in X}:{{\|{{F\operatorname{}{(G,H)}} - {\Phi_{\text{𝑠𝑜𝑙𝑢}}\operatorname{}{(G,H)}}}\|} > \delta} \right\} \right)} < \epsilon}.$   
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+[]{#S3.Thmtheorem7 label="S3.Thmtheorem7"} []{#S3.Thmtheorem7.1.1.1
+label="S3.Thmtheorem7.1.1.1"}Corollary 3.7[]{#S3.Thmtheorem7.2.2
+label="S3.Thmtheorem7.2.2"}.
+
+[]{#S3.Thmtheorem7.p1 label="S3.Thmtheorem7.p1"}
+[]{#S3.Thmtheorem7.p1.3.3 label="S3.Thmtheorem7.p1.3.3"}Let
+$\mathcal{D} \subset {\Phi_{\text{𝑜𝑏𝑗}}^{- 1}\operatorname{}{({\mathbb{R}})}} \subset {\mathcal{G}_{m,n} \times \mathcal{H}_{m}^{V} \times \mathcal{H}_{n}^{W}}$
+be a finite dataset. For any $\delta > 0$, there exists some
+$F_{W} \in \mathcal{F}_{\text{𝐺𝑁𝑁}}^{W}$, such that
+
+::: {#S3.Ex6}
+  -- ----------------------------------------------------------------------------------------------------------------------------------- --
+     ${{{\|{{F\operatorname{}{(G,H)}} - {\Phi_{\text{𝑠𝑜𝑙𝑢}}\operatorname{}{(G,H)}}}\|} < \delta},{{\forall{(G,H)}} \in \mathcal{D}}}.$   
+  -- ----------------------------------------------------------------------------------------------------------------------------------- --
+:::
+
+
+## 5. Numerical Experiments
+
+[]{#S5.p1 label="S5.p1"} We present the numerical results that validate
+our theoretical results in this section. We generate LP instances with
+$m = 10$ and $n = 50$ that are possibly infeasible or feasible and
+bounded. To check whether GNN can predict feasibility, we generate three
+data sets with $100,500,2500$ independent LP instances respectively, and
+call the solver wrapped in []{#S5.p1.5.1
+label="S5.p1.5.1"}scipy.optimize.linprog to get the feasibility, optimal
+value and an optimal solution for each generated LP. To generate enough
+feasible and bounded LPs to check whether GNN can approximate the
+optimal objective value and optimal solution, we follow the same
+approach as before to generate LP randomly and discard those infeasible
+LPs until the number of LPs reach our requirement. We train GNNs to fit
+the three LP characteristics by minimizing the distance between
+GNN-output and those solver-generated answers. The building and the
+training of the GNNs are implemented using []{#S5.p1.5.2
+label="S5.p1.5.2"}TensorFlow and the codes are modified
+from[]{#footnote3 label="footnote3"}^3^^3^3Our codes are modified from
+<https://github.com/ds4dm/learn2branch> and we will release codes.
+\[gasse2019exact\]. We set $L = 2$ for all GNNs and those learnable
+functions
+$f_{in}^{V},f_{in}^{W},f_{\text{out}},f_{\text{out}}^{W},{\{ f_{l}^{V},f_{l}^{W},g_{l}^{V},g_{l}^{W}\}}_{l = 0}^{L}$
+are all parameterized with MLPs.
+

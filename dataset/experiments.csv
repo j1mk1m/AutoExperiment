@@ -1,0 +1,2 @@
+paper_id, exp_id, exp_details, exp_result
+2209.12288,0,"Given that all the data is generated, run a feasibility experiment with 500 data points using 6 as embedding size for the GNN. Use default number of epochs. Return the training error rate only.",0.0

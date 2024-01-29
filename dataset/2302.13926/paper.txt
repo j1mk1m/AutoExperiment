@@ -1,0 +1,733 @@
+::: ltx_page_main
+::: ltx_page_content
+# Image to Sphere: Learning Equivariant Features for Efficient Pose Prediction {#image-to-sphere-learning-equivariant-features-for-efficient-pose-prediction .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [David M. Klee, Ondrej Biza, Robert Platt, Robin Walters\
+Northeastern University\
+[{klee.d, biza.o, r.platt, r.walters}@northeastern.edu]{#id3.1.id1
+.ltx_text .ltx_font_typewriter} ]{.ltx_personname}]{.ltx_creator
+.ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Predicting the pose of objects from a single image is an important but
+difficult computer vision problem. Methods that predict a single point
+estimate do not predict the pose of objects with symmetries well and
+cannot represent uncertainty. Alternatively, some works predict a
+distribution over orientations in ${SO}\operatorname{}{(3)}$. However,
+training such models can be computation- and sample-inefficient.
+Instead, we propose a novel mapping of features from the image domain to
+the 3D rotation manifold. Our method then leverages
+${SO}\operatorname{}{(3)}$ equivariant layers, which are more sample
+efficient, and outputs a distribution over rotations that can be sampled
+at arbitrary resolution. We demonstrate the effectiveness of our method
+at object orientation prediction, and achieve state-of-the-art
+performance on the popular PASCAL3D+ dataset. Moreover, we show that our
+method can model complex object symmetries, without any modifications to
+the parameters or loss function. Code is available at
+[https://dmklee.github.io/image2sphere](https://dmklee.github.io/image2sphere){.ltx_ref
+.ltx_url .ltx_font_typewriter target="_blank"}.
+:::
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para .ltx_noindent}
+Determining the pose of an object from an image is a challenging problem
+with important applications in artificial reality, robotics, and
+autonomous vehicles. Traditionally, pose estimation has been approached
+as a point regression problem, minimizing the error to a single ground
+truth 3D rotation. In this way, object symmetries are manually
+disambiguated using domain knowledge (Xiang et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib36){.ltx_ref})
+and uncertainty is not accounted for. This approach to pose estimation
+cannot scale to the open-world setting where we wish to reason about
+uncertainty from sensor noise or occlusions and model novel objects with
+unknown symmetries.
+:::
+
+::: {#S1.p2 .ltx_para .ltx_noindent}
+Recent work has instead attempted to learn a distribution over poses.
+Single rotation labels can be modeled as random samples from the
+distribution over object symmetries, which removes the need for
+injecting domain knowledge. For instance, a table with front-back
+symmetry presents a challenge for single pose regression methods, but
+can be effectively modeled with a bimodal distribution. The drawback to
+learning distributions over the large space of 3D rotations is that it
+requires lots of data, especially when modeling hundreds of instances
+across multiple object categories.
+:::
+
+::: {#S1.p3 .ltx_para .ltx_noindent}
+This poor data efficiency can be improved by constraining the weights to
+encode symmetries present in the problem (Cohen & Welling,
+[2016](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib3){.ltx_ref}).
+The pose prediction problem exhibits 3D rotational symmetry, e.g. the
+${SO}\operatorname{}{(3)}$ abstract group. That is, if we change the
+canonical reference frame of an object, the predictions of our model
+should transform correspondingly. For certain input modalities, such as
+point clouds or 3D camera images, the symmetry group acts directly on
+the input data via 3D rotation matrices. Thus, many networks exploit the
+symmetry with end-to-end ${SO}\operatorname{}{(3)}$ equivariance to
+achieve sample efficient pose estimation. However, achieving 3D rotation
+equivariance in a network trained on 2D images is less explored.
+:::
+
+::: {#S1.p4 .ltx_para .ltx_noindent}
+Thus, we present Image2Sphere, I2S, a novel method that learns
+${SO}\operatorname{}{(3)}$-equivariant features to represent
+distributions over 3D rotations. Features extracted by a convolutional
+network are projected from image space onto the half 2-sphere. Then,
+spherical convolution is performed on the features with a learned filter
+over the entire 2-sphere, resulting in a signal that is equivariant to
+3D rotations. A final ${SO}\operatorname{}{(3)}$ group convolution
+operation produces a probability distribution over
+${SO}\operatorname{}{(3)}$ parameterized in the Fourier domain. Our
+method can be trained to accurately predict object orientation and
+correctly express ambiguous orientations for objects with symmetries not
+specified at training time.
+:::
+
+::: {#S1.p5 .ltx_para .ltx_noindent}
+I2S achieves state-of-the-art performance on the PASCAL3D+ pose
+estimation dataset, and outperforms all baselines on the
+ModelNet10-SO(3) dataset. We demonstrate that our proposed architecture
+for learning ${SO}\operatorname{}{(3)}$ equivariant features from images
+empirically outperforms a variety of sensible, alternative approaches.
+In addition, we use the diagnostic SYMSOL datasets to show that our
+approach is more expressive than methods using parametric families of
+multi-modal distributions at representing complex object symmetries.
+:::
+
+::: {#S1.p6 .ltx_para .ltx_noindent}
+[Contributions:]{#S1.p6.1.1 .ltx_text .ltx_font_bold}
+
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i1}
+
+    ::: {#S1.I1.i1.p1 .ltx_para}
+    We propose a novel hybrid architecture that uses non-equivariant
+    layers to learn ${SO}\operatorname{}{(3)}$-equivariant features
+    which are further processed by equivariant layers.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i2}
+
+    ::: {#S1.I1.i2.p1 .ltx_para}
+    Our method uses the Fourier basis of ${SO}\operatorname{}{(3)}$ to
+    more efficiently represent detailed distributions over pose than
+    other methods.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i3}
+
+    ::: {#S1.I1.i3.p1 .ltx_para}
+    We empirically demonstrate our method is able to describe
+    ambiguities in pose due to partial observability or object symmmetry
+    unlike point estimate methods.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i4}
+
+    ::: {#S1.I1.i4.p1 .ltx_para .ltx_noindent}
+    I2S achieves SOTA performance on PASCAL3D+, a challenging pose
+    estimation benchmark using real-world images.
+    :::
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Related Work {#related-work .ltx_title .ltx_title_section}
+
+::: {#S2.SS0.SSS0.Px1 .section .ltx_paragraph}
+##### 6D Pose Estimation {#d-pose-estimation .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px1.p1 .ltx_para .ltx_noindent}
+Predicting the 6D pose (e.g. 3D position and orientation) of objects in
+an image has important applications in fields like robotics (Tremblay
+et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib31){.ltx_ref}),
+autonomous vehicles (Geiger et al.,
+[2012](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib13){.ltx_ref}),
+and microscopy (Levy et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib22){.ltx_ref}).
+Most popular methods use deep convolutional networks, which are robust
+to occlusions and can handle multi-object scenes with a segmentation
+module (He et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib18){.ltx_ref}).
+Convolutional networks have been trained using a variety of output
+formulations. Xiang et al.
+([2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib36){.ltx_ref})
+regresses the 3D bounding box of the object in pixel space, while He
+et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib19){.ltx_ref})
+predicts 3D keypoints on the object with which the pose can be
+extracted. Another line of work (Wang et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib33){.ltx_ref};
+Li et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib23){.ltx_ref};
+Zakharov et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib38){.ltx_ref})
+outputs a dense representation of the object's coordinate space. Most of
+these methods are benchmarked on datasets with limited number of object
+instances (Hinterstoisser et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib20){.ltx_ref};
+Xiang et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib36){.ltx_ref}).
+In contrast, our method is evaluated on datasets that have hundreds of
+object instances or novel instances in the test set. Moreover, our
+method makes minimal assumptions about the labels, requiring only a 3D
+rotation matrix per image regardless of underlying object symmetry.
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px2 .section .ltx_paragraph}
+##### Rotation Equivariance {#rotation-equivariance .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px2.p1 .ltx_para .ltx_noindent}
+Symmetries present in data can be preserved using equivariant neural
+networks to improve performance and sample efficiency. For the symmetry
+group of 3D rotations, ${SO}\operatorname{}{(3)}$, a number of
+equivariant models have been proposed. Chen et al.
+([2021](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib2){.ltx_ref})
+and Fuchs et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib12){.ltx_ref})
+introduce networks to process point cloud data with equivariance to the
+discrete icosahedral group and continuous ${SO}\operatorname{}{(3)}$
+group, respectively. Esteves et al.
+([2019b](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib10){.ltx_ref})
+combines images from structured viewpoints and then performs discrete
+group convolution to classify shapes. Cohen et al.
+([2018a](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib4){.ltx_ref})
+introduces spherical convolution to process signals that live on the
+sphere, such as images from 3D cameras. However, these methods are
+restricted to cases where the ${SO}\operatorname{}{(3)}$ group acts on
+the input space, which prevents their use on 2D images. Falorsi et al.
+([2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib11){.ltx_ref})
+and Park et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib28){.ltx_ref})
+extract 3D rotational equivariant features from images to model object
+orientation, but were limited to simplistic datasets with a single
+object. Similar to our work, Esteves et al.
+([2019a](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib9){.ltx_ref})
+learns ${SO}\operatorname{}{(3)}$ equivariant embeddings from image
+input for object pose prediction; however, they use a supervised loss to
+replicate the embeddings of a spherical convolutional network pretrained
+on 3D images. In contrast, our method incorporates a novel architecture
+for achieving ${SO}\operatorname{}{(3)}$ equivariance from image inputs
+that can be trained end-to-end on the challenging pose prediction tasks.
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px3 .section .ltx_paragraph}
+##### Uncertainty over ${SO}\operatorname{}{(3)}$ {#uncertainty-over-sooperatorname3 .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px3.p1 .ltx_para .ltx_noindent}
+Due to object symmetry or occlusion, there may be a set of equivalent
+rotations that result in the same object appearance, which makes pose
+prediction challenging. Most early works into object pose prediction
+have avoided this issue by either breaking the symmetry when labelling
+the data (Xiang et al.,
+[2014](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib35){.ltx_ref})
+or applying loss functions to handle to known symmetries (Xiang et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib36){.ltx_ref};
+Wang et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib33){.ltx_ref}).
+However, this approach requires knowing what symmetries are present in
+the data, and does not work for objects that have ambiguous orientations
+due to occlusion (e.g. coffee mug when the handle is not visible).
+Several works have proposed models to reason about orientation
+uncertainty by predicting the parameters of von Mises (Prokudin et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib29){.ltx_ref}),
+Fisher (Mohlin et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib26){.ltx_ref}),
+and Bingham (Gilitschenski et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib15){.ltx_ref};
+Deng et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib7){.ltx_ref})
+distributions. However, multi-modal distributions required for modeling
+complex object symmetries which can be difficult to train. Recent work
+by Murphy et al.
+([2021](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib27){.ltx_ref})
+leverages an implicit model to produce a non-parametric distribution
+over ${SO}\operatorname{}{(3)}$ that can model objects with large
+symmetry groups. Our method also generates a distribution over
+${SO}\operatorname{}{(3)}$ that can model symmetric objects, but uses
+${SO}\operatorname{}{(3)}$-equivariant layers to achieve higher accuracy
+and sample efficiency.
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Background {#background .ltx_title .ltx_title_section}
+
+::: {#S3.SS1 .section .ltx_subsection}
+### [3.1 ]{.ltx_tag .ltx_tag_subsection}Equivariance {#equivariance .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS1.p1 .ltx_para .ltx_noindent}
+Equivariance formalizes what it means for a map $f$ to be symmetry
+preserving. Let $G$ be a symmetry group, that is, a set of
+transformations that preserves some structure. Assume $G$ acts on spaces
+$\mathcal{X}$ and $\mathcal{Y}$ via $\mathcal{T}_{g}$ and
+$\mathcal{T}_{g}^{\prime}$, respectively. For all $g \in G$, a map
+$f:{\mathcal{X}\rightarrow\mathcal{Y}}$ is equivariant to $G$ if
+
+  -- ------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     ${{f\operatorname{}{({\mathcal{T}_{g}\operatorname{}x})}} = {\mathcal{T}_{g}^{\prime}\operatorname{}f\operatorname{}{(x)}}}.$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+That is, if the input of $f$ is transformed by $g$, the output will be
+transformed in a corresponding way. Invariance is a special case of
+equivariance when $\mathcal{T}_{g}^{\prime}$ is the identity map (i.e.
+applying group transformations to the input of an invariant mapping does
+not affect the output).
+:::
+:::
+
+::: {#S3.SS2 .section .ltx_subsection}
+### [3.2 ]{.ltx_tag .ltx_tag_subsection}Group convolution over Homogeneous Spaces {#group-convolution-over-homogeneous-spaces .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS2.p1 .ltx_para .ltx_noindent}
+The group convolution operation is a linear equivariant mapping which
+can be equipped with trainable parameters and used to build equivariant
+neural networks (Cohen & Welling,
+[2016](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib3){.ltx_ref}).
+Convolution is performed by computing the dot product with a filter as
+it is shifted across the input signal. In standard 2D convolution, the
+shifting corresponds to a translation in pixel space. Group convolution
+(Cohen & Welling,
+[2016](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib3){.ltx_ref})
+generalizes this idea to arbitrary symmetry groups, with the filter
+transformed by elements of the group. Let $G$ be a group and
+$\mathcal{X}$ be a homogeneous space, i.e. a space on which $G$ acts
+transitively, for example, $\mathcal{X} = G$ or $\mathcal{X} = {G/H}$
+for a subgroup $H$. We compute the group convolution between two
+functions, ${f,\psi}:{\mathcal{X}\rightarrow{\mathbb{R}}^{k}}$, as
+follows:
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     ${{{\lbrack{f \star \psi}\rbrack}\operatorname{}{(g)}} = {\sum\limits_{x \in \mathcal{X}}{{{f\operatorname{}{(x)}} \cdot \psi}\operatorname{}{({\mathcal{T}_{g}^{- 1}\operatorname{}x})}}}}.$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+Note that the output of the convolution operation is defined for each
+group element $g \in G$, while the inputs, $f$ and $\psi$, are defined
+over a homogeneous space of $G$. By parameterizing either $f$ or $\psi$
+using trainable weights, group convolution may be used as a layer in an
+equivariant model.
+:::
+
+<figure id="S3.F1" class="ltx_figure">
+<img src="./i2s_files/figure1.png" id="S3.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="548"
+height="78" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 1:
+</span>Illustration of our proposed model, Image2Sphere (I2S). First,
+output image features of a pre-trained ResNet are orthographically
+projected to the sphere. We convolve the features <span
+class="math inline"><em>Ψ</em></span> with a learned filter on <span
+class="math inline"><em>S</em><sup>2</sup></span> to generate a signal
+on <span class="math inline"><em>S</em><em>O</em> (3)</span>
+(represented by vector field on the sphere). A final <span
+class="math inline"><em>S</em><em>O</em> (3)</span> group convolution is
+performed to produce a detailed distribution over 3D rotations, allowing
+I2S to learn object symmetries and represent uncertainty during pose
+estimation.</figcaption>
+</figure>
+:::
+
+::: {#S3.SS3 .section .ltx_subsection}
+### [3.3 ]{.ltx_tag .ltx_tag_subsection}${SO}\operatorname{}{(3)}$--Equivariance {#sooperatorname3equivariance .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS3.p1 .ltx_para .ltx_noindent}
+For reasoning about physical objects, such as pose detection or part
+segmentation, it is desirable to learn functions that are equivariant to
+the group ${SO}\operatorname{}{(3)}$ of 3D rotations. In order to build
+${SO}\operatorname{}{(3)}$-equivariant neural networks using group
+convolution, it is necessary to efficiently parameterize the space of
+signals $\{ f:{\mathcal{X}\rightarrow{\mathbb{R}}}\}$ over the
+homogenous spaces $\mathcal{X} = S^{2}$ or
+$\mathcal{X} = {{SO}\operatorname{}{(3)}}$. Cohen et al.
+([2018b](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib5){.ltx_ref})
+give an effective and compact solution in terms of the truncated Fourier
+transform. Analogous to the Fourier basis over the circle, it is
+possible to give a Fourier basis for signals defined over $S^{2}$ in
+terms of the spherical harmonics $Y_{k}^{l}$ and for signals over
+${SO}\operatorname{}{(3)}$ in terms of Wigner $D$-matrix coefficients
+$D_{m\operatorname{}n}^{l}$. Writing
+$f:{{{SO}\operatorname{}{(3)}}\rightarrow{\mathbb{R}}}$ in terms of the
+$D_{m\operatorname{}n}^{l}$ and then truncating to a certain frequency
+$l \leq L$ we obtain an approximate representation
+${f\operatorname{}{(g)}} \approx {\sum_{l = 0}^{L}{\sum_{m = 0}^{{2\operatorname{}l} + 1}{\sum_{n = 0}^{{2\operatorname{}l} + 1}{c_{m\operatorname{}n}^{l}\operatorname{}D_{m\operatorname{}n}^{l}\operatorname{}{(g)}}}}}$.
+:::
+
+::: {#S3.SS3.p2 .ltx_para .ltx_noindent}
+${SO}\operatorname{}{(3)}$ group convolution ([[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2302.13926#S3.E2 "2 ‣ 3.2 Group convolution over Homogeneous Spaces ‣ 3 Background ‣ Image to Sphere: Learning Equivariant Features for Efficient Pose Prediction"){.ltx_ref})
+can be efficiently computed in the Fourier domain using the convolution
+theorem[^1^[[^1^[1]{.ltx_tag .ltx_tag_note}See Cohen et al.
+([2018a](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib4){.ltx_ref})
+for explanation and visuals describing efficient
+${SO}\operatorname{}{(3)}$ group
+convolution.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote1 .ltx_note
+.ltx_role_footnote}. Namely, the convolution of two functions is
+calculated as the element-wise product of the functions in the Fourier
+domain. For functions over ${SO}\operatorname{}{(3)}$, the Fourier
+domain is described by the Wigner $D$-matrix coefficients, corresponding
+to a block diagonal matrix with a
+${({{2\operatorname{}l} + 1})} \times {({{2\operatorname{}l} + 1})}$
+block for each $l$ (Knapp,
+[1996](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib21){.ltx_ref}).
+A functions over $S^{2}$ in the Fourier domain is described by a vector
+of coefficients of spherical harmonics and convolution is performed
+using an outer product (Cohen et al.,
+[2018a](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib4){.ltx_ref}).
+This generates the same block diagonal matrix output as
+${SO}\operatorname{}{(3)}$ convolution (e.g. both $S^{2}$ and
+${SO}\operatorname{}{(3)}$ convolution generate signals that live on
+${SO}\operatorname{}{(3)}$). See Geiger et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib14){.ltx_ref})
+for efficient implementation of Fourier and inverse Fourier transforms
+of $S^{2}$ and ${SO}\operatorname{}{(3)}$ signals.
+:::
+:::
+
+::: {#S3.SS4 .section .ltx_subsection}
+### [3.4 ]{.ltx_tag .ltx_tag_subsection}${SO}\operatorname{}{(3)}$ Distributions with the Fourier Basis {#sooperatorname3-distributions-with-the-fourier-basis .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS4.p1 .ltx_para .ltx_noindent}
+The output of the above group convolution is a signal
+$f:{{{SO}\operatorname{}{(3)}}\rightarrow{\mathbb{R}}}$ defined as a
+linear combination of Wigner $D$-matrices. While this signal is useful
+for efficient group convolution, it cannot be directly normalized to
+produce a probability distribution. Instead, the signal can be queried
+at discrete points in ${SO}\operatorname{}{(3)}$ and then normalized
+using a softmax. To reduce errors introduced by the discretization,
+points should be taken from an equivolumetric grid. Equivolumetric grids
+over ${SO}\operatorname{}{(3)}$ can be generated using an extension of
+the HEALPix method developed by Yershova et al.
+([2010](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib37){.ltx_ref}).
+The HEALPix method (Gorski et al.,
+[2005](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib16){.ltx_ref})
+starts with 12 'pixels' that cover the sphere, and recursively divides
+each pixel into four sections. The latitude and longitude of each pixel
+describe two Euler angles of a rotation. The extension to
+${SO}\operatorname{}{(3)}$ specifies the final Euler angle in a way that
+the grid is equally-spaced in ${SO}\operatorname{}{(3)}$. The resolution
+of the final grid can be controlled by the number of recursions.
+:::
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Method {#method .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para .ltx_noindent}
+Our method, Image2Sphere (I2S), is designed to predict object pose from
+images under minimal assumptions. Much previous work assumes objects
+with either no symmetry or known symmetry, and thus it is sufficient to
+output a single point estimate of the pose. Our method, in contrast,
+outputs a distribution over poses, which allows us to represent
+uncertainty due to partial observability and the inherent ambiguity in
+pose resulting from object symmetries. Recent work using distribution
+learning has suffered from difficulty in training multi-modal
+distributions and high data requirements. I2S circumvents these
+challenges by reasoning about uncertainty in the Fourier basis of
+${SO}\operatorname{}{(3)}$, which is simple to train over and allows us
+to leverage equivariant layers for better data efficiency.
+:::
+
+::: {#S4.p2 .ltx_para .ltx_noindent}
+The I2S network consists of an encoder, a projection step, and a 2-layer
+spherical pose predictor (see Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2302.13926#S3.F1 "Figure 1 ‣ 3.2 Group convolution over Homogeneous Spaces ‣ 3 Background ‣ Image to Sphere: Learning Equivariant Features for Efficient Pose Prediction"){.ltx_ref}).
+I2S generates ${SO}\operatorname{}{(3)}$ equivariant features from
+traditional convolutional network encoders. Our method then maps
+features from image space to the 2-sphere using an orthographic
+projection operation. Then, we perform two spherical convolution
+operations. Importantly, the output of the spherical convolution is a
+signal over the Fourier basis of ${SO}\operatorname{}{(3)}$, which can
+be queried in the spatial domain to create highly expressive
+distributions over the space of 3D rotations.
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Mapping from Image to Sphere {#mapping-from-image-to-sphere .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para .ltx_noindent}
+We use orthographic projection to map the output image feature map
+$f:{{\mathbb{R}}^{2}\rightarrow{\mathbb{R}}^{h}}$ from the ResNet to a
+spherical signal $\Psi:{S^{2}\rightarrow{\mathbb{R}}^{h}}$. Orthographic
+projection $P:{S^{2}\rightarrow{\mathbb{R}}^{2}}$ defined
+${P\operatorname{}{(x,y,z)}} = {(x,y)}$ maps a hemisphere onto the unit
+disk. By positioning the feature map $f$ around the unit disk before
+projecting, we get a localized signal
+${\Psi\operatorname{}{(x)}} = {f\operatorname{}{({P\operatorname{}{(x)}})}}$
+supported over one hemisphere. The advantage of this method is that it
+preserves the spatial information of features in the original image.
+Practically, to compute $\Psi$, a HEALPix grid is generated over a
+hemisphere ${\{ x_{i}\}} \subset S^{2}$ and mapped to positions
+$\{{P\operatorname{}{(x_{i})}}\}$ in the image feature map. The value of
+$\Psi\operatorname{}{(x_{i})}$ is interpolated from the value of $f$ at
+pixels near position $P\operatorname{}{(x_{i})}$. This process is
+illustrated in Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2302.13926#S4.F2 "Figure 2 ‣ 4.1 Mapping from Image to Sphere ‣ 4 Method ‣ Image to Sphere: Learning Equivariant Features for Efficient Pose Prediction"){.ltx_ref}.
+:::
+
+::: {#S4.SS1.p2 .ltx_para .ltx_noindent}
+We then move $\Psi$ to the frequency domain using fast Fourier transform
+to express $\Psi$ as a linear combination of spherical harmonics.
+Operating in the frequency domain allows us to efficiently convolve
+continuous signals over the sphere ($S^{2}$) and the group of 3D
+rotations (${SO}\operatorname{}{(3)}$). We truncate the Fourier series
+for $\Psi$ at frequency $L$ as
+${\Psi\operatorname{}{(x)}} \approx {\sum_{l = 0}^{L}{\sum_{k = 0}^{{2\operatorname{}l} + 1}{c_{k}^{l}\operatorname{}Y_{k}^{l}\operatorname{}{(x)}}}}$.
+This truncation may cause sampling error if the spatial signal has high
+frequency. We mitigate this error by: (1) tapering the magnitude of the
+projected features toward the edge of the image to avoid a discontinuity
+on the 2-sphere, and (2) performing dropout of the HEALPix grid such
+that a random subset of grid points is used for each projection.
+:::
+
+<figure id="S4.F2" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S4.F1.sf1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./i2s_files/simple_ortho.png" id="S4.F1.sf1.g1"
+class="ltx_graphics ltx_img_square" width="548" height="455"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(a)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S4.F1.sf2"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./i2s_files/proj-diagram.png" id="S4.F1.sf2.g1"
+class="ltx_graphics ltx_img_landscape" width="548" height="256"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(b)
+</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 2:
+</span>Projection of features from image space to the 2-sphere. (a)
+orthographic projection links pixels in image space to points on the
+sphere using vectors orthogonal to the image plane; (b) dense feature
+map, visualized as an RGB image, is mapped to a signal over <span
+class="math inline"><em>S</em><sup>2</sup></span> by orthographically
+projecting onto all visible grid points, resulting in a signal that is
+non-zero over half the 2-sphere.</figcaption>
+</figure>
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Learning ${SO}\operatorname{}{(3)}$ Equivariant Features {#learning-sooperatorname3-equivariant-features .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.p1 .ltx_para .ltx_noindent}
+Once the learned features are projected to the sphere, we use operations
+that preserve the 3D symmetry of the representation. First, the
+spherical signal $\Psi$ is processed with an $S^{2}$-equivariant group
+convolution operation. Unlike traditional convolutional layers that use
+locally supported filters, we elect to use a filter with global support.
+Intuitively, we view this operation similarly to template matching where
+the projected hemisphere signal $\Psi$ is the template and we are
+looking for the rotation transformation that results in the best match
+with the filter. Conveniently, using a globally supported filter gives a
+global receptive field after one layer, allowing for a shallower
+network. This is important since each spherical convolution operation is
+fairly computation and memory intensive due to the high band limit $L$
+necessary to model potentially complex distributions on the output.
+:::
+
+::: {#S4.SS2.p2 .ltx_para .ltx_noindent}
+After the $S^{2}$-convolution, we perform one
+${SO}\operatorname{}{(3)}$-equivariant group convolution before
+outputting the probability density. Using a locally supported filter,
+this operation serves as a refinement step and results in slightly
+higher prediction accuracy (see comparison in Appendix [[C.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2302.13926#A3.SS2 "C.2 Effect of Additional SO⁢(3) Convolutions ‣ Appendix C Additional Experiments ‣ Image to Sphere: Learning Equivariant Features for Efficient Pose Prediction"){.ltx_ref}).
+Following Spherical CNN (Cohen et al.,
+[2018a](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib4){.ltx_ref}),
+we apply non-linearities between convolution layers by mapping the
+signal to the spatial domain, applying a ReLU, and then mapping back to
+the Fourier domain.
+:::
+:::
+
+::: {#S4.SS3 .section .ltx_subsection}
+### [4.3 ]{.ltx_tag .ltx_tag_subsection}Loss Function {#loss-function .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS3.p1 .ltx_para .ltx_noindent}
+The output of the spherical convolution operation is a signal
+$f:{{{SO}\operatorname{}{(3)}}\rightarrow{\mathbb{R}}_{\geq 0}}$ that
+indicates the probability that the image corresponds to a particular
+object orientation. This output is queried using an equivolumetric grid
+over ${SO}\operatorname{}{(3)}$ then normalized with a softmax operation
+to produce a categorical distribution, which can be optimized using a
+cross-entropy loss. We find that this loss is effective even when
+training on images with ambiguous orientation or symmetric objects. For
+these cases, the model learns to predict high probabilities for the set
+of equivalently likely orientations. Additionally, we find that the
+model can accurately predict likelihoods for grids of higher resolution
+than it was trained on (e.g. train with a grid resolution of 5 degrees
+and test with a resolution of 2.5 degrees).
+:::
+:::
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
+
+::: {#S5.SS1 .section .ltx_subsection}
+### [5.1 ]{.ltx_tag .ltx_tag_subsection}Datasets {#datasets .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS1.p1 .ltx_para .ltx_noindent}
+To demonstrate the strengths of our method, we evaluate it on several
+challenging object orientation estimation datasets. Additional details
+can be found in Appendix [[B.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2302.13926#A2.SS2 "B.2 Dataset Preparation ‣ Appendix B Implementation Details ‣ Image to Sphere: Learning Equivariant Features for Efficient Pose Prediction"){.ltx_ref}.
+:::
+
+::: {#S5.SS1.p2 .ltx_para .ltx_noindent}
+The first dataset, [ModelNet10-SO(3)]{#S5.SS1.p2.1.1 .ltx_text
+.ltx_font_bold} (Liao et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib24){.ltx_ref}),
+is composed of rendered images of synthetic, untextured objects from
+ModelNet10 (Wu et al.,
+[2015](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib34){.ltx_ref}).
+The dataset includes 4,899 object instances over 10 categories, with
+novel camera viewpoints in the test set. Each image is labelled with a
+single 3D rotation matrix, even though some categories, such as desks
+and bathtubs, can have an ambiguous pose due to symmetry. For this
+reason, the dataset presents a challenge to methods that cannot reason
+about uncertainty over orientation.
+:::
+
+::: {#S5.SS1.p3 .ltx_para .ltx_noindent}
+Next, [PASCAL3D+]{#S5.SS1.p3.1.1 .ltx_text .ltx_font_bold}, (Xiang
+et al.,
+[2014](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib35){.ltx_ref}),
+is a popular benchmark for pose estimation that includes real images of
+objects from 12 categories. The dataset labels symmetric object
+categories in a consistent manner (e.g. bottles are symmetric about the
+z-axis, so label zero rotation about the z-axis), which simplifies the
+task. To improve accuracy, we follow the common practice of augmenting
+the training data with synthetic renderings from Su et al.
+([2015](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib30){.ltx_ref}).
+Nevertheless, PASCAL3D+ still serves as a challenging benchmark due to
+the high variability of natural textures and presence of novel instances
+in the test set.
+:::
+
+::: {#S5.SS1.p4 .ltx_para .ltx_noindent}
+Lastly, the [SYMSOL]{#S5.SS1.p4.1.1 .ltx_text .ltx_font_bold} dataset
+was recently introduced by Murphy et al.
+([2021](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib27){.ltx_ref})
+to evaluate the expressivity of methods that model distributions over 3D
+rotations. It includes synthetic renderings of objects split into two
+groups: geometric objects like the tetrahedron or cylinder with complex
+symmetries (SYMSOL I), and simple objects with single identifying
+feature such that the pose is ambiguous when the feature is occluded
+(SYMSOL II). The dataset provides the full set of equivalent rotation
+labels for each image so methods can be evaluated on how well they
+capture the distribution. Note that Murphy et al.
+([2021](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib27){.ltx_ref})
+generates results using 100k renderings per shape, which we report as a
+baseline, but the publicly released dataset that we train on only
+includes 50k renderings per shape.
+:::
+:::
+
+::: {#S5.SS2 .section .ltx_subsection}
+### [5.2 ]{.ltx_tag .ltx_tag_subsection}Evaluation Metrics {#evaluation-metrics .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS2.p1 .ltx_para .ltx_noindent}
+The goal of pose prediction is to minimize the angular error between the
+predicted 3D rotation and the ground truth 3D rotation. Two commonly
+used metrics are the median rotation error ([MedErr]{#S5.SS2.p1.3.1
+.ltx_text .ltx_font_italic}) and the accuracy within a rotation error
+threshold (e.g. [Acc@15]{#S5.SS2.p1.3.2 .ltx_text .ltx_font_italic} is
+the fraction of predictions with 15 degrees or less rotation error).
+However, these metrics assume that there exists a single, ground truth
+3D rotation, which is not valid for symmetric objects or images with
+pose ambiguity. For ModelNet10-SO(3) and PASCAL3D+, only a single
+rotation is provided so these metrics must be used. However, when the
+full set of equivalent rotation labels are provided, like with SYMSOL, a
+more informative measure is the average log likelihood, computed as the
+expected log likelihood that the model, $p_{\theta}$, assigns to
+rotations sampled from the distribution of equivalent rotations
+$p_{G\operatorname{}T}$:
+${\mathbb{E}}_{R \sim p_{G\operatorname{}T}}\operatorname{}{\lbrack{{\log p_{\theta}}\operatorname{}{(\left. R \middle| x \right.)}}\rbrack}$.
+Achieving high log likelihood requires modelling all symmetries of an
+object.
+:::
+:::
+
+::: {#S5.SS3 .section .ltx_subsection}
+### [5.3 ]{.ltx_tag .ltx_tag_subsection}Network and Training Details {#network-and-training-details .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS3.p1 .ltx_para .ltx_noindent}
+I2S uses a residual network (He et al.,
+[2016](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib17){.ltx_ref})
+with weights pretrained on ImageNet (Deng et al.,
+[2009](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib8){.ltx_ref})
+to extract dense feature maps from 2D images. We use a ResNet50 backbone
+for ModelNet10-SO(3) and SYMSOL, and ResNet101 for PASCAL3D+. The
+orthographic projection uses a HEALPix grid with recursion level of 2,
+out of which 20 points are randomly selected during each forward pass.
+We parameterize the learned $S^{2}$ filter in the Fourier domain, e.g.
+learn weights for each spherical harmonic. The filter in the
+${SO}\operatorname{}{(3)}$ convolutional layer is locally supported over
+rotations up to 22.5 degrees in magnitude. We query the signal in the
+spatial domain using ${SO}\operatorname{}{(3)}$ HEALPix grids with 36k
+points (7.5 degree spacing) during training and 2.4M (1.875 degree
+spacing) during evaluation. We use the same maximum frequency ($L = 6$)
+on all datasets. Additional details on the architecture can be found in
+Appendix [[B.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2302.13926#A2.SS1 "B.1 Architecture ‣ Appendix B Implementation Details ‣ Image to Sphere: Learning Equivariant Features for Efficient Pose Prediction"){.ltx_ref}.
+:::
+
+::: {#S5.SS3.p2 .ltx_para .ltx_noindent}
+I2S is instantiated with PyTorch and the [e3nn]{#S5.SS3.p2.1.1 .ltx_text
+.ltx_font_typewriter} library (Geiger et al.,
+[2022](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib14){.ltx_ref}).
+It is trained using SGD with Nesterov momentum of 0.9 for 40 epochs
+using a batch size of 64. The learning rate starts at 0.001 and decays
+by factor of 0.1 every 15 epochs.
+:::
+:::
+
+::: {#S5.SS4 .section .ltx_subsection}
+### [5.4 ]{.ltx_tag .ltx_tag_subsection}Baselines {#baselines .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS4.p1 .ltx_para .ltx_noindent}
+We compare our method against competitive baselines including regression
+methods and distribution learning methods. Zhou et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib39){.ltx_ref})
+and Brégier
+([2021](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib1){.ltx_ref})
+predict valid 3D rotation matrices using differentiable
+orthonormalization processes, Gram-Schmidt and Procrustes, respectively,
+that preclude discontinuities on the rotation manifold. Liao et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib24){.ltx_ref})
+and Mahendran et al.
+([2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib25){.ltx_ref})
+use unique classification-regression losses to predict rotation.
+Prokudin et al.
+([2018](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib29){.ltx_ref})
+represents rotation uncertainty with a mixture of von Mises
+distributions over each Euler angle, while Mohlin et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib26){.ltx_ref})
+predicts the parameters for a matrix Fisher distribution. Gilitschenski
+et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib15){.ltx_ref})
+and Deng et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib7){.ltx_ref})
+both predict multi-modal Bingham distributions. Lastly, Murphy et al.
+([2021](https://ar5iv.labs.arxiv.org/html/2302.13926#bib.bib27){.ltx_ref})
+trains an implicit model to generate a non-parametric distribution over
+3D rotations. All baselines use the same sized, pretrained ResNet
+encoders for each experiment. Results are from the original papers when
+available.
