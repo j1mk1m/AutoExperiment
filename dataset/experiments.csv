@@ -1,2 +1,10 @@
 paper_id, exp_id, exp_details, exp_result
-2209.12288,0,"Given that all the data is generated, run a feasibility experiment with 500 data points using 6 as embedding size for the GNN. Use default number of epochs. Return the training error rate only.",0.0
+2202.04538,0,Run experiment on QNLI task in GLUE using SuperGen for Zero-Shot Learning. Report the accuracy.,73.3
+2202.04538,1,Run experiment on QQP task in GLUE using SuperGen for Zero-Shot Learning. Report the F1-score.,66.1
+2202.04538,2,Run experiment on RTE task in GLUE using LM-BFF 32-Sample Few-Shot method. Report the accuracy.,69.1
+2311.10227,0,Run evaluation of BigToM on false belief action with GPT-3.5 with simulation method. Submit the accuracy in percent without the percent symbol.,70.5
+2311.10227,1,Run evaluation of BigToM on false belief action with GPT-3.5 with chain-of-thought. Submit the accuracy in percent without the percent symbol.,56.25
+2311.10227,2,Run evaluation of BigToM on false belief action with GPT-4 with baseline method. Submit the accuracy in percent without the percent symbol.,92.0
+2209.12288,0,"Run a feasibility experiment with 500 data points using 6 as embedding size for the GNN. Use default number of epochs. Return the training error rate only.",0.0
+2209.12288,1,"Run a experiment testing objective of LP with 500 data points using 6 as embedding size for the GNN. Use default number of epochs. Return the training error rate.",0.080
+2209.12288,2,"Run a experiment testing solutions of LP with 500 data points using 16 as embedding size for the GNN. Use default number of epochs. Return the training error rate.",0.193

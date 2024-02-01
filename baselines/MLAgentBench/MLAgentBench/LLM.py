@@ -35,7 +35,7 @@ try:
     from openai import OpenAI
     
     # setup OpenAI API key
-    client = OpenAI(api_key=open(os.path.join(this_dir, "../", "../", "openai_api_key.txt")).read().strip()) 
+    client = OpenAI(api_key=open(os.path.join(this_dir, "../", "openai_api_key.txt")).read().strip()) 
     # os.environ["OPENAI_API_KEY"] = openai.api_key 
 except Exception as e:
     print(e)

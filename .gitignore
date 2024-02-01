@@ -1,4 +1,4 @@
-baselines/openai_api_key.*
+baselines/MLAgentBench/openai_api_key.*
 workspace/*
 baselines/__pycache__/*
 dataset/__pycache__/*
