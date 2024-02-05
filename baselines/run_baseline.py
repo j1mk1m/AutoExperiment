@@ -5,11 +5,10 @@ import subprocess
 from datetime import datetime
 
 this_path = os.path.dirname(__file__)
-home_dir = "/home/gyeongwk"
 
 def run_MLAgentBench(paper_id, exp_id, mode, source):
     # Pipeline for MLAgentBench
-    mla_dir = os.path.join(home_dir, "MLAgentBench")
+    mla_dir = os.path.join(this_path, "MLAgentBench")
     prompt_file = os.path.join(mla_dir, "prompts", f"prompt_{mode}.txt")
     # read_only_file = os.path.join(source, "read_only_files.txt")
     benchmark_dir = os.path.join(mla_dir, "MLAgentBench", "benchmarks", "task")
@@ -22,8 +21,6 @@ def run_MLAgentBench(paper_id, exp_id, mode, source):
 
     # Copy files from source to benchmark
     shutil.copyfile(os.path.join(source, "environment.yml"), os.path.join(mla_dir, "environment.yml"))
-    # with open(os.path.join(this_path, "tmp", "environment.yml")) as file:
-    #    env_name = file.readline()[6:].strip()
     shutil.copytree(os.path.join(source, "code"), env_dir, symlinks=True)
     shutil.copyfile(os.path.join(source, "experiment.txt"), os.path.join(env_dir, "experiment.txt"))
     shutil.copyfile(os.path.join(source, "paper.txt"), os.path.join(env_dir, "paper.txt"))
@@ -32,16 +29,11 @@ def run_MLAgentBench(paper_id, exp_id, mode, source):
     ### Docker ###
     print("Set up done. Proceeding to create docker image and run...")
     name = f"mla_{mode}_{paper_id}_{exp_id}".lower()
-    # Build docker image with given name, build argument (env_name), and path to Dockerfile
-    #subprocess.run(["sudo", "docker", "build", "-t", f"{name}", "--build-arg", f"env_name={env_name}", "-f", "./baselines/Dockerfile-mla", "."])
-    # subprocess.run(["sudo", "docker", "build", "-t", f"{name}", "-f", "./baselines/Dockerfile-mla-v2", "."])
-    # Remove container if exists and run container (with gpu enabled)
-    #subprocess.run(["sudo", "docker", "run", "--gpus", "all", "--name", container_name, f"{name}"])
-    subprocess.run(["sudo", "docker", "run", "--name", name, "-v", f"{mla_dir}:/app/tmp:ro", "base_image"])
+    subprocess.run(["docker", "run", "--name", name, "-v", f"{mla_dir}:/app/tmp:ro", "base_image"])
     # After container stops, copy output and log to local
-    subprocess.run(["sudo", "docker", "cp", f"{name}:/app/MLAgentBench/MLAgentBench/output.txt", os.path.join(this_path, "tmp")])
-    subprocess.run(["sudo", "docker", "cp", f"{name}:/app/MLAgentBench/logs/agent_log/main_log", os.path.join(this_path, "logs", "MLAgentBench", name+"_log")])
-    subprocess.run(["sudo", "docker", "rm", name])
+    subprocess.run(["docker", "cp", f"{name}:/app/MLAgentBench/MLAgentBench/output.txt", os.path.join(this_path, "tmp")])
+    subprocess.run(["docker", "cp", f"{name}:/app/MLAgentBench/logs/agent_log/main_log", os.path.join(this_path, "logs", "MLAgentBench", name+"_log")])
+    subprocess.run(["docker", "rm", name])
 
     # Retrieve final answer
     answer = 0

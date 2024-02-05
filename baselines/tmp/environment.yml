@@ -1,9 +1,0 @@
-name: gnn_lp_env
-channels:
-  - defaults
-dependencies:
-  - tensorflow-gpu
-  - scipy
-  - pandas
-  - numpy=1.20.3
-prefix: /work/gyeongwk/anaconda3/envs/gnn_lp_env
