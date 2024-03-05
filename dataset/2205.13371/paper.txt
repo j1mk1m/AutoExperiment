@@ -1,0 +1,2357 @@
+::: ltx_page_main
+::: ltx_page_content
+# A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning {#a-rotated-hyperbolic-wrapped-normal-distribution-for-hierarchical-representation-learning .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [$\text{Seunghyuk Cho}^{1}$ &$\text{Juyong Lee}^{1}$
+&$\text{Jaesik Park}^{1,2}$ &$\text{Dongwoo Kim}^{1,2}$
+$\text{CSED POSTECH}^{1}$ &$\text{GSAI POSTECH}^{2}$
+]{.ltx_personname}]{.ltx_creator .ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+We present a rotated hyperbolic wrapped normal distribution (RoWN), a
+simple yet effective alteration of a hyperbolic wrapped normal
+distribution (HWN). The HWN expands the domain of probabilistic modeling
+from Euclidean to hyperbolic space, where a tree can be embedded with
+arbitrary low distortion in theory. In this work, we analyze the
+geometric properties of the *diagonal* HWN, a standard choice of
+distribution in probabilistic modeling. The analysis shows that the
+distribution is inappropriate to represent the data points at the same
+hierarchy level through their angular distance with the same norm in the
+Poincaré disk model. We then empirically verify the presence of
+limitations of HWN, and show how RoWN, the proposed distribution, can
+alleviate the limitations on various hierarchical datasets, including
+noisy synthetic binary tree, WordNet, and Atari 2600 Breakout. The code
+is available at
+[https://github.com/ml-postech/RoWN](https://github.com/ml-postech/RoWN){.ltx_ref
+.ltx_url .ltx_font_typewriter target="_blank"}.
+:::
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+Hyperbolic space has served as an effective medium to learn parsimonious
+representations of hierarchical data, including vocabulary with
+relationships (Nickel and Kiela,
+[2017](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib21){.ltx_ref},
+[2018](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib22){.ltx_ref};
+Tifrea et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib31){.ltx_ref}),
+knowledge graphs (Chami et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib3){.ltx_ref};
+Sun et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib29){.ltx_ref}),
+and social networks (Zhao et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib33){.ltx_ref};
+Shavitt and Tankel,
+[2008](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib28){.ltx_ref}).
+Recent studies reveal that the underlying anatomy in much complex data
+is non-Euclidean, supporting the success of representation learning in
+hyperbolic space (Bronstein et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib2){.ltx_ref}).
+However, due to the absence of well-defined distribution that is easy to
+sample and has an analytic density function in hyperbolic space, earlier
+studies have focused on the non-probabilistic learning framework.
+:::
+
+::: {#S1.p2 .ltx_para}
+Hyperbolic wrapped normal distribution (HWN) has been recently proposed
+as an alternative to the celebrated normal distribution in Euclidean
+space. With an analytic density function and easiness of sampling, the
+HWN expands the domain of probabilistic modeling from Euclidean to
+hyperbolic space. The HWN has been successfully applied in various
+probabilistic models, including VAE (Kingma and Welling,
+[2014](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib12){.ltx_ref})
+and probabilistic word embeddings (Vilnis and McCallum,
+[2015](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib32){.ltx_ref}).
+However, unlike the normal distribution in Euclidean space, the
+geometric characteristics of the HWN have not been fully understood so
+far. Therefore, figuring out what can be done or not with the HWN is
+difficult.
+:::
+
+::: {#S1.p3 .ltx_para}
+In this work, we analyze the geometric properties of the *diagonal* HWN,
+a standard choice of distribution in many probabilistic models (Mathieu
+et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib16){.ltx_ref};
+Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+Based on the observation that the principal axes of the diagonal normal
+distribution in Euclidean space have a parallel structure with the
+standard bases, we also focus on the structure of the principal axes of
+HWN in hyperbolic space to delve into a deeper understanding. Our
+analysis shows that the principal axes of the diagonal HWN are locally
+parallel to the standard bases in the Poincaré disk model.
+:::
+
+::: {#S1.p4 .ltx_para}
+[[Figure 1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S2.F1 "Figure 1 ‣ 2 Preliminaries ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} (a) shows a common understanding on learned
+representation of hierarchical data in the Poincaré disk. The
+hierarchical structure spreads out like the spokes of a wheel. The local
+variation in a hierarchy can then be represented as an angular
+difference between nodes at the same level of the norm, i.e., the
+principal axis representing local variation is orthogonal to the radial
+axis. However, our analysis of the geometric property reveals that the
+local variation can only be modeled along with the standard bases with
+the diagonal HWN.
+:::
+
+::: {#S1.p5 .ltx_para}
+To fix the structure of the principal axes in the diagonal HWN, we
+propose a simple yet effective alteration of HWN, named a rotated
+hyperbolic wrapped normal distribution (RoWN). By rotating the diagonal
+covariance matrix before parallel transportation of HWN, we could
+resolve the limitations in local variation structure while keeping the
+valuable properties, such as easy sampling and tractable density of the
+original HWN.
+:::
+
+::: {#S1.p6 .ltx_para}
+We verify the representation learned with RoWN agrees with the common
+characteristic of representation in hyperbolic space, which is barely
+observable with the diagonal and the full covariance HWN, by using
+*synthetic noisy binary tree* dataset. We demonstrate the usefulness of
+RoWN on the benchmark datasets: WordNet and Atari 2600 breakout. We
+summarize our contributions as follows:
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i1}
+
+    ::: {#S1.I1.i1.p1 .ltx_para}
+    We provide an analysis of the geometric properties of HWN and its
+    potential limitations in representation learning.
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i2}
+
+    ::: {#S1.I1.i2.p1 .ltx_para}
+    We propose a novel and efficient method of using hyperbolic
+    distribution, namely RoWN, and apply it to probabilistic models.
+    :::
+3.  [[3.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i3}
+
+    ::: {#S1.I1.i3.p1 .ltx_para}
+    We demonstrate the performance of RoWN through the comparison with
+    the Euclidean normal distribution, diagonal covariance HWN, and full
+    covariance HWN on one synthetic dataset and two benchmark datasets.
+    :::
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Preliminaries {#preliminaries .ltx_title .ltx_title_section}
+
+::: {#S2.p1 .ltx_para}
+This section reviews the wrapped normal distribution defined on the
+Lorentz model. We first introduce the Lorentz model of hyperbolic space
+and necessary concepts to understand the wrapped normal distribution.
+:::
+
+<figure id="S2.F1" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S2.F0.sf1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./rown_files/x1.png" id="S2.F0.sf1.g1"
+class="ltx_graphics ltx_centering ltx_img_square" width="498"
+height="498" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S2.F0.sf1.2.1.1" class="ltx_text" style="font-size:90%;">(a)</span>
+</span><span id="S2.F0.sf1.3.2" class="ltx_text"
+style="font-size:90%;">The Poincaré disk model</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S2.F0.sf2"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./rown_files/lorentz_model.png" id="S2.F0.sf2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="598"
+height="383" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S2.F0.sf2.2.1.1" class="ltx_text" style="font-size:90%;">(b)</span>
+</span><span id="S2.F0.sf2.3.2" class="ltx_text"
+style="font-size:90%;">The Lorentz model</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S2.F1.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 1</span>: </span><span
+id="S2.F1.3.2" class="ltx_text" style="font-size:90%;">Visualization of
+hyperbolic space models. (a) The Poincaré disk model can embed a given
+tree-structured data with low distortions as shown in the illustration.
+The black segments refer to the shortest path between the points in the
+Poincaré disk model. The red dashed line denotes the continuous points
+in the same hierarchy level. (b) The Lorentz model is another model for
+hyperbolic space. The blue line is the shortest path between the points
+on the Lorentz model. The red line is the projected geodesic via the
+diffeomorphism, which is still a geodesic of the Poincaré disk model.
+</span></figcaption>
+</figure>
+
+::: {#S2.SS1 .section .ltx_subsection}
+### [2.1 ]{.ltx_tag .ltx_tag_subsection}The Lorentz model {#the-lorentz-model .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS1.p1 .ltx_para}
+Hyperbolic space is a non-Euclidean space, having a constant negative
+Gaussian curvature. [[Figure 1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S2.F1 "Figure 1 ‣ 2 Preliminaries ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} illustrates two models for hyperbolic space,
+among four standard equivalent models: (1) Klein model, (2) the Poincaré
+disk model, (3) the Lorentz (hyperboloid) model, and (4) the Poincaré
+half-plane model. In particular, the Lorentz model is famous for its
+numerical stability in computing the distance and comes with a simpler
+closed form of geodesics (Nickel and Kiela,
+[2018](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib22){.ltx_ref}).
+The Lorentz model ${\mathbb{L}}^{n}$ is the Riemannian manifold
+consisting of the set of points ${\mathbf{z}} \in {\mathbb{R}}^{n + 1}$
+satisfying
+${\langle{\mathbf{z}},{\mathbf{z}}\rangle}_{\mathcal{L}} = {- 1}$ and
+$z_{0} > 0$, where the Lorentizan product
+${\langle \cdot , \cdot \rangle}_{\mathcal{L}}$ is defined as:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $${{\langle{\mathbf{x}},{\mathbf{y}}\rangle}_{\mathcal{L}}:={{- {x_{0}\operatorname{}y_{0}}} + {\sum\limits_{i = 1}^{n}{x_{i}\operatorname{}y_{i}}}}},$$   
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+which also works as the metric tensor on hyperbolic space, i.e., the
+metric tensor $g$ of the Lorentz model is
+${g\operatorname{}{({\mathbf{x}})}} = {{diag}{\lbrack{- 1},1,\cdots,1\rbrack}}$
+:::
+:::
+
+::: {#S2.SS2 .section .ltx_subsection}
+### [2.2 ]{.ltx_tag .ltx_tag_subsection}Tangent space of the Lorentz model {#tangent-space-of-the-lorentz-model .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS2.p1 .ltx_para}
+We denote the tangent space of ${\mathbf{x}} \in {\mathbb{L}}^{n}$ as
+$\mathcal{T}_{\mathbf{x}}\operatorname{}{\mathbb{L}}^{n}$, which is a
+set of points satisfying the orthogonality relation with $\mathbf{x}$ in
+terms of the Lorentzian product:
+${{T_{\mathbf{x}}\operatorname{}{\mathbb{L}}^{n}}:=\left\{ {\mathbf{u}}:{{\langle{\mathbf{u}},{\mathbf{x}}\rangle}_{\mathcal{L}} = 0} \right\}}.$
+The metric tensor $g$ induces an inner product of two tangent vectors
+from a tangent space. Geodesic
+$\gamma:{{\lbrack 0,1\rbrack}\rightarrow{\mathbb{L}}^{n}}$ generalizes
+straight lines in the Riemannian manifold which is the shortest curve
+between two points. The exponential map
+$\exp_{\mathbf{x}}:{{\mathcal{T}_{\mathbf{x}}\operatorname{}{\mathbb{L}}^{n}}\rightarrow{\mathbb{L}}^{n}}$
+maps a tangent vector
+${\mathbf{u}} \in {\mathcal{T}_{\mathbf{x}}\operatorname{}{\mathbb{L}}^{n}}$
+onto ${\mathbb{L}}^{n}$ as:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${{\exp_{\mathbf{x}}{({\mathbf{u}})}}:={{{\cosh{({\|{\mathbf{u}}\|}_{\mathcal{L}})}}\operatorname{}{\mathbf{x}}} + {{\sinh{({\|{\mathbf{u}}\|}_{\mathcal{L}})}}\operatorname{}\frac{\mathbf{u}}{{\|{\mathbf{u}}\|}_{\mathcal{L}}}}}},$$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+such that
+${{\exp_{\mathbf{x}}{({\mathbf{u}})}} = {\mathbf{y}}},{{{\gamma\operatorname{}{(0)}} = {\mathbf{x}}},{{\gamma\operatorname{}{(1)}} = {\mathbf{y}}}}$.
+The log map, inverse of the exponential map, is defined as
+${\log_{\mathbf{x}}{({\mathbf{y}})}}:={\exp_{\mathbf{x}}^{- 1}{({\mathbf{u}})}}$.
+:::
+
+::: {#S2.SS2.p2 .ltx_para}
+Parallel transport is an operation that transports a tangent vector in
+the tangent space at $\mathbf{x}$ to another vector in the tangent space
+at $\mathbf{y}$ along the geodesic from $\mathbf{x}$ to $\mathbf{y}$
+without losing the parallel property. The parallel transport in the
+Lorentz model is given by:
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{{PT}_{{\mathbf{x}}\rightarrow{\mathbf{y}}}\operatorname{}{({\mathbf{v}})}}:={{\mathbf{v}} + {\frac{{\langle{{\mathbf{y}} - {\alpha\operatorname{}{\mathbf{x}}}},{\mathbf{v}}\rangle}_{\mathcal{L}}}{\alpha + 1}\operatorname{}{({{\mathbf{x}} + {\mathbf{y}}})}}}},$$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where
+$\alpha = {- {\langle{\mathbf{x}},{\mathbf{y}}\rangle}_{\mathcal{L}}}$.
+:::
+:::
+
+::: {#S2.SS3 .section .ltx_subsection}
+### [2.3 ]{.ltx_tag .ltx_tag_subsection}Hyperbolic wrapped normal distribution {#hyperbolic-wrapped-normal-distribution .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS3.p1 .ltx_para}
+One of the key challenges in adopting hyperbolic space to probabilistic
+models is finding a distribution on hyperbolic space that is easy to
+sample and has a closed-form density function. The two most common
+distributions of hyperbolic space used in previous work are Riemannian
+normal distribution (Mathieu et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib16){.ltx_ref};
+Said et al.,
+[2014](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib25){.ltx_ref})
+and hyperbolic wrapped normal distribution (HWN) (Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+Our work is mainly based on the HWN because sampling in Riemannian
+normal distribution is limited with only a unit variance.
+:::
+
+::: {#S2.SS3.p2 .ltx_para}
+The sampling process with the HWN follows:
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S2.I1.i1}
+
+    ::: {#S2.I1.i1.p1 .ltx_para}
+    Sample ${\mathbf{v}} \in {\mathbb{R}}^{n}$ from a Gaussian
+    distribution $\mathcal{N}\operatorname{}{(\mathbf{0},\Sigma)}$ in
+    Euclidean space.
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S2.I1.i2}
+
+    ::: {#S2.I1.i2.p1 .ltx_para}
+    Parallel transport the vector
+    ${\lbrack 0,{\mathbf{v}}\rbrack} \in {\mathcal{T}_{\mathbf{0}_{\mathcal{L}}}\operatorname{}{\mathbb{L}}^{n}}$
+    to the tangent space.
+    :::
+3.  [[3.]{.ltx_tag .ltx_tag_item}]{#S2.I1.i3}
+
+    ::: {#S2.I1.i3.p1 .ltx_para}
+    Project the transported tangent vector to ${\mathbb{L}}^{n}$ using
+    exponential mapping.
+    :::
+
+The density of a sample can be measured via the change of variable
+method. For convenience, we denote the procedures 2 and 3 as a single
+operation:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{f_{\mathbf{μ}}\operatorname{}{({\mathbf{v}})}}:={\exp_{\mathbf{μ}}{({{PT}_{\mathbf{0}_{\mathcal{L}}\rightarrow{\mathbf{μ}}}\operatorname{}{({\lbrack 0,{\mathbf{v}}\rbrack})}})}}},$$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+with given ${\mathbf{μ}} \in {\mathbb{L}}^{n}$ and
+${\mathbf{v}} \in {\mathbb{R}}^{n}$, and
+$\mathbf{0}_{\mathcal{L}} = {\lbrack 1,\ldots,0\rbrack}$ stands for the
+origin of ${\mathbb{L}}^{n}$.
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Rotated Hyperbolic Wrapped Normal Distribution {#rotated-hyperbolic-wrapped-normal-distribution .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para}
+This section introduces several observations on the geometric properties
+of the HWN distribution transformation from the Euclidean space to
+hyperbolic space. We show the limitations of the diagonal HWN for
+representation learning of hierarchical data. Then, we propose a simple
+yet effective modification of the HWN, called a rotated hyperbolic
+wrapped normal distribution.
+:::
+
+::: {#S3.SS1 .section .ltx_subsection}
+### [3.1 ]{.ltx_tag .ltx_tag_subsection}Observations on the hyperbolic wrapped normal distribution {#observations-on-the-hyperbolic-wrapped-normal-distribution .ltx_title .ltx_title_subsection}
+
+<figure id="S3.F2" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_3">
+<figure id="S3.F1.sf1"
+class="ltx_figure ltx_flex_size_3 ltx_align_center">
+<img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzMuRjEuc2YxLnBpYzEiIGNsYXNzPSJsdHhfcGljdHVyZSIgaGVpZ2h0PSI1MTIuMjIiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSI2MDcuMjIiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsNTEyLjIyKSBtYXRyaXgoMSAwIDAgLTEgMCAwKSB0cmFuc2xhdGUoLTAuMjgsMCkgdHJhbnNsYXRlKDAsLTAuMjgpIiBmaWxsPSIjMDAwMDAwIiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMC40cHQiIGNvbG9yPSIjMDAwMDAwIj48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA0Ljg5KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIj48Zm9yZWlnbm9iamVjdCB3aWR0aD0iNTk4IiBoZWlnaHQ9IjUwMyIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxpbWcgc3JjPSIuL3Jvd25fZmlsZXMveDIucG5nIiBpZD0iUzMuRjEuc2YxLnBpYzEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5nMSIgY2xhc3M9Imx0eF9ncmFwaGljcyBsdHhfaW1nX3NxdWFyZSIgd2lkdGg9IjgzMCIgaGVpZ2h0PSI2OTgiIGFsdD0iUmVmZXIgdG8gY2FwdGlvbiI+PC9mb3JlaWdub2JqZWN0PjwvZz48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA4NC45NykiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjQ2LjYiIGhlaWdodD0iNi4xNSIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxzcGFuIGlkPSJTMy5GMS5zZjEucGljMS4yLjIuMi4xLjEiIGNsYXNzPSJsdHhfdGV4dCBsdHhfZm9udF9zYW5zc2VyaWYiIHN0eWxlPSJmb250LXNpemU6NTAlOyI+RGlhZ29uYWwgSFdOPC9zcGFuPjwvZm9yZWlnbm9iamVjdD48L2c+PC9nPjwvc3ZnPg=="
+id="S3.F1.sf1.pic1" class="ltx_picture" /><img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzMuRjEuc2YxLnBpYzIiIGNsYXNzPSJsdHhfcGljdHVyZSIgaGVpZ2h0PSI1MTMuMjIiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSI2MDcuMjIiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsNTEzLjIyKSBtYXRyaXgoMSAwIDAgLTEgMCAwKSB0cmFuc2xhdGUoLTAuMjgsMCkgdHJhbnNsYXRlKDAsLTAuMjgpIiBmaWxsPSIjMDAwMDAwIiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMC40cHQiIGNvbG9yPSIjMDAwMDAwIj48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA0Ljg5KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIj48Zm9yZWlnbm9iamVjdCB3aWR0aD0iNTk4IiBoZWlnaHQ9IjUwNCIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxpbWcgc3JjPSIuL3Jvd25fZmlsZXMveDMucG5nIiBpZD0iUzMuRjEuc2YxLnBpYzIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5nMSIgY2xhc3M9Imx0eF9ncmFwaGljcyBsdHhfaW1nX3NxdWFyZSIgd2lkdGg9IjgzMCIgaGVpZ2h0PSI3MDAiIGFsdD0iUmVmZXIgdG8gY2FwdGlvbiI+PC9mb3JlaWdub2JqZWN0PjwvZz48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA4My42MykiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjIwLjg1IiBoZWlnaHQ9IjQuNzMiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48c3BhbiBpZD0iUzMuRjEuc2YxLnBpYzIuMi4yLjIuMS4xIiBjbGFzcz0ibHR4X3RleHQgbHR4X2ZvbnRfc2Fuc3NlcmlmIiBzdHlsZT0iZm9udC1zaXplOjUwJTsiPlJvV048L3NwYW4+PC9mb3JlaWdub2JqZWN0PjwvZz48L2c+PC9zdmc+"
+id="S3.F1.sf1.pic2" class="ltx_picture" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F1.sf1.2.1.1" class="ltx_text" style="font-size:90%;">(a)</span>
+</span><span id="S3.F1.sf1.3.2" class="ltx_text" style="font-size:90%;">
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_3">
+<figure id="S3.F1.sf2"
+class="ltx_figure ltx_flex_size_3 ltx_align_center">
+<img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzMuRjEuc2YyLnBpYzEiIGNsYXNzPSJsdHhfcGljdHVyZSIgaGVpZ2h0PSI1MTMuMjIiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSI2MDcuMjIiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsNTEzLjIyKSBtYXRyaXgoMSAwIDAgLTEgMCAwKSB0cmFuc2xhdGUoLTAuMjgsMCkgdHJhbnNsYXRlKDAsLTAuMjgpIG1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA0Ljg5KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjAuNHB0IiBjb2xvcj0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjU5OCIgaGVpZ2h0PSI1MDQiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48aW1nIHNyYz0iLi9yb3duX2ZpbGVzL3g0LnBuZyIgaWQ9IlMzLkYxLnNmMi5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuZzEiIGNsYXNzPSJsdHhfZ3JhcGhpY3MgbHR4X2ltZ19zcXVhcmUiIHdpZHRoPSI4MzAiIGhlaWdodD0iNzAwIiBhbHQ9IlJlZmVyIHRvIGNhcHRpb24iPjwvZm9yZWlnbm9iamVjdD48L2c+PC9zdmc+"
+id="S3.F1.sf2.pic1" class="ltx_picture" /><img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzMuRjEuc2YyLnBpYzIiIGNsYXNzPSJsdHhfcGljdHVyZSIgaGVpZ2h0PSI1MTIuMjIiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSI2MDcuMjIiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsNTEyLjIyKSBtYXRyaXgoMSAwIDAgLTEgMCAwKSB0cmFuc2xhdGUoLTAuMjgsMCkgdHJhbnNsYXRlKDAsLTAuMjgpIG1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA0Ljg5KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjAuNHB0IiBjb2xvcj0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjU5OCIgaGVpZ2h0PSI1MDMiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48aW1nIHNyYz0iaHR0cHM6Ly9hcjVpdi5sYWJzLmFyeGl2Lm9yZy9odG1sLzIyMDUuMTMzNzEiIGlkPSJTMy5GMS5zZjIucGljMi4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLmcxIiBjbGFzcz0ibHR4X2dyYXBoaWNzIGx0eF9taXNzaW5nIGx0eF9taXNzaW5nX2ltYWdlIiBhbHQ9IlJlZmVyIHRvIGNhcHRpb24iPjwvZm9yZWlnbm9iamVjdD48L2c+PC9zdmc+"
+id="S3.F1.sf2.pic2" class="ltx_picture" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F1.sf2.2.1.1" class="ltx_text" style="font-size:90%;">(b)</span>
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_3">
+<figure id="S3.F1.sf3"
+class="ltx_figure ltx_flex_size_3 ltx_align_center">
+<img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzMuRjEuc2YzLnBpYzEiIGNsYXNzPSJsdHhfcGljdHVyZSIgaGVpZ2h0PSI1MTMuMjIiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSI2MDcuMjIiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsNTEzLjIyKSBtYXRyaXgoMSAwIDAgLTEgMCAwKSB0cmFuc2xhdGUoLTAuMjgsMCkgdHJhbnNsYXRlKDAsLTAuMjgpIG1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA0Ljg5KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjAuNHB0IiBjb2xvcj0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjU5OCIgaGVpZ2h0PSI1MDQiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48aW1nIHNyYz0iLi9yb3duX2ZpbGVzL3g2LnBuZyIgaWQ9IlMzLkYxLnNmMy5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuZzEiIGNsYXNzPSJsdHhfZ3JhcGhpY3MgbHR4X2ltZ19zcXVhcmUiIHdpZHRoPSI4MzAiIGhlaWdodD0iNzAwIiBhbHQ9IlJlZmVyIHRvIGNhcHRpb24iPjwvZm9yZWlnbm9iamVjdD48L2c+PC9zdmc+"
+id="S3.F1.sf3.pic1" class="ltx_picture" /><img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzMuRjEuc2YzLnBpYzIiIGNsYXNzPSJsdHhfcGljdHVyZSIgaGVpZ2h0PSI1MTIuMjIiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSI2MDcuMjIiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsNTEyLjIyKSBtYXRyaXgoMSAwIDAgLTEgMCAwKSB0cmFuc2xhdGUoLTAuMjgsMCkgdHJhbnNsYXRlKDAsLTAuMjgpIG1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNC44OSA0Ljg5KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjAuNHB0IiBjb2xvcj0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjU5OCIgaGVpZ2h0PSI1MDMiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48aW1nIHNyYz0iaHR0cHM6Ly9hcjVpdi5sYWJzLmFyeGl2Lm9yZy9odG1sLzIyMDUuMTMzNzEiIGlkPSJTMy5GMS5zZjMucGljMi4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLmcxIiBjbGFzcz0ibHR4X2dyYXBoaWNzIGx0eF9taXNzaW5nIGx0eF9taXNzaW5nX2ltYWdlIiBhbHQ9IlJlZmVyIHRvIGNhcHRpb24iPjwvZm9yZWlnbm9iamVjdD48L2c+PC9zdmc+"
+id="S3.F1.sf3.pic2" class="ltx_picture" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F1.sf3.2.1.1" class="ltx_text" style="font-size:90%;">(c)</span>
+</span><span id="S3.F1.sf3.3.2" class="ltx_text" style="font-size:90%;">
+</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F2.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 2</span>: </span><span
+id="S3.F2.3.2" class="ltx_text" style="font-size:90%;"> Visualization of
+(a) the principal axes of the normal distribution in the Euclidean
+space, (b) the transported version of two axes in hyperbolic space, and
+(c) the probability density plot of the distributions. (a) The contour
+line (green) can be represented as an ellipse with major principal axis
+(red) and minor principal axis (blue). (b) The transformed principal
+axes become geodesics in hyperbolic space. The major principal axis of
+the RoWN passes the hyperbolic origin and crosses with the minor axis at
+the mean point, whereas the major and minor axes of the diagonal HWN is
+locally parallel to the standard axes. (c) The principal axes determine
+the shapes of the variational distributions. </span></figcaption>
+</figure>
+
+::: {#S3.SS1.p1 .ltx_para}
+First, we investigate the changes in the normal distribution during the
+transformation from Euclidean to hyperbolic space by
+[[Equation 3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S2.E3 "3 ‣ 2.3 Hyperbolic wrapped normal distribution ‣ 2 Preliminaries ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. As the principal axes characterize the
+covariance structure of the normal distribution in the Euclidean space,
+we investigate how the principal axes are transformed in hyperbolic
+space. Before deriving our main proposition, we first show that the
+straight lines that pass through the origin in the Euclidean space are
+transformed to the geodesics in hyperbolic space by
+[[Equation 3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S2.E3 "3 ‣ 2.3 Hyperbolic wrapped normal distribution ‣ 2 Preliminaries ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}.
+:::
+
+::: {#Thmproposition1 .ltx_theorem .ltx_theorem_proposition}
+###### [[Proposition 1]{#Thmproposition1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#Thmproposition1.2.2 .ltx_text .ltx_font_bold} {#proposition-1. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmproposition1.p1 .ltx_para}
+[Suppose
+${\ell_{\mathbf{s}}\operatorname{}{(t)}} = {t\operatorname{}\mathbf{s}} \in {\mathbb{R}}^{n}$
+be a line passing through the origin, where
+$\mathbf{s} \in {\mathbb{R}}^{n}$ is a directional vector. Then the
+curve
+$f_{\mathbf{μ}}\operatorname{}{({\ell_{\mathbf{s}}\operatorname{}{(t)}})}$
+in the Lorentz model ${\mathbb{L}}^{n}$ becomes a
+geodesic.]{#Thmproposition1.p1.4.4 .ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#S3.SS1.p2 .ltx_para}
+The proof of the proposition is provided in [[Appendix A]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A1 "Appendix A Proof of Proposition 1 ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. The proposition indicates that every straight
+line that passes through the origin including the principal axes, is
+transformed into a geodesic in hyperbolic space.
+:::
+
+::: {#S3.SS1.p3 .ltx_para}
+Based on the first proposition, we provide our main proposition, which
+fully characterizes the structure of principal axes when projected to
+the Poincaré disk model:
+:::
+
+::: {#Thmproposition2 .ltx_theorem .ltx_theorem_proposition}
+###### [[Proposition 2]{#Thmproposition2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#Thmproposition2.2.2 .ltx_text .ltx_font_bold} {#proposition-2. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmproposition2.p1 .ltx_para}
+[Define ${Proj}{(\mathbf{u})}$ to be the projection function from the
+Lorentz model to the Poincaré model, i.e.,
+${{{Proj}{(\mathbf{u})}} = \frac{x_{1:}\operatorname{}{(\mathbf{u})}}{{x_{0}\operatorname{}{(\mathbf{u})}} + 1}},{{\forall\mathbf{u}} \in {\mathbb{L}}^{n}}$.
+If $\ell_{\mathbf{s}}$ is a principal axis of the normal distribution
+defined in ${\mathbb{R}}^{n}$ and $\mathbf{μ}$ the mean of HWN in
+${\mathbb{L}}^{n}$, then $\mathbf{s}$ is the tangent vector of
+${Proj}{({f_{\mathbf{μ}}\operatorname{}{(\ell_{\mathbf{s}})}})}$ on
+${Proj}{({\mathbf{μ}})}$.]{#Thmproposition2.p1.9.9 .ltx_text
+.ltx_font_italic}
+:::
+:::
+
+::: {#S3.SS1.p4 .ltx_para}
+The proof of the proposition is provided in [[Appendix B]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A2 "Appendix B Proof of Proposition 2 ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. The proposition reveals that the principal axes
+of the HWN are locally parallel to the standard bases in the Poincaré
+disk model. To visualize the proposition, we plot the contour line and
+the principal axes of the two-dimensional diagonal normal distribution
+before and after the transformation in [[Figure 2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.F2 "Figure 2 ‣ 3.1 Observations on the hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. We observe that the tangent lines of the
+transformed principal axes are parallel to the standard bases in
+hyperbolic space.
+:::
+
+::: {#S3.SS1.p5 .ltx_para}
+When a popular diagonal normal distribution is employed as a variational
+distribution, the locally parallel principal axes might be problematic
+in learning hierarchical representations. For example, suppose one tries
+to represent the variability along the radial direction or in angular
+differences. In the case, both the major (red) and minor (blue) axes in
+[[1(b)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.F1.sf2 "1(b) ‣ Figure 2 ‣ 3.1 Observations on the hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} cannot model the variability properly.
+:::
+:::
+
+::: {#S3.SS2 .section .ltx_subsection}
+### [3.2 ]{.ltx_tag .ltx_tag_subsection}Rotated hyperbolic wrapped normal distribution {#rotated-hyperbolic-wrapped-normal-distribution-1 .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS2.p1 .ltx_para}
+Based on the observation, we propose a simple yet effective alternative
+to the diagonal HWN, a rotated hyperbolic wrapped normal distribution
+(RoWN). Rotating the covariance matrix to the direction of $\mathbf{μ}$
+enables aligning the major axis of the normal distribution in the
+Euclidean space to the radial axis in hyperbolic space as visualized in
+the [[Figure 2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.F2 "Figure 2 ‣ 3.1 Observations on the hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}.
+:::
+
+<figure id="alg1" class="ltx_float ltx_float_algorithm ltx_framed_top">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell">
+<p><span id="alg1.3.1" class="ltx_text ltx_font_bold">Input</span> Mean
+<span
+class="math inline"><strong>μ</strong> ∈ 𝕃<sup><em>n</em></sup></span>,
+diagonal covariance matrix <span
+class="math inline"><em>Σ</em> ∈ ℝ<sup><em>n</em> × <em>n</em></sup></span><br />
+<span id="alg1.3.2" class="ltx_text ltx_font_bold">Output</span> Sample
+<span
+class="math inline"><strong>z</strong> ∈ 𝕃<sup><em>n</em></sup></span></p>
+</div>
+<div class="ltx_flex_cell">
+<div id="alg1.6" class="ltx_listing">
+<div id="alg1.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l1.4.1.1"
+class="ltx_text" style="font-size:80%;">1:</span></span><span
+class="math inline"><strong>x</strong> = [±1, …, 0] ∈ ℝ<sup><em>n</em></sup>, <strong>y</strong> = <strong>μ</strong><sub>1:</sub>/∥<strong>μ</strong><sub>1:</sub>∥</span>
+<span id="alg1.l1.3" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> <span class="math inline">±</span> is
+determined by the sign of <span
+class="math inline"><strong>μ</strong><sub>0</sub></span> </span>
+</div>
+<div id="alg1.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l2.1.1.1"
+class="ltx_text" style="font-size:80%;">2:</span></span><span
+class="math inline"><strong>R</strong> = <strong>I</strong> + (<strong>y</strong><sup><em>T</em></sup> <strong>x</strong>−<strong>x</strong><sup><em>T</em></sup> <strong>y</strong>) + (<strong>y</strong><sup><em>T</em></sup> <strong>x</strong>−<strong>x</strong><sup><em>T</em></sup> <strong>y</strong>)<sup>2</sup>/(1+⟨<strong>x</strong>, <strong>y</strong>⟩)</span>
+</div>
+<div id="alg1.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l3.1.1.1"
+class="ltx_text" style="font-size:80%;">3:</span></span>Rotate <span
+class="math inline"><em>Σ̂</em> = <strong>R</strong> <em>Σ</em> <strong>R</strong><sup><em>T</em></sup></span>
+</div>
+<div id="alg1.l4" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l4.1.1.1"
+class="ltx_text" style="font-size:80%;">4:</span></span>Sample <span
+class="math inline"><strong>v</strong> ∼ 𝒩 (<strong>0</strong>,<em>Σ̂</em>)</span>
+</div>
+<div id="alg1.l5" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l5.1.1.1"
+class="ltx_text" style="font-size:80%;">5:</span></span><span
+id="alg1.l5.2" class="ltx_text ltx_font_bold">return</span> <span
+class="math inline"><strong>z</strong> = <em>f</em><sub><strong>μ</strong></sub> (<strong>v</strong>)</span>
+</div>
+</div>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg1.5.1.1"
+class="ltx_text ltx_font_bold">Algorithm 1</span> </span> Sampling
+process with the rotated hyperbolic wrapped normal
+distribution</figcaption>
+</figure>
+
+<figure id="S3.F3" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_3">
+<figure id="S3.F2.sf1"
+class="ltx_figure ltx_flex_size_3 ltx_align_center">
+<p><span id="S3.F2.sf1.2.1" class="ltx_text ltx_font_sansserif"
+style="font-size:50%;width:35.0pt;position:relative; bottom:50.0pt;">samples</span><img
+src="./rown_files/failure_wn_sample.png" id="S3.F2.sf1.1.g1"
+class="ltx_graphics ltx_img_square" width="557" height="556"
+alt="Refer to caption" /> <span id="S3.F2.sf1.2.2"
+class="ltx_text ltx_font_sansserif"
+style="font-size:50%;width:35.0pt;position:relative; bottom:45.0pt;">means</span><img
+src="./rown_files/failure_wn_mean.png" id="S3.F2.sf1.2.g2"
+class="ltx_graphics ltx_img_square" width="557" height="558"
+alt="Refer to caption" /></p>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F2.sf1.4.1.1" class="ltx_text" style="font-size:90%;">(a)</span>
+</span><span id="S3.F2.sf1.5.2" class="ltx_text"
+style="font-size:90%;">Diagonal HWN</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_3">
+<figure id="S3.F2.sf2"
+class="ltx_figure ltx_flex_size_3 ltx_align_center">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_1">
+<img src="./rown_files/failure_full_sample.png" id="S3.F2.sf2.g1"
+class="ltx_graphics ltx_flex_size_1 ltx_img_square" width="598"
+height="599" alt="Refer to caption" />
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<img src="./rown_files/failure_full_mean.png" id="S3.F2.sf2.g2"
+class="ltx_graphics ltx_flex_size_1 ltx_img_square" width="598"
+height="598" alt="Refer to caption" />
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F2.sf2.2.1.1" class="ltx_text" style="font-size:90%;">(b)</span>
+</span><span id="S3.F2.sf2.3.2" class="ltx_text"
+style="font-size:90%;">Full covariance HWN</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_3">
+<figure id="S3.F2.sf3"
+class="ltx_figure ltx_flex_size_3 ltx_align_center">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_1">
+<img src="./rown_files/failure_rown_sample.png" id="S3.F2.sf3.g1"
+class="ltx_graphics ltx_flex_size_1 ltx_img_square" width="598"
+height="598" alt="Refer to caption" />
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<img src="./rown_files/failure_rown_mean.png" id="S3.F2.sf3.g2"
+class="ltx_graphics ltx_flex_size_1 ltx_img_square" width="598"
+height="599" alt="Refer to caption" />
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S3.F2.sf3.2.1.1" class="ltx_text" style="font-size:90%;">(c)</span>
+</span><span id="S3.F2.sf3.3.2" class="ltx_text"
+style="font-size:90%;">RoWN</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F3.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 3</span>: </span><span
+id="S3.F3.3.2" class="ltx_text" style="font-size:90%;"> Visualization of
+the variational distribution of hyperbolic VAE on a synthetic binary
+tree dataset with different variational distributions. The red dots
+denote the variational means of the root and four representative
+children. The upper row shows the samples from the variational
+distributions where the color denotes the level of noise. The bottom row
+shows the means of the variational distributions. Overall, RoWN better
+aligns local variation in angular difference. </span></figcaption>
+</figure>
+
+::: {#S3.SS2.p2 .ltx_para}
+To construct the distribution, we start with a mean vector
+${\mathbf{μ}} \in {\mathbb{L}}^{n}$ and a diagonal covariance matrix
+$\Sigma$ as in the standard HWN. We change the covariance matrix of the
+normal distribution as follows:
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S3.I1.i1}
+
+    ::: {#S3.I1.i1.p1 .ltx_para}
+    Compute the rotation matrix $\mathbf{R}$ that rotates the x-axis
+    (${\lbrack{\pm 1},\ldots,0\rbrack} \in {\mathbb{R}}^{n}$) to
+    ${\mathbf{μ}}_{1:}$.
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S3.I1.i2}
+
+    ::: {#S3.I1.i2.p1 .ltx_para}
+    Substitute the covariance matrix of Gaussian normal with
+    ${\mathbf{R}}\operatorname{}\Sigma\operatorname{}{\mathbf{R}}^{T}$.
+    :::
+
+Thus, the rotation matrix $\mathbf{R}$, which rotates a unit vector from
+$\mathbf{x}$ to $\mathbf{y}$, can be computed as:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${{\mathbf{R}} = {{\mathbf{I}} + {({{{\mathbf{y}}^{T}\operatorname{}{\mathbf{x}}} - {{\mathbf{x}}^{T}\operatorname{}{\mathbf{y}}}})} + {\frac{1}{1 + {\langle{\mathbf{x}},{\mathbf{y}}\rangle}}\operatorname{}{({{{\mathbf{y}}^{T}\operatorname{}{\mathbf{x}}} - {{\mathbf{x}}^{T}\operatorname{}{\mathbf{y}}}})}^{2}}}}.$$      [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+:::
+
+::: {#S3.SS2.p3 .ltx_para}
+The pseudo-code of the sampling process of RoWN is in
+[[Algorithm 1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#alg1 "Algorithm 1 ‣ 3.2 Rotated hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. Note that the construction is straightforward
+but still keeps the following benefits of the HWN: 1) The sampling can
+be done efficiently, and 2) the computation of the probability density
+of the samples is tractable. As the HWN provides a tractable probability
+density function for any kind of covariance matrix, we can easily
+compute the probability density of a given sample from RoWN. See
+Appendix [[C]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A3 "Appendix C Details of Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}
+for more details.
+:::
+
+::: {#S3.SS2.p4 .ltx_para}
+We empirically demonstrate the influence of different variational
+distributions in [[Figure 3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.F3 "Figure 3 ‣ 3.2 Rotated hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. We visualize the variational distributions of
+the synthetic binary tree dataset of depth two after training a
+hyperbolic VAE. As the result shows, the model with the diagonal HWN
+represents the variation in a child parallel to the standard bases,
+whereas the model with RoWN represents the variation in angular
+difference. Please check the detailed description on the synthetic
+dataset in [[Section 4.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.SS2 "4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}.
+:::
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para}
+In this section, we first explain the two applications of the
+distribution defined on hyperbolic space: hyperbolic VAE and
+probabilistic hyperbolic word embedding model. We then conduct three
+different experiments to compare the performance of RoWN with four
+baselines, including the Gaussian distribution in the Euclidean space,
+the isotropic HWN (Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}),
+the diagonal HWN, and the full covariance HWN. We also provide an
+additional study on a variant of RoWN with learnable rotation direction
+$\mathbf{y}$ in [[Algorithm 1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#alg1 "Algorithm 1 ‣ 3.2 Rotated hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, and the results are in [[Table 9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T9 "Table 9 ‣ Learnable rotation. ‣ D.2 Noisy synthetic binary tree ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. The details of the experiments are described in
+[[Appendix D]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4 "Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}.
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Applications of the hyperbolic distribution {#applications-of-the-hyperbolic-distribution .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.SSS0.Px1 .section .ltx_paragraph}
+#### Hyperbolic VAE. {#hyperbolic-vae. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px1.p1 .ltx_para}
+The hyperbolic VAE, whose latent space is hyperbolic space, has been
+shown to be efficient for capturing the hierarchical structure of the
+data (Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref};
+Mathieu et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib16){.ltx_ref}).
+The evidence lower bound of the hyperbolic VAE can be written as:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $${{\mathcal{L}_{ELBO}\operatorname{}{(\theta,\phi)}}:={{{\mathbb{E}}_{{q_{\phi}\operatorname{}{({{\mathbf{z}} \mid {\mathbf{x}}})}} \cdot \sqrt{\det{(g)}}}\operatorname{}{\lbrack{{\log p_{\theta}}\operatorname{}{({{\mathbf{x}} \mid {\mathbf{z}}})}}\rbrack}} - {D_{KL}\operatorname{}\left( {{{q_{\phi}\operatorname{}{({{\mathbf{x}} \mid {\mathbf{z}}})}} \cdot \sqrt{\det{(g)}}} \parallel {{p\operatorname{}{({\mathbf{z}})}} \cdot \sqrt{\det{(g)}}}} \right)}}},$$   
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+where $q_{\phi}$ is the encoder, $p_{\theta}$ is the decoder, $g$ is the
+metric tensor of the chosen model of hyperbolic space, and
+$p\operatorname{}{({\mathbf{z}})}$ is a prior distribution. The
+distributions defined on hyperbolic spaces, such as HWN and RoWN, are
+used to define encoder
+${q_{\phi}\operatorname{}{({{\mathbf{z}} \mid {\mathbf{x}}})}} \cdot \sqrt{\det{(g)}}$
+and prior ${p\operatorname{}{({\mathbf{z}})}} \cdot \sqrt{\det{(g)}}$.
+In hyperbolic VAEs, due to the absence of the closed-form KL divergence
+in the hyperbolic distributions, the KL divergence between the encoder
+and the prior is usually approximated with Monte-Carlo sampling (Nagano
+et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref};
+Mathieu et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib16){.ltx_ref}).
+:::
+:::
+
+::: {#S4.SS1.SSS0.Px2 .section .ltx_paragraph}
+#### Probabilistic hyperbolic word embedding model. {#probabilistic-hyperbolic-word-embedding-model. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px2.p1 .ltx_para}
+The probabilistic word embedding models aim to learn probabilistic
+representations of words (Vilnis and McCallum,
+[2015](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib32){.ltx_ref};
+Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref};
+Tifrea et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib31){.ltx_ref}).
+The embeddings learned on hyperbolic spaces have shown better
+performance than the Euclidean counterpart (Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref};
+Tifrea et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib31){.ltx_ref}).
+Given the hypernymy relationships between the words, the probabilistic
+hyperbolic embedding model learns the probabilistic representation of
+words by minimizing the following objective:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\mathcal{L}_{word}\operatorname{}{({\mathbf{θ}})}}:={{\mathbb{E}}_{({{s \sim t},{s\operatorname{\sim\not{}}t^{\prime}}})}\operatorname{}{\lbrack{\max{(0,{{m + {D_{KL}\operatorname{}{({q_{s} \parallel q_{t}})}}} - {D_{KL}\operatorname{}{({q_{s} \parallel q_{t^{\prime}}})}}})}}\rbrack}}},$$      [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $m$ is a margin, $q_{i}$ is a distribution for word $i$
+parameterized by $\theta$, and $s \sim t$ and
+$s\operatorname{\sim\not{}}t$ denote the presence and absence of
+hypernymy relation between word pair $s$ and $t$, respectively.
+:::
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Noisy synthetic binary tree {#noisy-synthetic-binary-tree .ltx_title .ltx_title_subsection}
+
+<figure id="S4.F4" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S4.F3.sf1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./rown_files/nbt_noisy_examples.png" id="S4.F3.sf1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="718"
+height="483" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S4.F3.sf1.2.1.1" class="ltx_text" style="font-size:90%;">(a)</span>
+</span><span id="S4.F3.sf1.3.2" class="ltx_text"
+style="font-size:90%;">Noisy synthetic binary tree</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S4.F3.sf2"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./rown_files/nbt_examples.png" id="S4.F3.sf2.g1"
+class="ltx_graphics ltx_centering ltx_img_square" width="479"
+height="473" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="S4.F3.sf2.2.1.1" class="ltx_text" style="font-size:90%;">(b)</span>
+</span><span id="S4.F3.sf2.3.2" class="ltx_text"
+style="font-size:90%;">Learned representations</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S4.F4.4.2.1"
+class="ltx_text" style="font-size:90%;">Figure 4</span>: </span><span
+id="S4.F4.2.1" class="ltx_text" style="font-size:90%;">Illustration of a
+noisy synthetic binary tree. (a) We construct a noisy synthetic binary
+tree by adding spherical noises defined with <span
+class="math inline"><em>θ</em></span>. The continuous samples are
+generated at the same distance from the root. (b) We train the depth
+three noisy synthetic binary tree with hyperbolic VAE with RoWN as a
+variational distribution and visualize the means of the variational
+distributions. The black lines show the underlying hierarchical
+structure, and the color denotes the level of noise. The hierarchy and
+the local variations are well preserved in the
+representations.</span></figcaption>
+</figure>
+
+::: {#S4.SS2.p1 .ltx_para}
+A synthetic binary tree dataset is first used to show the performance of
+representing hierarchy in Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}),
+where each node in a tree corresponds to a sequence of binary values.
+[[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.F3.sf1 "3(a) ‣ Figure 4 ‣ 4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows an example of the depth three binary tree,
+where a parent and child only differ in one digit. We add spherical
+noises to the nodes in the same level of hierarchy as described in
+[[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.F3.sf1 "3(a) ‣ Figure 4 ‣ 4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} as the noisy samples. With the noisy samples, we
+can create a dataset containing a local-level variation in the
+hierarchy. For the experiments, we uniformly sample the spherical noise
+from $\lbrack 0,{\pi/4}\rbrack$.
+:::
+
+<figure id="S4.T1" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T1.49.1.1"
+class="ltx_text" style="font-size:90%;">Table 1</span>: </span><span
+id="S4.T1.50.2" class="ltx_text" style="font-size:90%;">Results of <span
+id="S4.T1.50.2.1" class="ltx_text ltx_font_italic">noisy synthetic
+binary tree</span>. The results are averaged over 10 runs. The
+hyperbolic models outperform the Euclidean model in all settings.
+Overall, RoWN preserves the hierarchical information better than the
+other distributions. </span></figcaption>
+</figure>
+
+::: {#S4.SS2.p2 .ltx_para}
+We train hyperbolic VAE on [noisy synthetic binary tree]{#S4.SS2.p2.1.1
+.ltx_text .ltx_font_italic} with varying depths. The detailed model
+description is available in Appendix [[D.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.SS1 "D.1 Baselines ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}.
+We set the latent dimension the same as the depth. We report 1) the
+correlation between the hamming distance and the embedding distance and
+2) the correlation between the depth and the Poincaré norm of the
+embeddings. The first correlation is computed over all possible pairs of
+test points. As [[Table 1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.T1 "Table 1 ‣ 4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows, the full covariance HWN and RoWN improve
+the diagonal HWN except depth six, outperforming the Euclidean model in
+every setting. RoWN preserves the depth information better than the
+other distributions in general. We additionally visualize the
+variational mean obtained by training the tree of depth three in
+[[3(b)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.F3.sf2 "3(b) ‣ Figure 4 ‣ 4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, where the hierarchical structure is well
+preserved in the hyperbolic embedding space.
+:::
+:::
+
+::: {#S4.SS3 .section .ltx_subsection}
+### [4.3 ]{.ltx_tag .ltx_tag_subsection}WordNet {#wordnet .ltx_title .ltx_title_subsection}
+
+<figure id="S4.T2" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T2.39.1.1"
+class="ltx_text" style="font-size:90%;">Table 2</span>: </span><span
+id="S4.T2.40.2" class="ltx_text" style="font-size:90%;">Results of <span
+id="S4.T2.40.2.1" class="ltx_text ltx_font_italic">WordNet</span>. The
+results are an average of 5 runs. Based on the rank of hypernymy pairs
+among non-hypernymy pairs, we report the mean rank (MR) and mean average
+precision (mAP) for evaluation.</span></figcaption>
+</figure>
+
+::: {#S4.SS3.p1 .ltx_para}
+We train a probabilistic word embedding model with WordNet
+dataset (Fellbaum,
+[1998](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib5){.ltx_ref}),
+which consists of 82,115 nouns and 743,241 hypernymy relationships. We
+have initialized the embeddings from
+$\mathcal{N}\operatorname{}{(0,{0.01\operatorname{}I})}$, which are then
+moved to the Lorentz model using the exponential map. We use the
+learning rate warm-up proposed in (Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+We evaluate the learned representations by computing the average rank of
+all the hypernymies. The rank of a given pair of words $s$ and $t$ is
+computed among the distances between all possible pairs of the words $s$
+and $t^{\prime}$ without hypernymy. [[Table 2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.T2 "Table 2 ‣ 4.3 WordNet ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows the empirical performances of representing
+the word data. We report the performance with the mean rank (MR) and the
+mean average precision (mAP). RoWN preserves the hierarchical structure
+better than the other distributions, while the full covariance HWN often
+performs worse than RoWN.
+:::
+
+::: {#S4.SS3.SSS0.Px1 .section .ltx_paragraph}
+#### Failure of the full covariance HWN. {#failure-of-the-full-covariance-hwn. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS3.SSS0.Px1.p1 .ltx_para}
+In theory, the full covariance HWN needs to have at least a similar
+performance to RoWN since the RoWN is the particular case of the full
+covariance. The performance of the full covariance HWN often performs
+worse with the probabilistic hyperbolic word embedding models than the
+hyperbolic VAEs. We speculate that reason is because of the relatively
+simple prior in the hyperbolic VAE, whereas the probabilistic word
+embedding models need to compute the KL divergence between the full
+covariance HWNs. Our additional experiments reported in
+[[Table 11]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T11 "Table 11 ‣ Optimization issue in training full covariance HWN. ‣ D.3 WordNet ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} confirm our speculation as the number of training
+samples for the KL divergence increases, the performance increases
+slightly.
+:::
+:::
+
+::: {#S4.SS3.SSS0.Px2 .section .ltx_paragraph}
+#### Discussion of the root placement. {#discussion-of-the-root-placement. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS3.SSS0.Px2.p1 .ltx_para}
+Note that due to the isometry of the geometry, the root node can be
+placed anywhere in hyperbolic space. In other words, infinitely many
+sets of embeddings preserve the same pairwise distances between the
+nodes. To place the root near the origin, we initialize all embeddings
+with the zero mean distribution as done in (Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+We find that this initialization helps the root placed near the origin.
+A study on the effects of the initialization methods is shown in
+[[Table 3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.T3 "Table 3 ‣ Discussion of the root placement. ‣ 4.3 WordNet ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. Further details about the root placement can be
+found in [[Appendix E]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A5 "Appendix E Discussion on Root Placement ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}.
+:::
+
+<figure id="S4.T3" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T3.32.3.1"
+class="ltx_text" style="font-size:90%;">Table 3</span>: </span><span
+id="S4.T3.4.2" class="ltx_text" style="font-size:90%;"> The effects of
+initializations. We test different initializations on the deterministic
+hyperbolic word embedding models trained with the subset of the WordNet
+dataset. The <span id="S4.T3.4.2.1"
+class="ltx_text ltx_font_typewriter">near zero vector</span> model
+initializes the embeddings with uniform distribution <span
+class="math inline">𝒰 (−0.001,0.001)</span>, while the <span
+id="S4.T3.4.2.2" class="ltx_text ltx_font_typewriter">near one
+vector</span> model initializes the embeddings with uniform distribution
+<span class="math inline">𝒰 (0.999,1.001)</span>. While the Poincaré
+norm of the root node differs, the other metrics remain similar.
+</span></figcaption>
+</figure>
+:::
+:::
+
+::: {#S4.SS4 .section .ltx_subsection}
+### [4.4 ]{.ltx_tag .ltx_tag_subsection}Atari 2600 Breakout {#atari-2600-breakout .ltx_title .ltx_title_subsection}
+
+<figure id="S4.T4" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T4.21.1.1"
+class="ltx_text" style="font-size:90%;">Table 4</span>: </span><span
+id="S4.T4.22.2" class="ltx_text" style="font-size:90%;">Results of <span
+id="S4.T4.22.2.1" class="ltx_text ltx_font_italic">Atari 2600
+Breakout</span>. The results are averaged over 5 runs. We measure the
+correlation between the score of an image and the Poincaré norm of the
+variational mean. The HWN with the isotropic covariance can be viewed as
+a variant of RoWN.</span></figcaption>
+</figure>
+
+::: {#S4.SS4.p1 .ltx_para}
+Trajectories of some Atari 2600 games can be structured as a tree-like
+hierarchy along the time horizon as Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref})
+points out. For example, given Atari 2600 Breakout, the root node can be
+the starting state of the game where no blocks have been broken. As the
+game progresses the states of the blocks form a hierarchical structure
+depending on which blocks have been broken. To learn the implicit
+hierarchy that can be observed from the trajectories of Breakout, we
+train the VAE models with the Atari 2600 Breakout images.
+:::
+
+::: {#S4.SS4.p2 .ltx_para}
+The images of Breakout are collected by using a pre-trained Deep
+Q-network (Mnih et al.,
+[2015](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib17){.ltx_ref})
+and divided into training set and test set with 90,000 and 10,000 images
+respectively. We label each image with the score obtained from the game
+environment. So the labels are correlated to the number of broken
+blocks. To train VAE, we use a DCGAN-based architecture, which was
+originally used to evaluate HWN in Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+The detailed architecture is provided in Appendix [[D.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.SS4.SSS0.Px1 "Experimental setting. ‣ D.4 Atari 2600 Breakout ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}.
+To evaluate the models, we measure the correlation between the Poincaré
+norm of the test images and the labeled scores. The evaluation results
+and the generated images from the trained models are reported in
+[[Table 4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.T4 "Table 4 ‣ 4.4 Atari 2600 Breakout ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} and [[Figure 5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.F5 "Figure 5 ‣ 4.4 Atari 2600 Breakout ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, respectively.
+:::
+
+::: {#S4.SS4.p3 .ltx_para}
+In learning Breakout images, RoWN and the full covariance HWN outperform
+the diagonal HWN. The isotropic HWN, where the covariance matrix is
+invariant to any rotation matrix, shows a better correlation than the
+others in all the settings. However, as reported in
+[[Table 14]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T14 "Table 14 ‣ Results. ‣ D.4 Atari 2600 Breakout ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, the test ELBO values are relatively worse than
+the others. While the isotropic HWN shows a high correlation but
+relatively lower test ELBO, RoWN shows competitive test ELBO to the
+others and well aligns the hierarchical structures with respect to the
+norm in low latent dimensions.
+:::
+
+<figure id="S4.F5" class="ltx_figure">
+<img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzQuRjUucGljMSIgY2xhc3M9Imx0eF9waWN0dXJlIGx0eF9jZW50ZXJpbmciIGhlaWdodD0iMTkzLjAzIiBvdmVyZmxvdz0idmlzaWJsZSIgdmVyc2lvbj0iMS4xIiB3aWR0aD0iNjA3LjIyIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLDE5My4wMykgbWF0cml4KDEgMCAwIC0xIDAgMCkgdHJhbnNsYXRlKC0wLjI4LDApIHRyYW5zbGF0ZSgwLC0wLjI4KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIiBzdHJva2Utd2lkdGg9IjAuNHB0IiBjb2xvcj0iIzAwMDAwMCI+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMS4wIDAuMCAwLjAgMS4wIDQuODkgMTYuNykiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjU5OCIgaGVpZ2h0PSIxNzIiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48aW1nIHNyYz0iLi9yb3duX2ZpbGVzL3g4LnBuZyIgaWQ9IlM0LkY1LnBpYzEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5nMSIgY2xhc3M9Imx0eF9ncmFwaGljcyBsdHhfaW1nX2xhbmRzY2FwZSIgd2lkdGg9IjgzMCIgaGVpZ2h0PSIyMzciIGFsdD0iUmVmZXIgdG8gY2FwdGlvbiI+PC9mb3JlaWdub2JqZWN0PjwvZz48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgMjguNTEgNi4yNykiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9Ijc3LjYiIGhlaWdodD0iNi4yMyIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxzcGFuIGlkPSJTNC5GNS5waWMxLjIuMi4yLjEuMSIgY2xhc3M9Imx0eF90ZXh0IGx0eF9mb250X3NhbnNzZXJpZiIgc3R5bGU9ImZvbnQtc2l6ZTo1MCU7Ij5UaGUgUG9pbmNhcsOpIGRpc2sgbW9kZWw8L3NwYW4+PC9mb3JlaWdub2JqZWN0PjwvZz48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgMjE1LjUyIDYuMjMpIiBmaWxsPSIjMDAwMDAwIiBzdHJva2U9IiMwMDAwMDAiPjxmb3JlaWdub2JqZWN0IHdpZHRoPSI2MC44MyIgaGVpZ2h0PSI2LjE1IiB0cmFuc2Zvcm09Im1hdHJpeCgxIDAgMCAtMSAwIDE2LjYpIiBvdmVyZmxvdz0idmlzaWJsZSI+PHNwYW4gaWQ9IlM0LkY1LnBpYzEuMy4zLjMuMS4xIiBjbGFzcz0ibHR4X3RleHQgbHR4X2ZvbnRfc2Fuc3NlcmlmIiBzdHlsZT0iZm9udC1zaXplOjUwJTsiPlRoZSBEaWFnb25hbCBIV048L3NwYW4+PC9mb3JlaWdub2JqZWN0PjwvZz48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNDQxLjkgNC44OSkiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjIwLjg1IiBoZWlnaHQ9IjQuNzMiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48c3BhbiBpZD0iUzQuRjUucGljMS40LjQuNC4xLjEiIGNsYXNzPSJsdHhfdGV4dCBsdHhfZm9udF9zYW5zc2VyaWYiIHN0eWxlPSJmb250LXNpemU6NTAlOyI+Um9XTjwvc3Bhbj48L2ZvcmVpZ25vYmplY3Q+PC9nPjwvZz48L3N2Zz4="
+id="S4.F5.pic1" class="ltx_picture ltx_centering" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S4.F5.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 5</span>: </span><span
+id="S4.F5.3.2" class="ltx_text" style="font-size:90%;"> The generated
+images from a trained VAE endowed with RoWN by using Atari 2600 Breakout
+images. Every five images are generated from the randomly sampled latent
+vectors of dimensionality two having the Poincaré norm 0.1, 0.9, 0.95.
+The larger norm of the sample latent vectors, the more blocks are broken
+out in the generated images. </span></figcaption>
+</figure>
+:::
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Related work {#related-work .ltx_title .ltx_title_section}
+
+::: {#S5.SS0.SSS0.Px1 .section .ltx_paragraph}
+#### Hyperbolic space for hierarchical representation learning. {#hyperbolic-space-for-hierarchical-representation-learning. .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS0.SSS0.Px1.p1 .ltx_para}
+Earlier studies on the hierarchical representation learning have focused
+on modeling explicit hierarchical structures through the Bayesian
+non-parametrics (Griffiths et al.,
+[2003](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib7){.ltx_ref};
+Larsen et al.,
+[2002](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib13){.ltx_ref};
+Salakhutdinov et al.,
+[2012](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib26){.ltx_ref};
+Teh et al.,
+[2007](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib30){.ltx_ref};
+Ghahramani et al.,
+[2010](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib6){.ltx_ref};
+Heller and Ghahramani,
+[2005](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib9){.ltx_ref})
+or embedding the hierarchical structure into Euclidean space (Nickel
+et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib20){.ltx_ref};
+Grover and Leskovec,
+[2016](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib8){.ltx_ref};
+Nguyen et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib19){.ltx_ref}).
+Euclidean space is later shown to require an excessive number of
+dimensions to embed the original hierarchical structure without any
+distortion (Linial et al.,
+[1994](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib14){.ltx_ref}).
+:::
+
+::: {#S5.SS0.SSS0.Px1.p2 .ltx_para}
+Hyperbolic space has been proposed as an alternative medium to embed the
+hierarchical data. Theoretically, any tree-structured data can be
+embedded in hyperbolic space with arbitrarily low distortion (Sarkar,
+[2011](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib27){.ltx_ref}).
+Based on the theory, learning representation of hierarchical structure
+in hyperbolic space has been shown great success in various datasets
+including WordNet hierarchy, graph-structured data, and social network
+data (Nickel and Kiela,
+[2017](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib21){.ltx_ref},
+[2018](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib22){.ltx_ref};
+Chami et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib3){.ltx_ref};
+Sun et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib29){.ltx_ref};
+Zhao et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib33){.ltx_ref};
+Shavitt and Tankel,
+[2008](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib28){.ltx_ref}).
+However, these studies are only limited to modeling the explicit
+hierarchy, which means that the dataset contains an explicit relation
+between data points. Furthermore, the learning frameworks are limited in
+the non-probabilistic setting because of the absence of well-behaved
+distribution in hyperbolic space.
+:::
+:::
+
+::: {#S5.SS0.SSS0.Px2 .section .ltx_paragraph}
+#### Distributions in hyperbolic space. {#distributions-in-hyperbolic-space. .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS0.SSS0.Px2.p1 .ltx_para}
+The probabilistic model enables measuring the uncertainty and provides a
+principled way of learning. To extend the probabilistic learning
+framework from Euclidean to hyperbolic space or Riemannian manifold in
+general, one needs to define a well-behaved distribution that has a
+tractable density and is easy to sample from. Recently, a few studies
+have proposed probabilistic learning schemes in hyperbolic
+space (Mathieu et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib16){.ltx_ref};
+Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+Mathieu et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib16){.ltx_ref})
+introduces parametrizable sampling schemes for the two canonical
+Gaussian generalizations defined on the Poincaré disk model. The scheme
+is used to train a hyperbolic VAE and show an improved generalization
+performance with high interpretability. Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref})
+suggests a method of integrating the Bayesian framework with hyperbolic
+space in the Lorentz model where the simpler closed form of geodesics is
+defined. Normalizing flow (Rezende and Mohamed,
+[2015](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib23){.ltx_ref})
+can be also used to define the hyperbolic distribution in the
+probabilistic learning framework. Bose et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib1){.ltx_ref})
+propose two normalizing flows defined on hyperbolic space, which show
+improvements in learning hierarchical structures in graph data. Mathieu
+and Nickel
+([2020](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib15){.ltx_ref})
+elevate the continuous normalizing flow (Chen et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib4){.ltx_ref})
+defined on the Euclidean space to arbitrary Riemannian manifold,
+including the hyperbolic space. Based on Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}),
+we analyze the geometric properties of the distribution lying on the
+Lorentz model and show the limitations of the existing method.
+:::
+:::
+:::
+
+::: {#S6 .section .ltx_section}
+## [6 ]{.ltx_tag .ltx_tag_section}Limitations {#limitations .ltx_title .ltx_title_section}
+
+::: {#S6.p1 .ltx_para}
+We explore a better method of representing hierarchical data in
+hyperbolic space. To this end, we propose a simple yet effective
+alternative of hyperbolic wrapped normal distribution. However, the
+proposed distribution is limited only to hyperbolic space, and no
+generalization method for Riemannian space is studied yet. To explore
+the usefulness of alternative Riemannian spaces, finding a common
+distribution that can work well in any Riemannian space will be
+necessary.
+:::
+
+::: {#S6.p2 .ltx_para}
+RoWN is a subset of the full covariance HWN. However, in many cases,
+RoWN outperforms the full covariance HWN in our experiments. In general,
+optimizing the covariance matrix requires learning the quadratic number
+of parameters with respect to the dimensionality. We conjecture the
+hardness of optimization leads to the poor performance of the full
+covariance HWN. To overcome this limitation, a search for a better
+optimization algorithm in hyperbolic space needs to be explored.
+:::
+:::
+
+::: {#S7 .section .ltx_section}
+## [7 ]{.ltx_tag .ltx_tag_section}Conclusions {#conclusions .ltx_title .ltx_title_section}
+
+::: {#S7.p1 .ltx_para}
+In this work, we propose a novel method of using RoWN for representing
+the data with a hierarchical structure. With an in-depth analysis of the
+geometric properties of HWN, we demonstrate why the common choice of the
+diagonal covariance matrix for HWN may be inappropriate but the rotated
+covariance matrix. Our empirical results present that RoWN exhibits
+better representation ability, both qualitatively and quantitatively,
+compared to all the baselines: Euclidean normal distribution, diagonal
+HWN, and full covariance HWN. We hope that our method helps better
+understanding the anatomy of hyperbolic space and be a promising
+technique for efficient representation learning.
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+
+::: {#Sx1 .section .ltx_section}
+## Acknowledgement {#acknowledgement .ltx_title .ltx_title_section}
+
+::: {#Sx1.p1 .ltx_para}
+This work was partly supported by Institute of Information &
+communications Technology Planning & Evaluation (IITP) grant funded by
+the Korea government (MSIT) (No.2019-0-01906, Artificial Intelligence
+Graduate School Program (POSTECH)) and the National Research Foundation
+of Korea (NRF) grant funded by the Korea government (MSIT)
+(NRF-2021R1C1C1011375).
+:::
+:::
+
+::: {#bib .section .ltx_bibliography}
+## References {#references .ltx_title .ltx_title_bibliography}
+
+-   [[Bose et al. \[2020\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Joey Bose, Ariella Smofsky, Renjie Liao, Prakash Panangaden, and
+    Will Hamilton. ]{.ltx_bibblock} [Latent variable modelling with
+    hyperbolic normalizing flows. ]{.ltx_bibblock} [In *International
+    Conference on Machine Learning*, 2020. ]{.ltx_bibblock}]{#bib.bib1}
+-   [[Bronstein et al. \[2017\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Michael M Bronstein, Joan Bruna, Yann LeCun,
+    Arthur Szlam, and Pierre Vandergheynst. ]{.ltx_bibblock} [Geometric
+    deep learning: going beyond euclidean data. ]{.ltx_bibblock} [*IEEE
+    Signal Processing Magazine*, 2017. ]{.ltx_bibblock}]{#bib.bib2}
+-   [[Chami et al. \[2020\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Ines Chami, Adva Wolf, Da-Cheng Juan, Frederic Sala, Sujith Ravi,
+    and Christopher Ré. ]{.ltx_bibblock} [Low-dimensional hyperbolic
+    knowledge graph embeddings. ]{.ltx_bibblock} [In *Proceedings of the
+    58th Annual Meeting of the Association for Computational
+    Linguistics*, July 2020. ]{.ltx_bibblock}]{#bib.bib3}
+-   [[Chen et al. \[2018\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Ricky TQ Chen, Yulia Rubanova, Jesse Bettencourt, and David K
+    Duvenaud. ]{.ltx_bibblock} [Neural ordinary differential equations.
+    ]{.ltx_bibblock} [*Advances in neural information processing
+    systems*, 31, 2018. ]{.ltx_bibblock}]{#bib.bib4}
+-   [[Fellbaum \[1998\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Christiane Fellbaum. ]{.ltx_bibblock} [*WordNet: An Electronic
+    Lexical Database*. ]{.ltx_bibblock} [Bradford Books, 1998.
+    ]{.ltx_bibblock}]{#bib.bib5}
+-   [[Ghahramani et al. \[2010\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Zoubin Ghahramani, Michael Jordan, and Ryan P
+    Adams. ]{.ltx_bibblock} [Tree-structured stick breaking for
+    hierarchical data. ]{.ltx_bibblock} [*Advances in neural information
+    processing systems*, 23, 2010. ]{.ltx_bibblock}]{#bib.bib6}
+-   [[Griffiths et al. \[2003\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Thomas Griffiths, Michael Jordan, Joshua
+    Tenenbaum, and David Blei. ]{.ltx_bibblock} [Hierarchical topic
+    models and the nested chinese restaurant process. ]{.ltx_bibblock}
+    [*Advances in neural information processing systems*, 16, 2003.
+    ]{.ltx_bibblock}]{#bib.bib7}
+-   [[Grover and Leskovec \[2016\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Aditya Grover and Jure Leskovec.
+    ]{.ltx_bibblock} [node2vec: Scalable feature learning for networks.
+    ]{.ltx_bibblock} [In *Proceedings of the 22nd ACM SIGKDD
+    international conference on Knowledge discovery and data
+    mining*, 2016. ]{.ltx_bibblock}]{#bib.bib8}
+-   [[Heller and Ghahramani \[2005\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Katherine A Heller and Zoubin Ghahramani.
+    ]{.ltx_bibblock} [Bayesian hierarchical clustering. ]{.ltx_bibblock}
+    [In *Proceedings of the 22nd international conference on Machine
+    learning*, pages 297--304, 2005. ]{.ltx_bibblock}]{#bib.bib9}
+-   [[Horan et al. \[2021\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Daniella Horan, Eitan Richardson, and Yair Weiss. ]{.ltx_bibblock}
+    [When is unsupervised disentanglement possible? ]{.ltx_bibblock}
+    [*Advances in Neural Information Processing Systems*,
+    34:5150--5161, 2021. ]{.ltx_bibblock}]{#bib.bib10}
+-   [[Jo and Seo \[2019\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Jaemin Jo and Jinwook Seo. ]{.ltx_bibblock} [Disentangled
+    representation of data distributions in scatterplots.
+    ]{.ltx_bibblock} [In *2019 IEEE Visualization Conference (VIS)*,
+    pages 136--140. IEEE, 2019. ]{.ltx_bibblock}]{#bib.bib11}
+-   [[Kingma and Welling \[2014\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Diederik P. Kingma and Max Welling.
+    ]{.ltx_bibblock} [Auto-encoding variational bayes. ]{.ltx_bibblock}
+    [In Yoshua Bengio and Yann LeCun, editors, *2nd International
+    Conference on Learning Representations, ICLR 2014, Banff, AB,
+    Canada, April 14-16, 2014, Conference Track Proceedings*, 2014.
+    ]{.ltx_bibblock}]{#bib.bib12}
+-   [[Larsen et al. \[2002\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Jan Larsen, A Szymkowiak, and Lars Kai Hansen.
+    ]{.ltx_bibblock} [Probabilistic hierarchical clustering with labeled
+    and unlabeled data. ]{.ltx_bibblock} [*International Journal of
+    Knowledge Based Intelligent Engineering Systems*, 6(1):56--63, 2002.
+    ]{.ltx_bibblock}]{#bib.bib13}
+-   [[Linial et al. \[1994\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ N. Linial, E. London, and Y. Rabinovich.
+    ]{.ltx_bibblock} [The geometry of graphs and some of its algorithmic
+    applications. ]{.ltx_bibblock} [In *Proceedings 35th Annual
+    Symposium on Foundations of Computer Science*, 1994.
+    ]{.ltx_bibblock}]{#bib.bib14}
+-   [[Mathieu and Nickel \[2020\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Emile Mathieu and Maximilian Nickel.
+    ]{.ltx_bibblock} [Riemannian continuous normalizing flows.
+    ]{.ltx_bibblock} [*Advances in Neural Information Processing
+    Systems*, 2020. ]{.ltx_bibblock}]{#bib.bib15}
+-   [[Mathieu et al. \[2019\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Emile Mathieu, Charline Le Lan, Chris J.
+    Maddison, Ryota Tomioka, and Yee Whye Teh. ]{.ltx_bibblock}
+    [Continuous hierarchical representations with poincaré variational
+    auto-encoders. ]{.ltx_bibblock} [In H. Wallach, H. Larochelle,
+    A. Beygelzimer, F. d\'Alché-Buc, E. Fox, and R. Garnett, editors,
+    *Advances in Neural Information Processing Systems*. Curran
+    Associates, Inc., 2019. ]{.ltx_bibblock}]{#bib.bib16}
+-   [[Mnih et al. \[2015\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A Rusu,
+    Joel Veness, Marc G Bellemare, Alex Graves, Martin Riedmiller,
+    Andreas K Fidjeland, Georg Ostrovski, et al. ]{.ltx_bibblock}
+    [Human-level control through deep reinforcement learning.
+    ]{.ltx_bibblock} [*nature*, 2015. ]{.ltx_bibblock}]{#bib.bib17}
+-   [[Nagano et al. \[2019\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Yoshihiro Nagano, Shoichiro Yamaguchi, Yasuhiro
+    Fujita, and f Masanori Koyama. ]{.ltx_bibblock} [A wrapped normal
+    distribution on hyperbolic space for gradient-based learning.
+    ]{.ltx_bibblock} [In Kamalika Chaudhuri and Ruslan Salakhutdinov,
+    editors, *Proceedings of the 36th International Conference on
+    Machine Learning*, Proceedings of Machine Learning Research.
+    PMLR, 2019. ]{.ltx_bibblock}]{#bib.bib18}
+-   [[Nguyen et al. \[2017\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Kim Anh Nguyen, Maximilian Köper, Sabine
+    Schulte im Walde, and Ngoc Thang Vu. ]{.ltx_bibblock} [Hierarchical
+    embeddings for hypernymy detection and directionality.
+    ]{.ltx_bibblock} [In *Proceedings of the 2017 Conference on
+    Empirical Methods in Natural Language Processing*, September 2017.
+    ]{.ltx_bibblock}]{#bib.bib19}
+-   [[Nickel et al. \[2011\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Maximilian Nickel, Volker Tresp, and Hans-Peter
+    Kriegel. ]{.ltx_bibblock} [A three-way model for collective learning
+    on multi-relational data. ]{.ltx_bibblock} [In *International
+    Conference on Machine Learning*, 2011. ]{.ltx_bibblock}]{#bib.bib20}
+-   [[Nickel and Kiela \[2017\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Maximillian Nickel and Douwe Kiela.
+    ]{.ltx_bibblock} [Poincaré embeddings for learning hierarchical
+    representations. ]{.ltx_bibblock} [In I. Guyon, U. Von Luxburg,
+    S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett,
+    editors, *Advances in Neural Information Processing Systems*. Curran
+    Associates, Inc., 2017. ]{.ltx_bibblock}]{#bib.bib21}
+-   [[Nickel and Kiela \[2018\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Maximillian Nickel and Douwe Kiela.
+    ]{.ltx_bibblock} [Learning continuous hierarchies in the Lorentz
+    model of hyperbolic geometry. ]{.ltx_bibblock} [In Jennifer Dy and
+    Andreas Krause, editors, *Proceedings of the 35th International
+    Conference on Machine Learning*, Proceedings of Machine Learning
+    Research. PMLR, 2018. ]{.ltx_bibblock}]{#bib.bib22}
+-   [[Rezende and Mohamed \[2015\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Danilo Jimenez Rezende and Shakir Mohamed.
+    ]{.ltx_bibblock} [Variational inference with normalizing flows.
+    ]{.ltx_bibblock} [In *Proceedings of the 32nd International
+    Conference on International Conference on Machine Learning*.
+    JMLR.org, 2015. ]{.ltx_bibblock}]{#bib.bib23}
+-   [[Robbin and Salamon \[2022\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Joel W Robbin and Dietmar A Salamon.
+    ]{.ltx_bibblock} [*Introduction to differential geometry*.
+    ]{.ltx_bibblock} [Springer Nature, 2022.
+    ]{.ltx_bibblock}]{#bib.bib24}
+-   [[Said et al. \[2014\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Salem Said, Lionel Bombrun, and Yannick Berthoumieu.
+    ]{.ltx_bibblock} [New riemannian priors on the univariate normal
+    model. ]{.ltx_bibblock} [*Entropy*, 2014.
+    ]{.ltx_bibblock}]{#bib.bib25}
+-   [[Salakhutdinov et al. \[2012\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Ruslan Salakhutdinov, Joshua Tenenbaum, and
+    Antonio Torralba. ]{.ltx_bibblock} [One-shot learning with a
+    hierarchical nonparametric bayesian model. ]{.ltx_bibblock} [In
+    *Proceedings of ICML Workshop on Unsupervised and Transfer
+    Learning*, pages 195--206. JMLR Workshop and Conference
+    Proceedings, 2012. ]{.ltx_bibblock}]{#bib.bib26}
+-   [[Sarkar \[2011\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Rik
+    Sarkar. ]{.ltx_bibblock} [Low distortion delaunay embedding of trees
+    in hyperbolic plane. ]{.ltx_bibblock} [In *Proceedings of the 19th
+    International Conference on Graph Drawing*. Springer-Verlag, 2011.
+    ]{.ltx_bibblock}]{#bib.bib27}
+-   [[Shavitt and Tankel \[2008\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Yuval Shavitt and Tomer Tankel. ]{.ltx_bibblock}
+    [Hyperbolic embedding of internet graph for distance estimation and
+    overlay construction. ]{.ltx_bibblock} [*IEEE ACM Transactions on
+    Networking*, 2008. ]{.ltx_bibblock}]{#bib.bib28}
+-   [[Sun et al. \[2020\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Zequn Sun, Muhao Chen, Wei Hu, Chengming Wang, Jian Dai, and Wei
+    Zhang. ]{.ltx_bibblock} [Knowledge association with hyperbolic
+    knowledge graph embeddings. ]{.ltx_bibblock} [In *Proceedings of the
+    2020 Conference on Empirical Methods in Natural Language Processing
+    (EMNLP)*, November 2020. ]{.ltx_bibblock}]{#bib.bib29}
+-   [[Teh et al. \[2007\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Yee Teh, Hal Daume III, and Daniel M Roy. ]{.ltx_bibblock} [Bayesian
+    agglomerative clustering with coalescents. ]{.ltx_bibblock}
+    [*Advances in neural information processing systems*, 20, 2007.
+    ]{.ltx_bibblock}]{#bib.bib30}
+-   [[Tifrea et al. \[2019\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Alexandru Tifrea, Gary Becigneul, and
+    Octavian-Eugen Ganea. ]{.ltx_bibblock} [Poincare glove: Hyperbolic
+    word embeddings. ]{.ltx_bibblock} [In *International Conference on
+    Learning Representations*, 2019. ]{.ltx_bibblock}]{#bib.bib31}
+-   [[Vilnis and McCallum \[2015\]]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Luke Vilnis and Andrew McCallum.
+    ]{.ltx_bibblock} [Word representations via gaussian embedding.
+    ]{.ltx_bibblock} [In Yoshua Bengio and Yann LeCun, editors, *3rd
+    International Conference on Learning Representations, ICLR 2015, San
+    Diego, CA, USA, May 7-9, 2015, Conference Track Proceedings*, 2015.
+    ]{.ltx_bibblock}]{#bib.bib32}
+-   [[Zhao et al. \[2011\]]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Xiaohan Zhao, Alessandra Sala, Haitao Zheng, and Ben Y. Zhao.
+    ]{.ltx_bibblock} [Efficient shortest paths on massive social graphs.
+    ]{.ltx_bibblock} [In *7th International Conference on Collaborative
+    Computing: Networking, Applications and Worksharing
+    (CollaborateCom)*, 2011. ]{.ltx_bibblock}]{#bib.bib33}
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+
+::: {#Sx2 .section .ltx_section}
+## Checklist {#checklist .ltx_title .ltx_title_section}
+
+::: {#Sx2.p1 .ltx_para}
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I1.i1}
+
+    ::: {#Sx2.I1.i1.p1 .ltx_para}
+    For all authors...
+
+    1.  [[(a)]{.ltx_tag .ltx_tag_item}]{#Sx2.I1.i1.I1.i1}
+
+        ::: {#Sx2.I1.i1.I1.i1.p1 .ltx_para}
+        Do the main claims made in the abstract and introduction
+        accurately reflect the paper's contributions and scope?
+        [\[Yes\]]{#Sx2.I1.i1.I1.i1.p1.1.1 .ltx_text
+        style="color:#0000FF;"}
+        :::
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#Sx2.I1.i2}
+
+    ::: {#Sx2.I1.i2.p1 .ltx_para}
+    Did you describe the limitations of your work?
+    [\[Yes\]]{#Sx2.I1.i2.p1.1.1 .ltx_text style="color:#0000FF;"}
+    :::
+
+See Section [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S6 "6 Limitations ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}
+:::
+
+::: {#Sx2.p2 .ltx_para}
+Did you discuss any potential negative societal impacts of your work?
+[\[N/A\] ]{#Sx2.p2.1.1 .ltx_text style="color:#808080;"}
+:::
+
+::: {#Sx2.p3 .ltx_para}
+Have you read the ethics review guidelines and ensured that your paper
+conforms to them? [\[Yes\] ]{#Sx2.p3.1.1 .ltx_text
+style="color:#0000FF;"} If you are including theoretical results...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I2.i1}
+
+    ::: {#Sx2.I2.i1.p1 .ltx_para}
+    Did you state the full set of assumptions of all theoretical
+    results? [\[Yes\]]{#Sx2.I2.i1.p1.1.1 .ltx_text
+    style="color:#0000FF;"}
+    :::
+
+Did you include complete proofs of all theoretical results? [\[Yes\]
+]{#Sx2.p3.2.1 .ltx_text style="color:#0000FF;"} If you ran
+experiments...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I3.i1}
+
+    ::: {#Sx2.I3.i1.p1 .ltx_para}
+    Did you include the code, data, and instructions needed to reproduce
+    the main experimental results (either in the supplemental material
+    or as a URL)? [\[Yes\]]{#Sx2.I3.i1.p1.1.1 .ltx_text
+    style="color:#0000FF;"}
+    :::
+
+The code is provided with the supplemental materials. Did you specify
+all the training details (e.g., data splits, hyperparameters, how they
+were chosen)? [\[Yes\] ]{#Sx2.p3.3.1 .ltx_text style="color:#0000FF;"}
+Did you report error bars (e.g., with respect to the random seed after
+running experiments multiple times)? [\[Yes\] ]{#Sx2.p3.3.2 .ltx_text
+style="color:#0000FF;"} Did you include the total amount of compute and
+the type of resources used (e.g., type of GPUs, internal cluster, or
+cloud provider)? [\[No\] ]{#Sx2.p3.3.3 .ltx_text style="color:#FF8000;"}
+If you are using existing assets (e.g., code, data, models) or
+curating/releasing new assets...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I4.i1}
+
+    ::: {#Sx2.I4.i1.p1 .ltx_para}
+    If your work uses existing assets, did you cite the creators?
+    [\[Yes\]]{#Sx2.I4.i1.p1.1.1 .ltx_text style="color:#0000FF;"}
+    :::
+
+Did you mention the license of the assets? [\[No\] ]{#Sx2.p3.4.1
+.ltx_text style="color:#FF8000;"} Did you include any new assets either
+in the supplemental material or as a URL? [\[Yes\] ]{#Sx2.p3.4.2
+.ltx_text style="color:#0000FF;"} Did you discuss whether and how
+consent was obtained from people whose data you're using/curating?
+[\[N/A\] ]{#Sx2.p3.4.3 .ltx_text style="color:#808080;"} Did you discuss
+whether the data you are using/curating contains personally identifiable
+information or offensive content? [\[N/A\] ]{#Sx2.p3.4.4 .ltx_text
+style="color:#808080;"} If you used crowdsourcing or conducted research
+with human subjects...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I5.i1}
+
+    ::: {#Sx2.I5.i1.p1 .ltx_para}
+    Did you include the full text of instructions given to participants
+    and screenshots, if applicable? [\[N/A\] ]{#Sx2.I5.i1.p1.1.1
+    .ltx_text style="color:#808080;"}
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#Sx2.I5.i2}
+
+    ::: {#Sx2.I5.i2.p1 .ltx_para}
+    Did you describe any potential participant risks, with links to
+    Institutional Review Board (IRB) approvals, if applicable? [\[N/A\]
+    ]{#Sx2.I5.i2.p1.1.1 .ltx_text style="color:#808080;"}
+    :::
+3.  [[3.]{.ltx_tag .ltx_tag_item}]{#Sx2.I5.i3}
+
+    ::: {#Sx2.I5.i3.p1 .ltx_para}
+    Did you include the estimated hourly wage paid to participants and
+    the total amount spent on participant compensation? [\[N/A\]
+    ]{#Sx2.I5.i3.p1.1.1 .ltx_text style="color:#808080;"}
+    :::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+
+::: {#A1 .section .ltx_appendix}
+## [Appendix A ]{.ltx_tag .ltx_tag_appendix}Proof of Proposition 1 {#appendix-a-proof-of-proposition-1 .ltx_title .ltx_title_appendix}
+
+::: {#A1.p1 .ltx_para}
+We prove the first proposition in [[Section 3.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.SS1 "3.1 Observations on the hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} in this section. Through the proposition, we
+first show that straight lines that pass through the origin in the
+Euclidean space are transformed into the geodesics in hyperbolic space
+by [[Equation 3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S2.E3 "3 ‣ 2.3 Hyperbolic wrapped normal distribution ‣ 2 Preliminaries ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}.
+:::
+
+::: {#A1.SS0.SSS0.Px1 .section .ltx_paragraph}
+#### Proposition 1. {#proposition-1.-1 .ltx_title .ltx_title_paragraph}
+
+::: {#A1.SS0.SSS0.Px1.p1 .ltx_para}
+Suppose
+${\ell_{\mathbf{s}}\operatorname{}{(t)}} = {t\operatorname{}{\mathbf{s}}} \in {\mathbb{R}}^{n}$
+be a line passing through the origin, where
+${\mathbf{s}} \in {\mathbb{R}}^{n}$ is a directional vector. Then the
+curve
+$f_{\mathbf{μ}}\operatorname{}{({\ell_{\mathbf{s}}\operatorname{}{(t)}})}$
+in the Lorentz model ${\mathbb{L}}^{n}$ becomes a geodesic.
+:::
+
+::: {#A1.SS0.SSS0.Px1.1 .ltx_proof}
+###### Proof. {#proof. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A1.SS0.SSS0.Px1.1.p1 .ltx_para}
+Let
+${\mathbf{u}}:={\lbrack{x_{0}\operatorname{}{({\mathbf{u}})}},{x_{1:}\operatorname{}{({\mathbf{u}})}}\rbrack} \in {\mathbb{L}}^{n}$
+be given, where $x_{0}:{{\mathbb{L}}^{n}\rightarrow{\mathbb{R}}}$ and
+$x_{1:}:{{\mathbb{L}}^{n}\rightarrow{\mathbb{R}}^{n}}$ denotes the
+projections, i.e., ${x_{i}\operatorname{}{({\mathbf{u}})}} = u_{i}$ .
+Then,
+
+  -- ------------------------------------------------------------------------------------------------------------------------------ ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${PT}_{\mathbf{0}_{\mathcal{L}}\rightarrow{\mathbf{μ}}}\operatorname{}{({\lbrack 0,{t\operatorname{}{\mathbf{s}}}\rbrack})}$   $= {{\lbrack 0,{t\operatorname{}{\mathbf{s}}}\rbrack} + {\frac{1}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1}\operatorname{}{\langle{{\mathbf{μ}} - {{x_{0}\operatorname{}{({\mathbf{μ}})}} \cdot \mathbf{0}_{\mathcal{L}}}},{\lbrack 0,{t\operatorname{}{\mathbf{s}}}\rbrack}\rangle}_{\mathcal{L}}\operatorname{}{({\mathbf{0}_{\mathcal{L}} + {\mathbf{μ}}})}}}$                            
+                                                                                                                                    $= {{\lbrack 0,{t\operatorname{}{\mathbf{s}}}\rbrack} + {\frac{1}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1}\operatorname{}{\langle{\lbrack 0,{x_{1:}\operatorname{}{({\mathbf{μ}})}}\rbrack},{\lbrack 0,{t\operatorname{}{\mathbf{s}}}\rbrack}\rangle}_{\mathcal{L}}\operatorname{}{\lbrack{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1},{x_{1:}\operatorname{}{({\mathbf{μ}})}}\rbrack}}}$   
+                                                                                                                                    $= {{\lbrack 0,{t\operatorname{}{\mathbf{s}}}\rbrack} + {\frac{1}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1}\operatorname{}{\langle{x_{1:}\operatorname{}{({\mathbf{μ}})}},{t\operatorname{}{\mathbf{s}}}\rangle}\operatorname{}{\lbrack{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1},{x_{1:}\operatorname{}{({\mathbf{μ}})}}\rbrack}}}$                                                       
+                                                                                                                                    ${= {t\operatorname{}\left\lbrack {\langle{x_{1:}\operatorname{}{({\mathbf{μ}})}},{\mathbf{s}}\rangle},{{\mathbf{s}} + {{\langle{x_{1:}\operatorname{}{({\mathbf{μ}})}},{\mathbf{s}}\rangle}\operatorname{}\frac{x_{1:}\operatorname{}{({\mathbf{μ}})}}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1}}} \right\rbrack}}.$                                                                        
+  -- ------------------------------------------------------------------------------------------------------------------------------ ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+Now, let
+${\mathbf{v}}:=\left\lbrack {\langle{x_{1:}\operatorname{}{({\mathbf{μ}})}},{\mathbf{s}}\rangle},{{\mathbf{s}} + {{\langle{x_{1:}\operatorname{}{({\mathbf{μ}})}},{\mathbf{s}}\rangle}\operatorname{}\frac{x_{1:}\operatorname{}{({\mathbf{μ}})}}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1}}} \right\rbrack$
+and $c:=\sqrt{{\langle{\mathbf{v}},{\mathbf{v}}\rangle}_{\mathcal{L}}}$.
+Then,
+
+  -- --------------------------------------------------- -------------------------------------------------------------------------------------------------------------------------------------------- --
+     $f_{\mathbf{μ}}\operatorname{}{(l_{\mathbf{s}})}$   $= {\exp_{\mathbf{μ}}{({{PT}_{\mathbf{0}_{\mathcal{L}}\rightarrow{\mathbf{μ}}}\operatorname{}{({(0,{t\operatorname{}{\mathbf{s}}})})}})}}$   
+                                                         $= {\exp_{\mathbf{μ}}{({t\operatorname{}{\mathbf{v}}})}}$                                                                                    
+                                                         ${= {{{\cosh{({c\operatorname{}t})}}\operatorname{}{\mathbf{μ}}} + {{\sinh{({c\operatorname{}t})}}\operatorname{}\frac{\mathbf{v}}{c}}}}.$   
+  -- --------------------------------------------------- -------------------------------------------------------------------------------------------------------------------------------------------- --
+
+Recall that the geodesic of the Lorentz model is
+${{\cosh{(t)}}\operatorname{}{\mathbf{x}}} + {{\sinh{(t)}}\operatorname{}{\mathbf{y}}}$
+where
+${{\mathbf{x}} \in {\mathbb{L}}^{n}},{{\langle{\mathbf{y}},{\mathbf{y}}\rangle}_{\mathcal{L}} = 1}$
+and
+${\mathbf{y}} \in {\mathcal{T}_{\mathbf{x}}\operatorname{}{\mathbb{L}}^{n}}$ (Robbin
+and Salamon,
+[2022](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib24){.ltx_ref}).
+∎
+:::
+:::
+
+::: {#A1.SS0.SSS0.Px1.p2 .ltx_para}
+The proposition indicates that every straight line that passes through
+the origin including the principal axes, is transformed into a geodesic
+in hyperbolic space.
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+:::
+
+::: {#A2 .section .ltx_appendix}
+## [Appendix B ]{.ltx_tag .ltx_tag_appendix}Proof of Proposition 2 {#appendix-b-proof-of-proposition-2 .ltx_title .ltx_title_appendix}
+
+::: {#A2.p1 .ltx_para}
+We prove the second proposition in [[Section 3.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.SS1 "3.1 Observations on the hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} to show the geometrical properties of HWN. Based
+on the first proposition, we provide our main proposition, which fully
+characterizes the structure of principal axes when projected to the
+Poincaré disk model:
+:::
+
+::: {#A2.SS0.SSS0.Px1 .section .ltx_paragraph}
+#### Proposition 2. {#proposition-2.-1 .ltx_title .ltx_title_paragraph}
+
+::: {#A2.SS0.SSS0.Px1.p1 .ltx_para}
+Let ${Proj}{({\mathbf{u}})}$ be the projection function from Lorentz
+model to Poincaré model, i.e.,
+${{{Proj}{({\mathbf{u}})}} = \frac{x_{1:}\operatorname{}{({\mathbf{u}})}}{{x_{0}\operatorname{}{({\mathbf{u}})}} + 1}},{{\forall{\mathbf{u}}} \in {\mathbb{L}}^{n}}$.
+Let $\ell_{\mathbf{s}}$ be a principal axis of the normal distribution
+defined in ${\mathbb{R}}^{n}$ and $\mathbf{μ}$ the mean of HWN in
+${\mathbb{L}}^{n}$, then $\mathbf{s}$ is the tangent vector of
+${Proj}{({f_{\mathbf{μ}}\operatorname{}{(\ell_{\mathbf{s}})}})}$ on
+${Proj}{({\mathbf{μ}})}$.
+:::
+
+::: {#A2.SS0.SSS0.Px1.1 .ltx_proof}
+###### Proof. {#proof.-1 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A2.SS0.SSS0.Px1.1.p1 .ltx_para}
+First, we project the transformed principal axis to the Poincaré disk
+model as:
+
+  -- ----------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${Proj}\operatorname{}\left( {f_{\mathbf{μ}}\operatorname{}{(l_{\mathbf{s}})}} \right)$   $= {{Proj}\operatorname{}\left( {{{\cosh{({c\operatorname{}t})}}\operatorname{}{\mathbf{μ}}} + {{\sinh{({c\operatorname{}t})}}\operatorname{}\frac{\mathbf{v}}{c}}} \right)}$                                                                                                                                                                                                                                                                        
+                                                                                               $= {{Proj}\operatorname{}\left( \left\lbrack {{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{μ}})}} + {{\sinh{({c\operatorname{}t})}}\operatorname{}\frac{x_{0}\operatorname{}{({\mathbf{v}})}}{c}}},{{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}} + {{\sinh{({c\operatorname{}t})}}\operatorname{}\frac{x_{1:}\operatorname{}{({\mathbf{v}})}}{c}}} \right\rbrack \right)}$   
+                                                                                               ${= \frac{{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}} + {{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{v}})}}/c}}{{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{μ}})}} + {{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{v}})}}/c} + 1}}.$                                                                     
+  -- ----------------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+Then, the derivative of the projected curve with respect to $t$ is
+derived as:
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $\frac{\partial}{\partial t}\operatorname{}{Proj}\operatorname{}\left( {f_{\mathbf{μ}}\operatorname{}{(l_{\mathbf{s}})}} \right)$   $= {\frac{\partial}{\partial t}\operatorname{}\frac{{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}} + {{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{v}})}}/c}}{{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{μ}})}} + {{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{v}})}}/c} + 1}}$                                                                                                                                                                                                   
+                                                                                                                                         $= \frac{{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}\operatorname{}c} + {{\cosh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{v}})}}}{{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{μ}})}} + {{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{v}})}}/c} + 1}$                                                                                                                                                                                                                                   
+                                                                                                                                         ${- \frac{{({{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{μ}})}\operatorname{}c} + {{\cosh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{v}})}}})}\operatorname{}{({{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}} + {{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{1:}\operatorname{}{({\mathbf{v}})}}/c}})}}{\left( {{{\cosh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{μ}})}} + {{{\sinh{({c\operatorname{}t})}}\operatorname{}x_{0}\operatorname{}{({\mathbf{v}})}}/c} + 1} \right)^{2}}}.$   
+  -- ----------------------------------------------------------------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+As ${Proj}{({\mathbf{μ}})}$ is the point of the curve at $t = 0$, the
+tangent vector of the curve on ${Proj}{({\mathbf{μ}})}$ can be computed
+by substituting $t = 0$:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     $\left. {\frac{\partial}{\partial t}\operatorname{}{Proj}\operatorname{}\left( {f_{\mathbf{μ}}\operatorname{}{(l_{\mathbf{s}})}} \right)} \right|_{t = 0}$   $= {\frac{x_{1:}\operatorname{}{({\mathbf{v}})}}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1} - \frac{x_{0}\operatorname{}{({\mathbf{v}})}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}}{{({{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1})}^{2}}}$                                                                                                                                                                                                  
+                                                                                                                                                                  $= {{\frac{\mathbf{s}}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1} + \frac{{\langle{x_{1:}\operatorname{}{({\mathbf{μ}})}},{\mathbf{s}}\rangle}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}}{{({{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1})}^{2}}} - \frac{{\langle{x_{1:}\operatorname{}{({\mathbf{μ}})}},{\mathbf{s}}\rangle}\operatorname{}x_{1:}\operatorname{}{({\mathbf{μ}})}}{{({{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1})}^{2}}}$   
+                                                                                                                                                                  $= \frac{\mathbf{s}}{{x_{0}\operatorname{}{({\mathbf{μ}})}} + 1}$                                                                                                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                  ${\propto {\mathbf{s}}}.$                                                                                                                                                                                                                                                                                                                                                                                                                               
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+∎
+:::
+:::
+
+::: {#A2.SS0.SSS0.Px1.p2 .ltx_para}
+The proposition reveals that the principal axes of the HWN are locally
+parallel to the standard bases in the Poincaré disk model. To visualize
+the proposition, we plot the contour line and the principal axes of the
+two-dimensional diagonal covariance normal distribution before and after
+the transformation in [[Figure 2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.F2 "Figure 2 ‣ 3.1 Observations on the hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. We observe that the tangent lines of the
+transformed principal axes are parallel to the standard bases in
+hyperbolic space.
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+:::
+
+::: {#A3 .section .ltx_appendix}
+## [Appendix C ]{.ltx_tag .ltx_tag_appendix}Details of Rotated Hyperbolic Wrapped Normal Distribution {#appendix-c-details-of-rotated-hyperbolic-wrapped-normal-distribution .ltx_title .ltx_title_appendix}
+
+::: {#A3.p1 .ltx_para}
+The details of RoWN, i.e. sampling and the probability density
+computation, are described in this section. We start with a mean vector
+${\mathbf{μ}} \in {\mathbb{L}}^{n}$ and a diagonal covariance matrix
+$\Sigma$ as in the standard HWN. Based on the mean vector, we construct
+RoWN by rotating the covariance matrix as follows:
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#A3.I1.i1}
+
+    ::: {#A3.I1.i1.p1 .ltx_para}
+    Compute the rotation matrix $\mathbf{R}$ that rotates the x-axis
+    (${\lbrack{\pm 1},\ldots,0\rbrack} \in {\mathbb{R}}^{n}$) to
+    ${\mathbf{μ}}_{1:}$.
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#A3.I1.i2}
+
+    ::: {#A3.I1.i2.p1 .ltx_para}
+    Substitute the covariance matrix of Gaussian normal with
+    ${\mathbf{R}}\operatorname{}\Sigma\operatorname{}{\mathbf{R}}^{T}$.
+    :::
+
+Thus, the rotation matrix $\mathbf{R}$, which rotates a unit vector from
+$\mathbf{x}$ to $\mathbf{y}$, can be computed as:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${{\mathbf{R}} = {{\mathbf{I}} + {({{{\mathbf{y}}^{T}\operatorname{}{\mathbf{x}}} - {{\mathbf{x}}^{T}\operatorname{}{\mathbf{y}}}})} + {\frac{1}{1 + {\langle{\mathbf{x}},{\mathbf{y}}\rangle}}\operatorname{}{({{{\mathbf{y}}^{T}\operatorname{}{\mathbf{x}}} - {{\mathbf{x}}^{T}\operatorname{}{\mathbf{y}}}})}^{2}}}}.$$      [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+Algorithm [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#alg2 "Algorithm 2 ‣ Appendix C Details of Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}
+shows the entire algorithm of constructing RoWN. Note that the
+construction is straightforward but still keeps the following benefits
+of the HWN: 1) The sampling can be done efficiently, and 2) the
+computation of the probability density of the samples is tractable. As
+the HWN provides a tractable probability density function for any kind
+of covariance matrix, we can easily compute the probability density of a
+given sample from RoWN. For the details of sampling and probability
+density computation, see Algorithm [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#alg3 "Algorithm 3 ‣ Appendix C Details of Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}
+& [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#alg4 "Algorithm 4 ‣ Appendix C Details of Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}.
+:::
+
+<figure id="alg2" class="ltx_float ltx_float_algorithm ltx_framed_top">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell">
+<p><span id="alg2.5.1" class="ltx_text ltx_font_bold">Input</span> Mean
+<span
+class="math inline"><strong>μ</strong> ∈ 𝕃<sup><em>n</em></sup></span>,
+diagonal covariance matrix <span
+class="math inline"><em>Σ</em> ∈ ℝ<sup><em>n</em> × <em>n</em></sup></span><br />
+<span id="alg2.5.2" class="ltx_text ltx_font_bold">Output</span> Rotated
+covariance matrix <span class="math inline"><em>Σ̂</em></span>.</p>
+</div>
+<div class="ltx_flex_cell">
+<div id="alg2.8" class="ltx_listing">
+<div id="alg2.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l1.4.1.1"
+class="ltx_text" style="font-size:80%;">1:</span></span><span
+class="math inline"><strong>x</strong> = [±1, …, 0] ∈ ℝ<sup><em>n</em></sup>, <strong>y</strong> = <strong>μ</strong><sub>1:</sub>/∥<strong>μ</strong><sub>1:</sub>∥</span>
+<span id="alg2.l1.3" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> <span class="math inline">±</span> is
+determined by the sign of <span
+class="math inline"><strong>μ</strong><sub>0</sub></span> </span>
+</div>
+<div id="alg2.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l2.1.1.1"
+class="ltx_text" style="font-size:80%;">2:</span></span><span
+class="math inline"><strong>R</strong> = <strong>I</strong> + (<strong>y</strong><sup><em>T</em></sup> <strong>x</strong>−<strong>x</strong><sup><em>T</em></sup> <strong>y</strong>) + (<strong>y</strong><sup><em>T</em></sup> <strong>x</strong>−<strong>x</strong><sup><em>T</em></sup> <strong>y</strong>)<sup>2</sup>/(1+⟨<strong>x</strong>, <strong>y</strong>⟩)</span>
+</div>
+<div id="alg2.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg2.l3.1.1.1"
+class="ltx_text" style="font-size:80%;">3:</span></span><span
+id="alg2.l3.2" class="ltx_text ltx_font_bold">return</span> <span
+class="math inline"><em>Σ̂</em> = <strong>R</strong> <em>Σ</em> <strong>R</strong><sup><em>T</em></sup></span>
+</div>
+</div>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg2.7.1.1"
+class="ltx_text ltx_font_bold">Algorithm 2</span> </span> RoWN(<span
+class="math inline"><strong>μ</strong>, <em>Σ</em></span>)</figcaption>
+</figure>
+
+<figure id="alg3" class="ltx_float ltx_float_algorithm ltx_framed_top">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell">
+<p><span id="alg3.3.1" class="ltx_text ltx_font_bold">Input</span> Mean
+<span
+class="math inline"><strong>μ</strong> ∈ 𝕃<sup><em>n</em></sup></span>,
+diagonal covariance matrix <span
+class="math inline"><em>Σ</em> ∈ ℝ<sup><em>n</em> × <em>n</em></sup></span><br />
+<span id="alg3.3.2" class="ltx_text ltx_font_bold">Output</span> Sample
+<span
+class="math inline"><strong>z</strong> ∈ 𝕃<sup><em>n</em></sup></span></p>
+</div>
+<div class="ltx_flex_cell">
+<div id="alg3.6" class="ltx_listing">
+<div id="alg3.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg3.l1.1.1.1"
+class="ltx_text" style="font-size:80%;">1:</span></span>Construct <span
+class="math inline"><em>Σ̂</em> = RoWN (<strong>μ</strong>,<em>Σ</em>)</span>
+</div>
+<div id="alg3.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg3.l2.1.1.1"
+class="ltx_text" style="font-size:80%;">2:</span></span>Sample <span
+class="math inline"><strong>v</strong> ∼ 𝒩 (<strong>0</strong>,<em>Σ̂</em>)</span>
+</div>
+<div id="alg3.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg3.l3.1.1.1"
+class="ltx_text" style="font-size:80%;">3:</span></span><span
+id="alg3.l3.2" class="ltx_text ltx_font_bold">return</span> <span
+class="math inline"><strong>z</strong> = <em>f</em><sub><strong>μ</strong></sub> (<strong>v</strong>)</span>
+</div>
+</div>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg3.5.1.1"
+class="ltx_text ltx_font_bold">Algorithm 3</span> </span> Sampling
+process with the rotated hyperbolic wrapped normal
+distribution</figcaption>
+</figure>
+
+<figure id="alg4" class="ltx_float ltx_float_algorithm ltx_framed_top">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell">
+<p><span id="alg4.4.1" class="ltx_text ltx_font_bold">Input</span> Mean
+<span
+class="math inline"><strong>μ</strong> ∈ 𝕃<sup><em>n</em></sup></span>,
+diagonal covariance matrix <span
+class="math inline"><em>Σ</em> ∈ ℝ<sup><em>n</em> × <em>n</em></sup></span>,
+sample <span
+class="math inline"><strong>z</strong> ∈ 𝕃<sup><em>n</em></sup></span><br />
+<span id="alg4.4.2" class="ltx_text ltx_font_bold">Output</span> Log
+probability of <span class="math inline"><strong>z</strong></span>.</p>
+</div>
+<div class="ltx_flex_cell">
+<div id="alg4.7" class="ltx_listing">
+<div id="alg4.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg4.l1.1.1.1"
+class="ltx_text" style="font-size:80%;">1:</span></span>Construct <span
+class="math inline"><em>Σ̂</em> = RoWN (<strong>μ</strong>,<em>Σ</em>)</span>
+</div>
+<div id="alg4.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg4.l2.1.1.1"
+class="ltx_text" style="font-size:80%;">2:</span></span><span
+class="math inline"><strong>u</strong> = log<sub><strong>μ</strong></sub>(<strong>z</strong>)</span>
+</div>
+<div id="alg4.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg4.l3.3.1.1"
+class="ltx_text" style="font-size:80%;">3:</span></span><span
+class="math inline"><strong>v</strong> = <em>P</em><em>T</em><sub><strong>μ</strong> → <strong>0</strong><sub>ℒ</sub></sub>(<strong>u</strong>)</span>
+<span id="alg4.l3.2" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> <span
+class="math inline"><strong>v</strong> = <em>f</em><sub><strong>μ</strong></sub><sup>−1</sup> (<strong>z</strong>)</span>
+</span>
+</div>
+<div id="alg4.l4" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg4.l4.1.1.1"
+class="ltx_text" style="font-size:80%;">4:</span></span><span
+id="alg4.l4.2" class="ltx_text ltx_font_bold">return</span> <span
+class="math inline">(log probability
+of<strong>v</strong><sub>1:</sub>from𝒩(<strong>0</strong>,<em>Σ̂</em>)) − (<em>n</em>−1) (log sinh ∥<strong>u</strong>∥<sub>ℒ</sub>−log ∥<strong>u</strong>∥<sub>ℒ</sub>)</span>
+</div>
+</div>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg4.6.1.1"
+class="ltx_text ltx_font_bold">Algorithm 4</span> </span> Probability
+density computation of the rotated hyperbolic wrapped normal
+distribution</figcaption>
+</figure>
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+
+::: {#A4 .section .ltx_appendix}
+## [Appendix D ]{.ltx_tag .ltx_tag_appendix}Experimental Details {#appendix-d-experimental-details .ltx_title .ltx_title_appendix}
+
+::: {#A4.p1 .ltx_para}
+In this section, we provide the details of the experiments in Section
+[[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4 "4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}.
+:::
+
+::: {#A4.SS1 .section .ltx_subsection}
+### [D.1 ]{.ltx_tag .ltx_tag_subsection}Baselines {#d.1-baselines .ltx_title .ltx_title_subsection}
+
+::: {#A4.SS1.p1 .ltx_para}
+For all the experiments, we compare the performance of RoWN with four
+baselines: the normal distribution in the Euclidean space, the isotropic
+HWN (Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}),
+the diagonal HWN, and the full covariance HWN. In the process of
+constructing the distributions for each application, i.e. the
+variational distribution of VAE and the embedding distribution of
+probabilistic word embedding, the distributions except the full
+covariance HWN have a diagonal matrix as an input, and then the softplus
+operation is used to make it positive. The full covariance HWN has a 2D
+matrix $\Sigma \in {\mathbb{R}}^{n \times n}$ as an input and constructs
+a covariance matrix as
+${\Sigma\operatorname{}\Sigma^{T}} + {\epsilon\operatorname{}{\mathbf{I}}}$,
+to match the positive-definite property, where $\epsilon$ is set to
+${1\operatorname{}e} - 9$ in our experiments. For the mean value, we
+concatenate zero at the first dimension and transport it to the Lorentz
+model using $\exp_{\mathbf{0}_{\mathcal{L}}}$. For the hyperbolic VAE
+models, we use $\log_{\mathbf{0}_{\mathcal{L}}}$ to transform the input
+of the decoder to the Euclidean space, as suggested in Mathieu et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib16){.ltx_ref}).
+:::
+:::
+
+::: {#A4.SS2 .section .ltx_subsection}
+### [D.2 ]{.ltx_tag .ltx_tag_subsection}Noisy synthetic binary tree {#d.2-noisy-synthetic-binary-tree .ltx_title .ltx_title_subsection}
+
+::: {#A4.SS2.SSS0.Px1 .section .ltx_paragraph}
+#### Experimental setting. {#experimental-setting. .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS2.SSS0.Px1.p1 .ltx_para}
+A synthetic binary tree dataset is first used to show the performance of
+representing hierarchy in Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}),
+where each node in a tree corresponds to a sequence of binary values.
+[[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.F3.sf1 "3(a) ‣ Figure 4 ‣ 4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows an example of the depth three binary tree,
+where a parent and child only differ in one digit. We add spherical
+noises to the nodes in the same level of hierarchy as described in
+[[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.F3.sf1 "3(a) ‣ Figure 4 ‣ 4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} as the noisy samples. With the data points with
+additional noises, we can create a dataset containing a local-level
+variation in the hierarchy. For the experiments, we uniformly sample the
+spherical noise from $\lbrack 0,{\pi/4}\rbrack$. We train hyperbolic VAE
+on [noisy synthetic binary tree]{#A4.SS2.SSS0.Px1.p1.5.1 .ltx_text
+.ltx_font_italic} with varying depth from 4 to 7. For each depth $d$, we
+use a three-layer fully connected neural network as the architecture
+where the number of hidden units is $2^{d + 3}$ and the latent dimension
+is $d$. We use ReLU as the activation function for each layer except the
+last layer of the encoder and decoder. The overall architecture is shown
+in [[Table 6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T6 "Table 6 ‣ Experimental setting. ‣ D.2 Noisy synthetic binary tree ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} and [[Table 6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T6 "Table 6 ‣ Experimental setting. ‣ D.2 Noisy synthetic binary tree ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. We use a Gaussian negative log-likelihood loss
+for the reconstruction loss with fixed $\sigma = 0.01$, which is
+selected for sufficient reconstruction performance on the train set.
+:::
+
+<figure id="A4.T6" class="ltx_table">
+<div class="ltx_flex_figure ltx_flex_table">
+<div class="ltx_flex_cell ltx_flex_size_2">
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="A4.T6.9.1.1"
+class="ltx_text" style="font-size:90%;">Table 5</span>: </span><span
+id="A4.T6.10.2" class="ltx_text" style="font-size:90%;">Encoder
+architecture for <span id="A4.T6.10.2.1"
+class="ltx_text ltx_font_italic">noisy synthetic binary
+tree</span></span>
+<span class="ltx_tag ltx_tag_table"><span id="A4.T6.12.1.1"
+class="ltx_text" style="font-size:90%;">Table 6</span>: </span><span
+id="A4.T6.13.2" class="ltx_text" style="font-size:90%;">Decoder
+architecture for <span id="A4.T6.13.2.1"
+class="ltx_text ltx_font_italic">noisy synthetic binary
+tree</span></span>
+<span class="ltx_tag ltx_tag_table"><span id="A4.T6.12.1.1"
+class="ltx_text" style="font-size:90%;">Table 6</span>: </span><span
+id="A4.T6.13.2" class="ltx_text" style="font-size:90%;">Decoder
+architecture for <span id="A4.T6.13.2.1"
+class="ltx_text ltx_font_italic">noisy synthetic binary
+tree</span></span></figcaption>
+</figure>
+:::
+
+::: {#A4.SS2.SSS0.Px2 .section .ltx_paragraph}
+#### Results. {#results. .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS2.SSS0.Px2.p1 .ltx_para}
+We report 1) the correlation between the hamming distance and the
+embedding distance and 2) the correlation between the depth and the norm
+of the embeddings. The first correlation is computed over all possible
+pairs of test points. For the norm of the hyperbolic embeddings, we use
+the Poincaré norm, which can be calculated by projecting the Lorentz
+model embedding to the Poincaré disk model. As [[Table 7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T7 "Table 7 ‣ Results. ‣ D.2 Noisy synthetic binary tree ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows, while all the models show similar
+performance with respect to the ELBO, the full covariance HWN and RoWN
+show better performance than the diagonal HWN except depth six,
+outperforming the Euclidean model in every setting. RoWN preserves the
+depth information better than the other distributions in general. We
+additionally visualize the variational mean obtained by training the
+tree of depth three in [[3(b)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.F3.sf2 "3(b) ‣ Figure 4 ‣ 4.2 Noisy synthetic binary tree ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, where the hierarchical structure is well
+preserved in the hyperbolic embedding space.
+:::
+
+<figure id="A4.T7" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="A4.T7.72.1.1"
+class="ltx_text" style="font-size:90%;">Table 7</span>: </span><span
+id="A4.T7.73.2" class="ltx_text" style="font-size:90%;">Results of <span
+id="A4.T7.73.2.1" class="ltx_text ltx_font_italic">noisy synthetic
+binary tree</span>. The results are averaged over 10 runs. The
+hyperbolic models outperform the Euclidean model in all settings.
+Overall, RoWN preserves the hierarchical information better than the
+other distributions.</span></figcaption>
+</figure>
+
+<figure id="A4.T8" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="A4.T8.98.1.1"
+class="ltx_text" style="font-size:90%;">Table 8</span>: </span><span
+id="A4.T8.99.2" class="ltx_text" style="font-size:90%;">Correlation
+between the radian axis and the angular axis.</span></figcaption>
+</figure>
+:::
+
+::: {#A4.SS2.SSS0.Px3 .section .ltx_paragraph}
+#### Decomposition of the radial and angular dependency. {#decomposition-of-the-radial-and-angular-dependency. .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS2.SSS0.Px3.p1 .ltx_para}
+To show how well the angular and radial representations are decomposed,
+we compute the Pearson correlation between the radial axis and the
+angular axis, which has been shown to be an effective measure of
+variable dependency in disentangled representation learning (Jo and Seo,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib11){.ltx_ref};
+Horan et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib10){.ltx_ref}).
+[[Table 8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T8 "Table 8 ‣ Results. ‣ D.2 Noisy synthetic binary tree ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows that the absolute value of the correlation
+is lower or similar to 0.1 in all the models, including RoWN.
+:::
+:::
+
+::: {#A4.SS2.SSS0.Px4 .section .ltx_paragraph}
+#### Learnable rotation. {#learnable-rotation. .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS2.SSS0.Px4.p1 .ltx_para}
+We add experiments for the models that learn the rotation direction,
+which is originally fixed to the direction of $\mathbf{μ}$ (in Algorithm
+1, the $\mathbf{y}$ vector). Given data, the encoder gives the rotation
+direction. We test the models on the noisy synthetic binary tree setting
+in our paper. As shown [[Table 9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T9 "Table 9 ‣ Learnable rotation. ‣ D.2 Noisy synthetic binary tree ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, as the depth becomes deeper, the learnable
+rotation models usually underperform RoWN. [[Figure 6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.F6 "Figure 6 ‣ Learnable rotation. ‣ D.2 Noisy synthetic binary tree ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows behaviors of learned representation by an
+alternative Learnable Rotation 1. Most of the rotation directions are
+pointing or orthogonal (black line segments on each node) to the
+direction of its parent node. This implies that the alternatives of RoWN
+can learn representations of nodes to align not to the root node but to
+the parent node. We note that these alternatives work well with shallow
+depths but not with great depths.
+:::
+
+<figure id="A4.F6" class="ltx_figure">
+<img src="./rown_files/learnable_rotation.png" id="A4.F6.g1"
+class="ltx_graphics ltx_centering ltx_img_square" width="180"
+height="206" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="A4.F6.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 6</span>: </span><span
+id="A4.F6.3.2" class="ltx_text" style="font-size:90%;">Visualization of
+the representations from learnable rotation model. The representations
+are from the Learnable Rotation 1 model learned on the depth 4 noisy
+synthetic binary tree with latent dimension 2. The size of the circles
+denotes the depth, where the biggest circle denotes the root node. Most
+of the rotation directions are pointing or orthogonal (black line
+segments on each node) to the direction of its parent
+node.</span></figcaption>
+</figure>
+
+<figure id="A4.T9" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="A4.T9.38.1.1"
+class="ltx_text" style="font-size:90%;">Table 9</span>: </span><span
+id="A4.T9.39.2" class="ltx_text" style="font-size:90%;">Results of
+learnable rotation models. Learnable Rotation 1 model outputs the
+rotation direction parallel to the mean and variance, while Learnable
+Rotation 2 model outputs the rotation direction by feeding the mean to a
+fully connected layer.</span></figcaption>
+</figure>
+:::
+:::
+
+::: {#A4.SS3 .section .ltx_subsection}
+### [D.3 ]{.ltx_tag .ltx_tag_subsection}WordNet {#d.3-wordnet .ltx_title .ltx_title_subsection}
+
+::: {#A4.SS3.SSS0.Px1 .section .ltx_paragraph}
+#### Experimental setting. {#experimental-setting.-1 .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS3.SSS0.Px1.p1 .ltx_para}
+We train a probabilistic word embedding model with WordNet
+dataset (Fellbaum,
+[1998](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib5){.ltx_ref}).
+We initialize the mean and variance parameters with
+$\mathcal{N}\operatorname{}{(\mathbf{0},0.01)}$. For the full covariance
+model, we use a learning rate $0.01$. For the other models, we set the
+learning rate $0.015$ for the first 100 epochs and then set the learning
+rate to $0.6$ for the remaining steps as done in (Nickel and Kiela,
+[2017](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib21){.ltx_ref};
+Nagano et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+We evaluate the learned representations by computing the average rank of
+all the hypernymies. The rank of a given pair of words $s$ and $t$ is
+computed among the distances between all possible pairs of the words $s$
+and $t^{\prime}$ without hypernymy.
+:::
+:::
+
+::: {#A4.SS3.SSS0.Px2 .section .ltx_paragraph}
+#### Results. {#results.-1 .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS3.SSS0.Px2.p1 .ltx_para}
+We evaluate the learned representations by computing the average rank of
+all the hypernymies. The rank of a given pair of words $s$ and $t$ is
+computed among the distances between all possible pairs of the words $s$
+and $t^{\prime}$ without hypernymy. [[Table 2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.T2 "Table 2 ‣ 4.3 WordNet ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows the empirical performances of representing
+the word data. We report the performance with the mean rank (MR) and the
+mean average precision (mAP). RoWN preserves the hierarchical structure
+better than the other distributions, while the full covariance HWN fails
+due to unstable optimization.
+:::
+
+<figure id="A4.T10" class="ltx_table">
+tabl<figcaption><span class="ltx_tag ltx_tag_table"><span id="A4.T11.8.1.1"
+class="ltx_text" style="font-size:90%;">Table 11</span>: </span><span
+id="A4.T11.9.2" class="ltx_text" style="font-size:90%;">Varying samples
+of the full covariance HWN on WordNet.</span></figcaption>
+</figure>
+
+::: {#A4.SS4 .section .ltx_subsection}
+### [D.4 ]{.ltx_tag .ltx_tag_subsection}Atari 2600 Breakout {#d.4-atari-2600-breakout .ltx_title .ltx_title_subsection}
+
+::: {#A4.SS4.SSS0.Px1 .section .ltx_paragraph}
+#### Experimental setting. {#experimental-setting.-2 .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS4.SSS0.Px1.p1 .ltx_para}
+To learn the implicit hierarchy that can be observed from the
+trajectories of Breakout, we train the VAE models with the Atari 2600
+Breakout images. The images of Breakout are collected by using a
+pre-trained Deep Q-network (Mnih et al.,
+[2015](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib17){.ltx_ref})
+and divided into a training set and test set with 90,000 and 10,000
+images respectively. We label each image with the score obtained from
+the game environment. So the labels are correlated to the number of
+broken blocks. To train VAE, we use a DCGAN-based architecture, which
+was originally used to evaluate HWN in Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+The detailed architecture is provided in [[Table 13]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T13 "Table 13 ‣ Experimental setting. ‣ D.4 Atari 2600 Breakout ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} and [[Table 13]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T13 "Table 13 ‣ Experimental setting. ‣ D.4 Atari 2600 Breakout ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. We use binary cross-entropy loss for the
+reconstruction loss.
+:::
+
+<figure id="A4.T13" class="ltx_table">
+<div class="ltx_flex_figure ltx_flex_table">
+<div class="ltx_flex_cell ltx_flex_size_2">
+</div>
+figcaption><span class="ltx_tag ltx_tag_table"><span id="A4.T14.39.1.1"
+class="ltx_text" style="font-size:90%;">Table 14</span>: </span><span
+id="A4.T14.40.2" class="ltx_text" style="font-size:90%;">Results of
+<span id="A4.T14.40.2.1" class="ltx_text ltx_font_italic">Atari 2600
+Breakout</span>. The results are averaged over 10 runs. We measure the
+correlation between the score of an image and the Poincaré norm of the
+variational mean.</span></figcaption>
+</figure>
+
+::: {#A4.SS4.SSS0.Px2.p1 .ltx_para}
+To evaluate the models, we measure the correlation between the norm of
+the test images and the labeled scores. For the norm of the hyperbolic
+embeddings, we use the Poincaré norm, which can be calculated by
+projecting the Lorentz model embedding to the Poincaré disk model. The
+results are reported in [[Table 14]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.T14 "Table 14 ‣ Results. ‣ D.4 Atari 2600 Breakout ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}. While all the models show similar representation
+power with respect to ELBO, RoWN and the full covariance HWN outperform
+the diagonal HWN. Especially, RoWN aligns the hierarchical structures
+better with respect to the norm in low latent dimensions. Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref})
+report a higher score of correlation in latent dimension 20, but we find
+some issues with the result. First, Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref})
+compute the correlation between the labeled scores and the norm in the
+tangent space ($\mathbf{v}$ vector from Algorithm [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#alg4 "Algorithm 4 ‣ Appendix C Details of Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}),
+not the Poincaré norm. The projection function in Proposition
+[[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#Thmproposition2 "Proposition 2. ‣ 3.1 Observations on the hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref}
+depends on the first element of the input vector. Thus the Poincaré norm
+is not proportional to the $\mathbf{v}$ norm, and computing the
+correlation with the $\mathbf{v}$ norm will show different behavior
+compared to the correlation with the Poincaré norm. Second, the
+reproduction results obtained from the code by the official
+repository[^1^[[^1^[1]{.ltx_tag
+.ltx_tag_note}[https://github.com/pfnet-research/hyperbolic_wrapped_distribution](https://github.com/pfnet-research/hyperbolic_wrapped_distribution){.ltx_ref
+.ltx_url .ltx_font_typewriter
+target="_blank"}]{.ltx_note_content}]{.ltx_note_outer}]{#footnote1
+.ltx_note .ltx_role_footnote} are far from the reported correlation. Our
+reproduction results of the correlation between the labeled scores and
+the $\mathbf{v}$ norm show 0.616, and between the Poincaré norm show
+0.501 averaged over four runs.
+:::
+:::
+
+::: {#A4.SS4.SSS0.Px3 .section .ltx_paragraph}
+#### Qualitative results. {#qualitative-results. .ltx_title .ltx_title_paragraph}
+
+::: {#A4.SS4.SSS0.Px3.p1 .ltx_para}
+[[Figure 8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#A4.F8 "Figure 8 ‣ Qualitative results. ‣ D.4 Atari 2600 Breakout ‣ Appendix D Experimental Details ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref} shows more examples of generated images from VAE
+models trained on Breakout images with two dimensional latent space.
+:::
+
+<figure id="A4.F8" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="A4.F7.sf1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./rown_files/breakout_hwn_apx.png" id="A4.F7.sf1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="598"
+height="458" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="A4.F7.sf1.2.1.1" class="ltx_text" style="font-size:90%;">(a)</span>
+</span><span id="A4.F7.sf1.3.2" class="ltx_text"
+style="font-size:90%;">Diagonal HWN</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="A4.F7.sf2"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./rown_files/breakout_rown_apx.png" id="A4.F7.sf2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="598"
+height="457" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span
+id="A4.F7.sf2.2.1.1" class="ltx_text" style="font-size:90%;">(b)</span>
+</span><span id="A4.F7.sf2.3.2" class="ltx_text"
+style="font-size:90%;">RoWN</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="A4.F8.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 8</span>: </span><span
+id="A4.F8.3.2" class="ltx_text" style="font-size:90%;">Generation
+results of the VAE models trained on Breakout images. The models are
+trained on Breakout images with two dimensional latent space. We
+generate the images from randomly sampled latent vectors having Poincaré
+norm as 0.1, 0.3, 0.5, 0.7, 0.9.</span></figcaption>
+</figure>
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+
+::: {#A5 .section .ltx_appendix}
+## [Appendix E ]{.ltx_tag .ltx_tag_appendix}Discussion on Root Placement {#appendix-e-discussion-on-root-placement .ltx_title .ltx_title_appendix}
+
+::: {#A5.p1 .ltx_para}
+Note that due to the isometry of the geometry, the root node can be
+placed anywhere in hyperbolic space. In other words, infinitely many
+sets of embeddings preserve the same pairwise distances between the
+nodes. This reveals that finding the appropriate isometry, where the
+root node is placed near the origin, is important for using RoWN as the
+distribution. In this section, we discuss the techniques we used to
+place the root node near the origin of each application.
+:::
+
+::: {#A5.SS1 .section .ltx_subsection}
+### [E.1 ]{.ltx_tag .ltx_tag_subsection}Probabilistic word embedding model {#e.1-probabilistic-word-embedding-model .ltx_title .ltx_title_subsection}
+
+::: {#A5.SS1.p1 .ltx_para}
+In our experiments, to place the root node near the origin, we have
+initialized embeddings from
+$\mathcal{N}\operatorname{}{(0,{0.01\operatorname{}I})}$, which are then
+moved to the Lorentz model using the exponential map, with learning rate
+warm-up Nagano et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2205.13371#bib.bib18){.ltx_ref}).
+The results with different initialization method are shown in
+[[Table 3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S4.T3 "Table 3 ‣ Discussion of the root placement. ‣ 4.3 WordNet ‣ 4 Experiments ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}.
+:::
+:::
+
+::: {#A5.SS2 .section .ltx_subsection}
+### [E.2 ]{.ltx_tag .ltx_tag_subsection}Hyperbolic VAE {#e.2-hyperbolic-vae .ltx_title .ltx_title_subsection}
+
+::: {#A5.SS2.p1 .ltx_para}
+When RoWN is used as a variational distribution in the hyperbolic VAE,
+the application of RoWN is different from the probabilistic word
+embedding model since the KL divergence encourages all variational means
+to be close to the prior mean. Suppose we only focus on nodes at a
+certain depth in a tree. In that case, it can be easily identified that
+it would be beneficial to have all nodes at the same level of the norm
+to minimize the geometric mean between the prior and posterior means.
+Here, we assume that each pair of nodes requires to have a certain
+amount of distance to minimize the reconstruction error. As shown in
+[[2(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.F2.sf1 "2(a) ‣ Figure 3 ‣ 3.2 Rotated hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, the original HWN is difficult to have the nodes
+at the same depth with similar norms since the local variation cannot be
+modeled through the radial direction. Eventually, the root node slightly
+deviates from the prior mean. With RoWN, as shown in [[2(c)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.13371#S3.F2.sf3 "2(c) ‣ Figure 3 ‣ 3.2 Rotated hyperbolic wrapped normal distribution ‣ 3 Rotated Hyperbolic Wrapped Normal Distribution ‣ A Rotated Hyperbolic Wrapped Normal Distribution for Hierarchical Representation Learning"){.ltx_ref
+.ltx_refmacro_autoref}, all the nodes at the same depth can be placed at
+a similar norm while preserving their local variations. If this is
+indeed the case, the root node is likely to be placed near the prior
+mean since the nodes with different depths will be placed at different
+levels of norms in the space.
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2205.13369){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./rown_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2205.13371){.ar5iv-text-button
+.ar5iv-severity-error} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2205.13371){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2205.13371){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2205.13372){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Wed Dec 14 18:56:29 2022 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+
+::: {#simplifyJobsPortals}
+:::
+:::

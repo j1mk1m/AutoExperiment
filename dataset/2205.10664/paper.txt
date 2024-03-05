@@ -1,0 +1,2244 @@
+::: ltx_page_main
+::: ltx_page_content
+# Temporal Domain Generalization with Drift-Aware Dynamic Neural Network {#temporal-domain-generalization-with-drift-aware-dynamic-neural-network .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [ Guangji Bai\
+Department of Computer Science\
+Emory University\
+Atlanta, GA\
+[guangji.bai@emory.edu]{#id2.2.id1 .ltx_text .ltx_font_typewriter}\
+&Chen Ling$^{*}$\
+Department of Computer Science\
+Emory University\
+Atlanta, GA\
+[chen.ling@emory.edu]{#id3.3.id2 .ltx_text .ltx_font_typewriter}\
+&Liang Zhao\
+Department of Computer Science\
+Emory University\
+Atlanta, GA\
+[liang.zhao@emory.edu]{#id4.4.id3 .ltx_text .ltx_font_typewriter}\
+]{.ltx_personname}[Equal contribution.Corresponding
+author.]{.ltx_author_notes}]{.ltx_creator .ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Temporal domain generalization is a promising yet extremely challenging
+area where the goal is to learn models under temporally changing data
+distributions and generalize to unseen data distributions following the
+trends of the change. The advancement of this area is challenged by: 1)
+characterizing data distribution drift and its impacts on models, 2)
+expressiveness in tracking the model dynamics, and 3) theoretical
+guarantee on the performance. To address them, we propose a Temporal
+Domain Generalization with Drift-Aware Dynamic Neural Network (DRAIN)
+framework. Specifically, we formulate the problem into a Bayesian
+framework that jointly models the relation between data and model
+dynamics. We then build a recurrent graph generation scenario to
+characterize the dynamic graph-structured neural networks learned across
+different time points. It captures the temporal drift of model
+parameters and data distributions and can predict models in the future
+without the presence of future data. In addition, we explore theoretical
+guarantees of the model performance under the challenging temporal DG
+setting and provide theoretical analysis, including uncertainty and
+generalization error. Finally, extensive experiments on several
+real-world benchmarks with temporal drift demonstrate the proposed
+method's effectiveness and efficiency.
+:::
+
+::: {#S1 .section .ltx_section .ltx_indent_first}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para .ltx_noindent}
+In machine learning, researchers often assume that training and test
+data follow the same distribution for the trained model to work on test
+data with some generalizability. However, in reality, this assumption
+usually cannot be satisfied, and when we cannot make sure the trained
+model is always applied in the same domain where it was trained. This
+motivates Domain Adaptation (DA) which builds the bridge between source
+and target domains by characterizing the transformation between the data
+from these
+domains \[[3](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib3){.ltx_ref},
+[10](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib10){.ltx_ref},
+[35](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib35){.ltx_ref}\].
+However, in more challenging situations when target domain data is
+unavailable (e.g., no data from an unknown area, no data from the
+future, etc.), we need a more realistic scenario named Domain
+Generalization
+(DG) \[[32](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib32){.ltx_ref},
+[1](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib1){.ltx_ref},
+[7](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib7){.ltx_ref}\].
+:::
+
+::: {#S1.p2 .ltx_para .ltx_noindent}
+Most existing works in DG focus on generalization among domains with
+categorical indices, such as generalizing the trained model from one
+dataset (e.g.,
+MNIST \[[18](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib18){.ltx_ref}\])
+to another (e.g.,
+SVHN \[[29](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib29){.ltx_ref}\]),
+from one task (e.g., image
+classification \[[15](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib15){.ltx_ref}\])
+to another (e.g., image
+segmentation \[[22](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib22){.ltx_ref}\]),
+etc. However, in many real-world applications, the "boundary" among
+different domains is unavailable and difficult to detect, leading to a
+*concept drift* across the domains. For example, when a bank leverages a
+model to predict whether a person will be a "defaulted borrower",
+features like "annual incoming", "profession type", and "marital status"
+are considered. However, due to the temporal change of the society, how
+these feature values indicate the prediction output should change
+accordingly following some trends that could be predicted somehow in a
+range of time. Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S1.F1 "Figure 1 ‣ 1 Introduction ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+shows another example, seasonal flu prediction via Twitter data which
+evolves each year in many aspects. For example, monthly active users are
+increasing, new friendships are formed, the age distribution is shifting
+under some trends, etc. Such temporal change in data distribution
+gradually outdated the models. Correspondingly, suppose there was an
+ideal, always update-to-date model, then the model parameters should
+gradually change correspondingly to counter the trend of data
+distribution shifting across time. It can also "predict" what the model
+parameters should look like in an arbitrary (not too far) future time
+point. This requires the power of *temporal* domain generalization.
+:::
+
+<figure id="S1.F1" class="ltx_figure">
+<img src="./2205.10664_files/x1.png" id="S1.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="592"
+height="184" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span
+id="S1.F1.2.1" class="ltx_text ltx_font_bold">An illustrative example of
+temporal domain generalization.</span> Consider training a model for
+some classification tasks based on the annual Twitter dataset such that
+the trained model can generalize to the future domains (e.g., 2023). The
+temporal drift of data distribution can influence the prediction model
+such as the rotation of the decision boundary in this case.</figcaption>
+</figure>
+
+::: {#S1.p3 .ltx_para .ltx_noindent}
+However, as an extension of traditional DG, temporal DG is extremely
+challenging yet promising. Existing DG methods that treat the domain
+indices as a categorical variable may not be suitable for temporal DG as
+they require the domain boundary as apriori to learn the mapping from
+source to target
+domains \[[27](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib27){.ltx_ref},
+[26](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib26){.ltx_ref},
+[2](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib2){.ltx_ref},
+[1](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib1){.ltx_ref}\].
+Until now, temporal domain indices have been well explored only in
+DA \[[13](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib13){.ltx_ref},
+[30](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib30){.ltx_ref},
+[36](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib36){.ltx_ref}\]
+but not DG. There are very few existing works in temporal DG due to its
+big challenges. One relevant work is *Sequential Learning Domain
+Generalization*
+(S-MLDG) \[[19](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib19){.ltx_ref}\]
+that proposed a DG framework over sequential domains via
+meta-learning \[[9](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib9){.ltx_ref}\].
+S-MLDG meta-trains the target model on all possible permutations of
+source domains, with one source domain left for meta-test. However,
+S-MLDG in fact still treats domain index as a categorical variable, and
+the method was only tested on categorical DG dataset. A more recent
+paper called *Gradient Interpolation*
+(GI) \[[28](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib28){.ltx_ref}\]
+proposes a temporal DG algorithm to encourage a model to learn functions
+that can extrapolate to the near future by supervising the first-order
+Taylor expansion of the learned function. However, GI has very limited
+power in characterizing model dynamics because it can only learn how the
+activation function changes along time while making all the remaining
+parameters fixed across time.
+:::
+
+::: {#S1.p4 .ltx_para .ltx_noindent}
+The advancement of temporal domain generalization is challenged by
+several critical bottlenecks, including [1) Difficulty in characterizing
+the data distribution drift and its influences on models.]{#S1.p4.1.1
+.ltx_text .ltx_font_bold} Modeling the temporally evolving distributions
+requires making the model time-sensitive. Intuitive ways include feeding
+the time as an input feature to the model, which is well deemed simple
+yet problematic as it discards the other features' dependency on time
+and dependency on other *confounding* factors changed along
+time \[[36](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib36){.ltx_ref}\].
+Another possible way is to make the model parameters a function of time.
+However, these ways cannot generalize the model to future data as long
+as the whole model's dynamics and data dynamics are not holistically
+modeled. [2) Lack of expressiveness in tracking the model
+dynamics.]{#S1.p4.1.3 .ltx_text .ltx_font_bold} Nowadays, complex tasks
+have witnessed the success of big complex models (e.g., large
+CNNs \[[6](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib6){.ltx_ref}\]),
+where the neurons and model parameters are connected as a complex graph
+structure. However, they also significantly challenge tracking their
+model dynamics in temporal DG. An expressive model dynamics
+characterization and prediction requires mapping data dynamics to *model
+dynamics* and hence the graph dynamics of model parameters across time.
+This is a highly open problem, especially for the temporal DG area. [3)
+Difficulty in theoretical guarantee on the performance.]{#S1.p4.1.5
+.ltx_text .ltx_font_bold} While there are fruitful theoretical analyses
+on machine learning problems with
+independent-and-identically-distributed (*i.i.d*) assumptions (e.g.,
+generalization error
+bound \[[12](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib12){.ltx_ref}\]),
+similar analyses meet substantial hurdles to be extended to
+out-of-distribution (*OOD*) problem due to the distribution drift over
+temporally evolving domains. Therefore, it is essential to enhance the
+theoretical analyses on the model capacity and theoretical relation
+among different temporal domain generalization models.
+:::
+
+::: {#S1.p5 .ltx_para .ltx_noindent}
+To address all the above challenges, we propose a Temporal Domain
+Generalization with [DR]{#S1.p5.1.1 .ltx_text .ltx_font_bold
+.ltx_framed_underline}ift-[A]{#S1.p5.1.2 .ltx_text .ltx_font_bold
+.ltx_framed_underline}ware dynam[I]{#S1.p5.1.3 .ltx_text .ltx_font_bold
+.ltx_framed_underline}c neural [N]{#S1.p5.1.4 .ltx_text .ltx_font_bold
+.ltx_framed_underline}etworks ([DRAIN]{#S1.p5.1.5 .ltx_text
+.ltx_font_bold}) framework that solves all challenges above
+simultaneously. Specifically, we propose a generic framework to
+formulate temporal domain generalization by a Bayesian treatment that
+jointly models the relation between data and model dynamics. To
+instantiate the Bayesian framework, a recurrent graph generation
+scenario is established to encode and decode the dynamic
+graph-structured neural networks learned across different timestamps.
+Such a scenario can achieve a fully time-sensitive model and can be
+trained in an end-to-end manner. It captures the temporal drift of model
+parameters and data distributions, and can predict the models in the
+future *without* the presence of future data.
+:::
+
+::: {#S1.p6 .ltx_para .ltx_noindent}
+[Our contributions include:]{#S1.p6.1.1 .ltx_text .ltx_font_bold}
+[1)]{#S1.p6.1.2 .ltx_text .ltx_font_bold} We develop a novel and
+adaptive temporal domain generalization framework that can be trained in
+an end-to-end manner. [2)]{#S1.p6.1.3 .ltx_text .ltx_font_bold} We
+innovatively treat the model as a dynamic graph and leverage graph
+generation techniques to achieve a fully time-sensitive model.
+[3)]{#S1.p6.1.4 .ltx_text .ltx_font_bold} We propose to use the
+sequential model to learn the temporal drift adaptively and leverage the
+learned sequential pattern to predict the model status on the future
+domain. [4)]{#S1.p6.1.5 .ltx_text .ltx_font_bold} We provide theoretical
+analysis on both uncertainty quantification and generalization error of
+the proposed method. [5)]{#S1.p6.1.6 .ltx_text .ltx_font_bold} We
+demonstrate our model's efficacy and superiority with extensive
+experiments.
+:::
+:::
+
+::: {#S2 .section .ltx_section .ltx_indent_first}
+## [2 ]{.ltx_tag .ltx_tag_section}Related work {#related-work .ltx_title .ltx_title_section}
+
+::: {#S2.p1 .ltx_para .ltx_noindent}
+[Continuous Domain Adaptation.]{#S2.p1.1.1 .ltx_text .ltx_font_bold}
+Domain Adaptation (DA) has received great attention from researchers in
+the past
+decade \[[3](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib3){.ltx_ref},
+[10](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib10){.ltx_ref},
+[35](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib35){.ltx_ref}\]
+and readers may refer
+to \[[38](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib38){.ltx_ref}\]
+for a comprehensive survey. Under the big umbrella of DA, continuous
+domain adaptation considers the problem of adapting to target domains
+where the domain index is a continuous variable (temporal DA is a
+special case when the domain index is 1D). Approaches to tackling such
+problems can be broadly classified into three categories: (1) biasing
+the training loss towards future data via transportation of past
+data\[[13](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib13){.ltx_ref},
+[30](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib30){.ltx_ref}\],
+(2) using time-sensitive network parameters and explicitly controlling
+their evolution along
+time \[[16](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib16){.ltx_ref},
+[17](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib17){.ltx_ref},
+[25](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib25){.ltx_ref}\],
+(3) learning representations that are time-invariant using adversarial
+methods \[[36](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib36){.ltx_ref}\].
+The first category augments the training data, the second category
+reparameterizes the model, and the third category redesigns the training
+objective. However, data may not be available for the target domain, or
+it may not be possible to adapt the base model, thus requiring Domain
+Generalization.
+:::
+
+::: {#S2.p2 .ltx_para .ltx_noindent}
+[Domain Generalization (DG).]{#S2.p2.1.1 .ltx_text .ltx_font_bold} A
+diversity of DG methods have been proposed in recent
+years \[[27](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib27){.ltx_ref},
+[26](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib26){.ltx_ref},
+[20](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib20){.ltx_ref},
+[2](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib2){.ltx_ref},
+[1](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib1){.ltx_ref},
+[7](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib7){.ltx_ref},
+[28](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib28){.ltx_ref}\].
+According
+to \[[37](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib37){.ltx_ref}\],
+existing DG methods can be categorized into the following three groups,
+namely: (1) *Data manipulation:* This category of methods focuses on
+manipulating the inputs to assist in learning general representations.
+There are two kinds of popular techniques along this line: a). Data
+augmentation \[[33](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib33){.ltx_ref},
+[34](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib34){.ltx_ref}\],
+which is mainly based on augmentation, randomization, and transformation
+of input data; b). Data
+generation \[[23](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib23){.ltx_ref},
+[31](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib31){.ltx_ref}\],
+which generates diverse samples to help generalization. (2)
+*Representation learning:* This category of methods is the most popular
+in domain generalization. There are two representative techniques: a).
+Domain-invariant representation
+learning \[[10](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib10){.ltx_ref},
+[11](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib11){.ltx_ref}\],
+which performs kernel, adversarial training, explicitly features
+alignment between domains, or invariant risk minimization to learn
+domain-invariant representations; b). Feature
+disentanglement \[[21](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib21){.ltx_ref}\],
+which tries to disentangle the features into domain-shared or
+domain-specific parts for better generalization. (3) *Learning
+strategy:* This category of methods focuses on exploiting the general
+learning strategy to promote the generalization capability, e.g,
+ensemble
+learning \[[24](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib24){.ltx_ref}\],
+meta-learning \[[7](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib7){.ltx_ref}\],
+gradient
+operation \[[14](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib14){.ltx_ref}\],
+etc.
+:::
+
+::: {#S2.p3 .ltx_para .ltx_noindent}
+Existing works above consider generalization across categorical domains,
+while in this paper, we assume the domain index set is across time
+(namely, temporal), and the domain shifts smoothly over time.
+Unfortunately, there is only very little work under this setting. The
+first work called *Sequential Learning Domain Generalization*
+(S-MLDG) \[[19](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib19){.ltx_ref}\]
+proposed a DG framework over sequential domains based on the idea of
+meta-learning. A more recent work called *Gradient Interpolation*
+(GI) \[[28](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib28){.ltx_ref}\]
+proposes a temporal DG algorithm to encourage a model to learn functions
+that can extrapolate well to the near future by supervising the
+first-order Taylor expansion of the learned function. However, neither
+work can adaptively learn the temporal drift across the domains while
+keeping the strong expressiveness of the learned model.
+:::
+:::
+
+::: {#S3 .section .ltx_section .ltx_indent_first}
+## [3 ]{.ltx_tag .ltx_tag_section}Methodology {#methodology .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para .ltx_noindent}
+In this section, we first provide the problem formulation of temporal
+domain generalization and then introduce our proposed framework,
+followed by our theoretical analyses.
+:::
+
+::: {#S3.SS1 .section .ltx_subsection .ltx_indent_first}
+### [3.1 ]{.ltx_tag .ltx_tag_subsection}Problem formulation {#problem-formulation .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS1.p1 .ltx_para .ltx_noindent}
+[Temporal Domain Generalization.]{#S3.SS1.p1.15.1 .ltx_text
+.ltx_font_bold} We consider prediction tasks where the data distribution
+evolves with time. During training, we are given $T$ observed source
+domains $\mathcal{D}_{1},\mathcal{D}_{2},\cdots,\mathcal{D}_{T}$ sampled
+from distributions on $T$ arbitrary time points
+$t_{1} \leq t_{2} \leq \cdots \leq t_{T}$, with each
+$\mathcal{D}_{s} = \left\{ {{(\mathbf{x}_{i}^{(s)},y_{i}^{(s)})} \in {\mathcal{X}_{s} \times \mathcal{Y}_{s}}} \right\}_{i = 1}^{N_{s}}$,
+$s = {1,2,\cdots,T}$ where $\mathbf{x}_{i}^{(s)}$, $y_{i}^{(s)}$ and
+$N_{s}$ denotes the input feature, label and sample size at timestamp
+$t_{s}$, respectively, and $\mathcal{X}_{s}$, $\mathcal{Y}_{s}$ denotes
+the input feature space and label space at timestamp $t_{s}$,
+respectively. The trained model will only be tested on some target
+domain *in the future*, i.e., $\mathcal{D}_{T + 1}$ where
+$t_{T + 1} \geq t_{T}$. Our setting further assumes the existence of
+concept drift across different domains, i.e., the domain distribution is
+changing across time by following some patterns. For example, if we
+consider how personal income changes each year, we could find that the
+average income typically increases by some (varying) ratio every year
+due to the inflation. Similar patterns can also be found on the housing
+price and education cost, etc.
+:::
+
+::: {#S3.SS1.p2 .ltx_para .ltx_noindent}
+Our *goal* is to build a model that proactively captures the concept
+drift. Given labeled data from the source domains
+$\mathcal{D}_{1},\mathcal{D}_{2},\cdots,\mathcal{D}_{T}$, we learn the
+mapping function
+$g_{{\mathbf{ω}}_{s}}:{\mathcal{X}_{s}\rightarrow\mathcal{Y}_{s}}$ on
+each domain $\mathcal{D}_{s}$, $s = {1,2,\cdots,T}$ where
+${\mathbf{ω}}_{s}$ denotes the function parameters at timestamp $t_{s}$,
+respectively, and then predict the dynamics across the parameters
+${\mathbf{ω}}_{1},{\mathbf{ω}}_{2},\cdots,{\mathbf{ω}}_{T}$. Finally, we
+predict the parameters ${\mathbf{ω}}_{T + 1}$ for the mapping function
+$g_{{\mathbf{ω}}_{T + 1}}:{\mathcal{X}_{T + 1}\rightarrow\mathcal{Y}_{T + 1}}$
+on the unseen future domain. As shown in Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S1.F1 "Figure 1 ‣ 1 Introduction ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+due to the temporal drift in data distribution, e.g. the input features
+such as Twitter user age distribution and number of tweets increase each
+year, the prediction model is expected to evolve accordingly, e.g. the
+magnitude of model parameter weights will decrease annually. Despite the
+necessity, handling the above problem is an open research area due to
+several existing challenges: 1) Difficulty in characterizing data
+distribution drift as well as how it influences the model. 2) Lack of
+expressiveness in automatically capturing the dynamics of how neural
+network evolves across time. 3) Theoretical guarantee on model's
+performance (e.g., generalization error, uncertainty) on future domains
+is hard to obtain due to the unknown and (potentially) complicated
+concept drift.
+:::
+:::
+
+::: {#S3.SS2 .section .ltx_subsection .ltx_indent_first}
+### [3.2 ]{.ltx_tag .ltx_tag_subsection}Proposed Method {#proposed-method .ltx_title .ltx_title_subsection}
+
+<figure id="S3.F2" class="ltx_figure">
+<img src="./2205.10664_files/x2.png" id="S3.F2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="598"
+height="220" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 2: </span>A high
+level overview of our DRAIN framework. Best viewed in
+color.</figcaption>
+</figure>
+
+::: {#S3.SS2.p1 .ltx_para .ltx_noindent}
+In this section, we introduce how we address the challenges mentioned
+above. For the first challenge, we build a systematic Bayesian
+probability framework to represent the concept drift over the domains,
+which instantly differentiates our work from all existing methods in DG.
+For the second challenge, we propose modeling a neural network with
+changing parameters as a dynamic graph and achieving a temporal DG
+framework that can be trained end-to-end by graph generation techniques.
+We further improve the proposed method's generalization ability by
+introducing a skip connection module over different domains. Finally, to
+handle the last challenge, we explore theoretical guarantees of model
+performance under the challenging temporal DG setting and provide
+theoretical analyses of our proposed method, such as uncertainty
+quantification and generalization error.
+:::
+
+::: {#S3.SS2.SSS1 .section .ltx_subsubsection .ltx_indent_first}
+#### [3.2.1 ]{.ltx_tag .ltx_tag_subsubsection}A probabilistic view of concept drift in temporal domain generalization {#a-probabilistic-view-of-concept-drift-in-temporal-domain-generalization .ltx_title .ltx_title_subsubsection}
+
+::: {#S3.SS2.SSS1.p1 .ltx_para .ltx_noindent}
+To perform domain generalization over temporally indexed domains, we
+need to capture the concept drift within a given time interval. From a
+probabilistic point of view, for each domain $\mathcal{D}_{s}$,
+$s = {1,2,\cdots,T}$, we can learn a neural network
+$g_{{\mathbf{ω}}_{s}}$ by maximizing the conditional probability
+$\Pr{(\left. {\mathbf{ω}}_{s} \middle| \mathcal{D}_{s} \right.)}$, where
+${\mathbf{ω}}_{s}$ denotes the status of model parameters at timestamp
+$t_{s}$. Due to the evolving distribution of $\mathcal{D}_{s}$, the
+conditional probability
+$\Pr{(\left. {\mathbf{ω}}_{s} \middle| \mathcal{D}_{s} \right.)}$ will
+change over time accordingly. Our ultimate goal is to predict
+${\mathbf{ω}}_{T + 1}$ given all training data
+$\mathcal{D}_{1},\mathcal{D}_{2},\cdots,\mathcal{D}_{T}$
+($\mathcal{D}_{1:T}$ for short), i.e.,
+$\Pr{(\left. {\mathbf{ω}}_{T + 1} \middle| \mathcal{D}_{1:T} \right.)}$.
+By the Law of total probability, we have
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $$\begin{array}{r}                                                                                                                                                                                                                                                                                                                                                                    [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     {{{\Pr\left( {\mathbf{ω}}_{T + 1} \middle| \mathcal{D}_{1:T} \right)} = {\oint_{\Omega}{{\underset{\text{inference}}{\underbrace{\Pr ⁡\left( {\mathbf{ω}}_{T+1} \middle| {\mathbf{ω}}_{1:T},\mathcal{D}_{1:T} \right)}} \cdot \underset{\text{training}}{\underbrace{\Pr ⁡\left( {\mathbf{ω}}_{1:T} \middle| \mathcal{D}_{1:T} \right)}}}\operatorname{}{d{\mathbf{ω}}_{1:T}}}}}.}      
+     \end{array}$$                                                                                                                                                                                                                                                                                                                                                                         
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+The first term in the integral of Eq. [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S3.E1 "1 ‣ 3.2.1 A probabilistic view of concept drift in temporal domain generalization ‣ 3.2 Proposed Method ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+represents the inference phase, i.e., how we predict the status of the
+target neural network in the future (namely, ${\mathbf{ω}}_{T + 1}$)
+given all history statuses, while the second term denotes the training
+phase, i.e., how we leverage all source domains' training data
+$\mathcal{D}_{1:T}$ to obtain the status of the neural network on each
+source domain, namely ${\mathbf{ω}}_{1:T}$. By the chain rule of
+probability, we can further decompose the training phase as follows:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $$\begin{array}{cl}                                                                                                                                                                                                                                                                                 [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     {\Pr\left( {\mathbf{ω}}_{1:T} \middle| \mathcal{D}_{1:T} \right)} & {= {\prod_{s = 1}^{T}{\Pr\left( {\mathbf{ω}}_{s} \middle| {\mathbf{ω}}_{1:{s - 1}},\mathcal{D}_{1:T} \right)}}} \\                                                                                                              
+      & {{= {{{\Pr\left( {\mathbf{ω}}_{1} \middle| \mathcal{D}_{1} \right)} \cdot {\Pr\left( {\mathbf{ω}}_{2} \middle| {\mathbf{ω}}_{1},\mathcal{D}_{1:2} \right)}}\operatorname{}\cdots\operatorname{}{\Pr\left( {\mathbf{ω}}_{T} \middle| {\mathbf{ω}}_{1:{T - 1}},\mathcal{D}_{1:T} \right)}}}.}      
+     \end{array}$$                                                                                                                                                                                                                                                                                       
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+Here we assume for each time point $t_{s}$, the model parameter
+${\mathbf{ω}}_{s}$ only depends on the current and previous domains
+(namely, $\{\mathcal{D}_{i}:{i \leq s}\}$), and there is no access to
+future data (even unlabeled). Now we can break down the whole training
+process into $T - 1$ steps, where each step corresponds to learning the
+model parameter on the new domain conditional on parameter statuses from
+the history domains and training data, i.e.,
+${{\Pr\left( {\mathbf{ω}}_{s + 1} \middle| {\mathbf{ω}}_{1:s},\mathcal{D}_{1:s},\mathcal{D}_{s + 1} \right)},{\forall s}} < T$.
+:::
+:::
+
+::: {#S3.SS2.SSS2 .section .ltx_subsubsection .ltx_indent_first}
+#### [3.2.2 ]{.ltx_tag .ltx_tag_subsubsection}Neural network with dynamic parameters {#neural-network-with-dynamic-parameters .ltx_title .ltx_title_subsubsection}
+
+::: {#S3.SS2.SSS2.p1 .ltx_para .ltx_noindent}
+Since the data distributions change temporally, the parameter
+${\mathbf{ω}}_{s}$ in $g_{{\mathbf{ω}}_{s}}$ needs to be updated
+accordingly to address the temporal drift across the domains. In this
+work, we consider leveraging *dynamic graphs* to model the temporally
+evolving neural networks in order to retain maximal expressiveness.
+:::
+
+::: {#S3.SS2.SSS2.p2 .ltx_para .ltx_noindent}
+Intuitively, a neural network $g_{\mathbf{ω}}$ can be represented as an
+edge-weighted graph $G = {(V,E,\psi)}$, where each node $v \in V$
+represents a neuron of $g_{\mathbf{ω}}$ while each edge $e \in E$
+corresponds to a connection between two neurons in $g_{\mathbf{ω}}$.
+Moreover, given a connection $e$ between neuron $u$ and $v$, i.e.,
+$e = {(u,v)} \in E$, function $\psi:{E\rightarrow{\mathbb{R}}}$ denotes
+the weight parameter between these two neurons, i.e.,
+${\psi\operatorname{}{(u,v)}} = w_{u,v}$, ${\forall{(u,v)}} \in E$.
+Essentially,
+${\mathbf{ω}} = {\psi\operatorname{}{(E)}} = {\{ w_{u,v}:{{(u,v)} \in E}\}}$
+is a set of parameter values indexed by all edges in E and $\mathbf{ω}$
+represents the entire set of parameters for neural network $g$. Notice
+that we give a general definition of $g_{\mathbf{ω}}$ so that both
+shallow models (namely, linear model) and deep neural networks (e.g.,
+MLP, CNN, RNN, GNN) can be treated as special cases here. We aim to
+characterize the potential drift across domains by optimizing and
+updating the graph structure (i.e., edge weight) of $g_{\mathbf{ω}}$.
+\[[39](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib39){.ltx_ref}\]
+have proven that optimizing the graph structure of the neural network
+could have a smaller search space and a more smooth optimization
+procedure than exhaustively searching over all possible connectivity
+patterns.
+:::
+
+::: {#S3.SS2.SSS2.p3 .ltx_para .ltx_noindent}
+We consider the case where the architecture or topology of neural
+network $g_{\mathbf{ω}}$ is given, i.e., $V$ and $E$ are fixed, while
+the parameter $\mathbf{ω}$ is changing constantly w.r.t time point
+$t_{s}$. In this sense, we can write
+${\mathbf{ω}}_{s} = {\psi\operatorname{}{(\left. E \middle| s \right.)}}$
+where $\psi{( \cdot |s)}$ (*abbrev.* $\psi_{s}$) depends only on time
+point $t_{s}$. Now the triplet $G = {(V,E,\psi_{s})}$ defines a *dynamic
+graph* with evolving edge weights.
+:::
+:::
+
+::: {#S3.SS2.SSS3 .section .ltx_subsubsection .ltx_indent_first}
+#### [3.2.3 ]{.ltx_tag .ltx_tag_subsubsection}End-to-end learning of concept drift {#end-to-end-learning-of-concept-drift .ltx_title .ltx_title_subsubsection}
+
+::: {#S3.SS2.SSS3.p1 .ltx_para .ltx_noindent}
+Given history statuses $\{{\mathbf{ω}}_{1:s}\}$ of the neural network
+learned from $\{\mathcal{D}_{1:s}\}$, we aim at generalizing and
+extrapolating ${\mathbf{ω}}_{s + 1}$ so that it produces good
+performance on the new domain $\mathcal{D}_{s + 1}$ in an end-to-end
+manner. In fact, by viewing the neural networks $\{{\mathbf{ω}}_{1:s}\}$
+as dynamically evolving graphs, a natural choice is to characterize the
+latent graph distribution of $\{{\mathbf{ω}}_{1:s}\}$ by learning from
+its evolving trend. Consequently, $\mathbf{ω}$'s can be directly sampled
+from the distribution for the prediction in future domains.
+:::
+
+::: {#S3.SS2.SSS3.p2 .ltx_para .ltx_noindent}
+We characterize the latent distribution of $\{{\mathbf{ω}}_{1:s}\}$ as a
+sequential learning process based on a recurrent architecture, and each
+unit $f_{\theta}$ in the recurrent model is parameterized by $\theta$ to
+generate ${\mathbf{ω}}_{s}$ by accounting for previous
+$\{{\mathbf{ω}}_{i}:{i < s}\}$. Specifically, at each recurrent block
+(i.e., time step) $t_{s}$, $f_{\theta}$ produces two outputs
+$(m_{s},h_{s})$, where $m_{s}$ is the current memory state and $h_{s}$
+is a latent probabilistic distribution (i.e., hidden output of
+$f_{\theta}$) denoting the information carried from previous time steps.
+The latent probabilistic distribution $h_{t}$ allows us to generate the
+dynamic graph ${\mathbf{ω}}_{s}$ by a decoding function
+$F_{\xi}\operatorname{}{( \cdot )}$. Intuitively, different from
+existing works that train and regularize a neural network on single
+domain \[[28](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib28){.ltx_ref}\],
+here we focus on directly searching for distribution of networks with
+"good architectures". Lastly, the sampled ${\mathbf{ω}}_{s}$ is encoded
+by a graph encoding function $G_{\eta}\operatorname{}{( \cdot )}$, which
+then serves as the input of next recurrent block. Such a recurrent model
+is trained on a single domain $\mathcal{D}_{s}$ to generate
+${\mathbf{ω}}_{s}$ for prediction by minimizing the empirical loss,
+i.e.,
+$\text{min}_{\theta,\xi,\eta}\operatorname{}{\sum_{i = 1}^{N_{s}}{\ell\operatorname{}\left( {g_{{\mathbf{ω}}_{s}}\operatorname{}{(\mathbf{x}_{i}^{(s)})}},y_{i}^{(s)} \right)}}$,
+where $\ell\operatorname{}{( \cdot , \cdot )}$ can be cross-entropy for
+classification or MSE for regression. The optimal ${\mathbf{ω}}_{s}$ on
+domain $\mathcal{D}_{s}$ will then be fed into the next domain
+$\mathcal{D}_{s + 1}$ along with the memory state $m_{s}$ as input to
+guide the generation of ${\mathbf{ω}}_{s + 1}$ until the entire training
+phase is done. For the inference phase, we feed the optimal parameters
+from the last training domain, namely ${\mathbf{ω}}_{T}$, into the
+encoding function and leverage the recurrent block, together with the
+memory state $m_{T}$ to predict the latent vector on the future domain
+$\mathcal{D}_{T + 1}$, followed by the decoding function to decode the
+latent vector and generate the optimal parameters
+${\mathbf{ω}}_{T + 1}$.
+:::
+
+::: {#S3.SS2.SSS3.p3 .ltx_para .ltx_noindent}
+In our implementation, the encoding and decoding functions are
+instantiated as MLPs. The total number of parameters of the encoding and
+decoding functions is
+$\mathcal{O}\operatorname{}{({{N\operatorname{}d} + C})}$, which is
+*linear* in $N$. Here $N$ is the number of parameters in predictive
+models (namely $\mathbf{ω}$), $d$ is the width (i.e., number of neurons)
+of the last hidden layer of the encoding and decoding functions, and $C$
+denotes the number of parameters for all the layers before the last for
+the encoding and decoding functions. Additionally, in many situations,
+the first few layers of representation learning could be shared. Hence,
+we do not need to generate all the parameters in $\mathbf{ω}$, but just
+the last few layers.
+:::
+:::
+
+::: {#S3.SS2.SSS4 .section .ltx_subsubsection .ltx_indent_first}
+#### [3.2.4 ]{.ltx_tag .ltx_tag_subsubsection}Less forgetting and better generalization {#less-forgetting-and-better-generalization .ltx_title .ltx_title_subsubsection}
+
+::: {#S3.SS2.SSS4.p1 .ltx_para .ltx_noindent}
+During the training of recurrent models, it is also likely to encounter
+the performance degradation problem. Such a problem can be severe in
+temporal DG since a more complicated concept correlation exists between
+each domain. In addition, if the training procedure on each domain
+$\mathcal{D}_{s}$ takes a large number of iterations to converge, we may
+also observe the forgetting phenomenon (i.e., the recurrent model
+$f_{\theta}$ will gradually focus on the current training domain and
+have less generalization capability for future domains). To alleviate
+such a phenomenon, we leverage a straightforward technique - skip
+connection to bridge the training on $\mathcal{D}_{s}$ with previous
+domains $\{\mathcal{D}_{1:{s - 1}}\}$. Specifically,
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\Phi\operatorname{}\left( {\mathbf{ω}}_{s},\left\{ {\mathbf{ω}}_{{s - \tau}:{s - 1}} \right\} \right)} ≔ {{\mathbf{ω}}_{s} + {\lambda \cdot {\sum_{i = {s - \tau}}^{s - 1}{\mathbf{ω}}_{i}}}}},$$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $\lambda$ is regularization coefficient and $\tau$ denotes the
+size of the *sliding window*. The skip connection could enforce the
+generated network parameters ${\mathbf{ω}}_{s}$ to contain part of
+previous network's information, and the implementation of the
+fixed-sized sliding window can better alleviate the potential drawback
+of the computational cost. We summarize the overall generative process
+in Appendix [[A.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.SS2 "A.2 Overall generation process ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+:::
+:::
+:::
+
+::: {#S3.SS3 .section .ltx_subsection .ltx_indent_first}
+### [3.3 ]{.ltx_tag .ltx_tag_subsection}Theoretical analysis {#theoretical-analysis .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS3.p1 .ltx_para .ltx_noindent}
+In this section, we provide a theoretical analysis of our proposed
+framework's performance in the target domain. Our analyses include
+uncertainty quantification and generalization error. Uncertainty
+characterizes the dispersion or error of an estimate due to the noise in
+measurements and the finite size of data sets, and smaller uncertainty
+means less margin of error over the model predictions. On the other
+hand, generalization error measures how accurate the model's prediction
+is on unseen data. Our analyses show that our proposed DRAIN achieves
+[both better prediction accuracy as well as smaller margin of error on
+target domain]{#S3.SS3.p1.1.1 .ltx_text .ltx_font_bold} compared with
+online and offline DG baselines. All proofs can be found in the appendix
+due to the limited space here.
+:::
+
+::: {#S3.SS3.p2 .ltx_para .ltx_noindent}
+First, we introduce two DG methods, namely online baseline and offline
+baseline as defined below:
+:::
+
+::: {#Thmdefinition1 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 1]{#Thmdefinition1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#Thmdefinition1.2.2 .ltx_text .ltx_font_bold} {#definition-1. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmdefinition1.p1 .ltx_para}
+Given timestamp $t_{s + 1}$ and domains
+$\mathcal{D}_{1},\mathcal{D}_{2},\cdots,\mathcal{D}_{s + 1}$, and model
+parameter state from previous timestamp, namely ${\mathbf{ω}}_{s}$.
+Define online model $\mathcal{M}_{\text{on}}$ and offline model
+$\mathcal{M}_{\text{off}}$ as
+$\omega_{s + 1} = {\text{argmax}_{\omega_{s + 1}}\operatorname{}{\Pr{(\left. \omega_{s + 1} \middle| {\omega_{s},\mathcal{D}_{s + 1}} \right.)}}}$
+and
+$\omega_{s + 1} = {\text{argmax}_{\omega_{s + 1}}\operatorname{}{\Pr{(\left. \omega_{s + 1} \middle| \mathcal{D}_{1:{s + 1}} \right.)}}}$,
+respectively.
+:::
+:::
+
+::: {#S3.SS3.p3 .ltx_para .ltx_noindent}
+Offline method $\mathcal{M}_{\text{off}}$ is trained using ERM over all
+source domains, while online method $\mathcal{M}_{\text{on}}$ considers
+one-step finetuning over the model parameter on each new domain's
+dataset. Both $\mathcal{M}_{\text{off}}$ and $\mathcal{M}_{\text{on}}$
+are time-oblivious, i.e., unaware of the concept drift over time.
+:::
+
+::: {#Thmassumption1 .ltx_theorem .ltx_theorem_assumption}
+###### [[Assumption 1]{#Thmassumption1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmassumption1.2.2 .ltx_text .ltx_font_bold}(Prior on Concept Drift)[.]{#Thmassumption1.3.3 .ltx_text .ltx_font_bold} {#assumption-1-prior-on-concept-drift. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmassumption1.p1 .ltx_para}
+[Suppose we consider a parameterized function
+$q_{\theta}\operatorname{}{( \cdot )}$ to approximate the conditional
+probability
+$P\operatorname{}{(\left. \omega_{t + 1} \middle| \omega_{t} \right.)}$,
+which is the unknown ground-truth concept drift of the model parameter.
+Without any training sample, we assume the prior over $q_{\theta}$ as a
+normal distribution with:
+${{{\mathbb{E}}\operatorname{}{\lbrack{q_{\theta_{0}}\operatorname{}{(\omega)}}\rbrack}} = \omega},{{{\text{𝑉𝑎𝑟}\operatorname{}{({q_{\theta_{0}}\operatorname{}{(\omega)}})}} = \sigma_{\theta_{0}}^{2}},{{\forall\omega} \in \Omega}}$.]{#Thmassumption1.p1.4.4
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#Thmdefinition2 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 2]{#Thmdefinition2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmdefinition2.2.2 .ltx_text .ltx_font_bold}(Predictive Distribution)[.]{#Thmdefinition2.3.3 .ltx_text .ltx_font_bold} {#definition-2-predictive-distribution. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmdefinition2.p1 .ltx_para}
+Given training sample
+$\mathcal{D}_{1},\mathcal{D}_{2},\cdots,\mathcal{D}_{T}$, and input
+feature from future domain, namely $\mathbf{x}_{T + 1}$, the predictive
+distribution can be defined as
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $$\begin{aligned}                                                                                                                                                                                                                                                                                [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     {{\Pr\left( \hat{y} \middle| \mathbf{x}_{T + 1},\mathcal{D}_{1:T} \right)} =} & {\oint_{\Omega}{{\Pr\left( \hat{y} \middle| \mathbf{x}_{T + 1},\omega_{T + 1} \right)}\operatorname{}{\Pr\left( \omega_{T + 1} \middle| \mathcal{D}_{1:T} \right)}\operatorname{}{d\omega_{T + 1}}}} \\          
+      = & {{\oint_{\Omega}{{\Pr\left. (\hat{y} \middle| \mathbf{x}_{T + 1},\omega_{T + 1}) \right.}\operatorname{}{\Pr\left. (\omega_{T + 1} \middle| \omega_{1:T}) \right.}\operatorname{}{\Pr\left. (\omega_{1:T} \middle| \mathcal{D}_{1:T}) \right.}\operatorname{}{d\omega_{1:{T + 1}}}}}.}      
+     \end{aligned}$$                                                                                                                                                                                                                                                                                  
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+:::
+
+::: {#S3.SS3.p4 .ltx_para .ltx_noindent}
+Our first theorem below shows that by capturing the concept drift over
+the sequential domains, our proposed method always achieves the smallest
+uncertainty in prediction on the future domain.
+:::
+
+::: {#Thmtheorem1 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 1]{#Thmtheorem1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmtheorem1.2.2 .ltx_text .ltx_font_bold}(Uncertainty Quantification)[.]{#Thmtheorem1.3.3 .ltx_text .ltx_font_bold} {#theorem-1-uncertainty-quantification. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmtheorem1.p1 .ltx_para}
+[Given training sample
+$\mathcal{D}_{1},\mathcal{D}_{2},\cdots,\mathcal{D}_{T}$, we have the
+following inequality over each method's predictive uncertainty, i.e.,
+the variance of predictive distribution as defined in Eq. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S3.E4 "4 ‣ Definition 2 (Predictive Distribution). ‣ 3.3 Theoretical analysis ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}:
+${\text{𝑉𝑎𝑟}\operatorname{}{(\mathcal{M}_{\text{𝑜𝑢𝑟𝑠}})}} < {\text{𝑉𝑎𝑟}\operatorname{}{(\mathcal{M}_{\text{𝑜𝑛}})}} \leq {\text{𝑉𝑎𝑟}\operatorname{}{(\mathcal{M}_{\text{𝑜𝑓𝑓}})}}$.]{#Thmtheorem1.p1.2.2
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#S3.SS3.p5 .ltx_para .ltx_noindent}
+Our second theorem shows that, besides uncertainty, our proposed method
+can also achieves smallest generalization error thanks to learning the
+concept drift.
+:::
+
+::: {#Thmdefinition3 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 3]{#Thmdefinition3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#Thmdefinition3.2.2 .ltx_text .ltx_font_bold} {#definition-3. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmdefinition3.p1 .ltx_para}
+Given predictive distribution in Eq. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S3.E4 "4 ‣ Definition 2 (Predictive Distribution). ‣ 3.3 Theoretical analysis ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+as well as ground-truth label $y_{T + 1}$ from the future domain, define
+the predictive or generalization error as
+${e\operatorname{}r\operatorname{}r} ≔ {\ell\operatorname{}{({{\mathbb{E}}\operatorname{}{\lbrack{P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\mathcal{D}_{1:T}} \right.)}}\rbrack}},y_{T + 1})}}$.
+:::
+:::
+
+::: {#Thmtheorem2 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 2]{#Thmtheorem2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmtheorem2.2.2 .ltx_text .ltx_font_bold}(Generalization Error)[.]{#Thmtheorem2.3.3 .ltx_text .ltx_font_bold} {#theorem-2-generalization-error. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmtheorem2.p1 .ltx_para}
+[We have the following inequality over each method's predictive error
+defined above:
+${e\operatorname{}r\operatorname{}r\operatorname{}{(\mathcal{M}_{\text{𝑜𝑢𝑟𝑠}})}} < {e\operatorname{}r\operatorname{}r\operatorname{}{(\mathcal{M}_{\text{𝑜𝑛}})}} < {e\operatorname{}r\operatorname{}r\operatorname{}{(\mathcal{M}_{\text{𝑜𝑓𝑓}})}}$.]{#Thmtheorem2.p1.1.1
+.ltx_text .ltx_font_italic}
+:::
+:::
+:::
+:::
+
+::: {#S4 .section .ltx_section .ltx_indent_first}
+## [4 ]{.ltx_tag .ltx_tag_section}Experiment {#experiment .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para .ltx_noindent}
+In this section, we present the performance of DRAIN against other
+state-of-the-art approaches with both quantitative and qualitative
+analysis; additional experiment settings and results (e.g.,
+hyperparameter setting and scalability analysis) are demonstrated in the
+appendix.
+:::
+
+<figure id="S4.T1" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 1:
+</span>Performance comparison of all methods in terms of
+misclassification error (in %) for classification tasks and mean
+absolute error (MAE) for regression tasks (both smaller the better.)
+Results of comparison methods on all datasets except "Appliance" are
+reported from [<a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib28"
+class="ltx_ref">28</a>]. "-" denotes that the method could not converge
+on the specific dataset.</figcaption>
+</figure>
+
+::: {#S4.SS1 .section .ltx_subsection .ltx_indent_first}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Experiment setting {#experiment-setting .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para .ltx_noindent}
+[Datasets.]{#S4.SS1.p1.1.1 .ltx_text .ltx_font_bold} We compare with the
+following classification datasets: Rotated Moons (2-Moons), Rotated
+MNIST (Rot-MNIST), Online News Popularity (ONP), Electrical Demand
+(Elec2), and Shuttle; and the following regression datasets: House
+prices dataset (House), Appliances energy prediction dataset
+(Appliance). The first two datasets are synthetic, where the rotation
+angle is used as a proxy for time. The remaining datasets are real-world
+datasets with temporally evolving characteristics. Dataset details can
+be found at Appendix [[A.1.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.SS1.SSS1 "A.1.1 Dataset Details ‣ A.1 Experimental Details ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+:::
+
+::: {#S4.SS1.p2 .ltx_para .ltx_noindent}
+[Comparison Methods.]{#S4.SS1.p2.1.1 .ltx_text .ltx_font_bold} We adopt
+three sets of comparison methods: [practical baselines]{#S4.SS1.p2.1.2
+.ltx_text .ltx_font_bold} that do not consider the concept drift,
+including *1). Offline* that treats all source domains as a single
+domain, *2). LastDomain* that only employs the last training domain, and
+*3). IncFinetune* that sequentially trains on each training domain.
+[Continuous domain adaptation methods]{#S4.SS1.p2.1.6 .ltx_text
+.ltx_font_bold} that focus only on DA, including *1).
+CDOT* \[[30](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib30){.ltx_ref}\]
+that transports most recent labeled examples to the future, and *2).
+CIDA* \[[36](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib36){.ltx_ref}\]
+that specifically tackles the continuous DA problem; and one [temporal
+domain generalization method]{#S4.SS1.p2.1.9 .ltx_text .ltx_font_bold}:
+*GI* \[[28](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib28){.ltx_ref}\].
+:::
+
+::: {#S4.SS1.p3 .ltx_para .ltx_noindent}
+All experiments are repeated $10$ times for each method, and we report
+the average results and the standard deviation in the following
+quantitative analysis. More detailed description of each comparison
+method and the parameter setting can be found in Appendix
+[[A.1.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.SS1.SSS2 "A.1.2 Details of Comparison Methods ‣ A.1 Experimental Details ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+and [[A.1.3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.SS1.SSS3 "A.1.3 Parameter Setting ‣ A.1 Experimental Details ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+respectively.
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection .ltx_indent_first}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Quantitative analysis {#quantitative-analysis .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.p1 .ltx_para .ltx_noindent}
+We firstly illustrate the performance of our proposed method against
+comparison methods. The experiments are conducted in both classification
+and regression tasks with the domain generalization setting, i.e.,
+models are trained on the training domains and deployed on the unseen
+testing domain.
+:::
+
+::: {#S4.SS2.p2 .ltx_para .ltx_noindent}
+As can be seen from Table [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.T1 "Table 1 ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+DRAIN consistently achieves competitive results across most datasets.
+Specifically, DRAIN excels the second-best approaches on Elec2 (CIDA),
+House (GI) and Appliance (GI) by a great margin. The only exception is
+the ONP dataset, where the Offline method achieves the best result and
+all state-of-the-art methods cannot generalize well on unseen testing
+domains since the ONP dataset does not exhibit a strong concept drift.
+Additionally, all time-oblivious baselines perform rather
+unsatisfactorily since they are not capable of handling the concept
+drift of the data distribution. Both CDOT and CIDA can generate better
+results than time-oblivious baselines, yet their generalization ability
+on the unseen domains is still limited as the maintained time-invariant
+representation in both methods cannot address the concept drift without
+any data in the testing domain. As the only method that addresses the
+temporal domain generalization problem, GI imposes a gradient
+regularization with a non-parametric activation function to handle the
+concept drift, which relies too much on the task-specific heuristic. In
+contrast, DRAIN proposes to sequentially model each domain in an
+end-to-end manner, which could address the concept drift more
+inherently.
+:::
+:::
+
+::: {#S4.SS3 .section .ltx_subsection .ltx_indent_first}
+### [4.3 ]{.ltx_tag .ltx_tag_subsection}Qualitative analysis {#qualitative-analysis .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS3.p1 .ltx_para .ltx_noindent}
+We compare different methods qualitatively by visualizing the decision
+boundary on the $2$-Moons dataset. As shown in Figure [[2(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F2.sf1 "2(a) ‣ Figure 3 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref} -
+[[2(c)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F2.sf3 "2(c) ‣ Figure 3 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+we demonstrate the decision boundary predicted by DRAIN at
+$\mathcal{D}_{2}$, $\mathcal{D}_{4}$, $\mathcal{D}_{6}$ training
+domains, and the final predicted decision boundary on the testing domain
+$\mathcal{D}_{9}$ (Figure [[2(d)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F2.sf4 "2(d) ‣ Figure 3 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}).
+As can be seen, DRAIN can successfully characterize the concept drift by
+sequentially modeling the $\{\mathcal{D}_{T}\}$, and the learned
+decision boundary could rotate correctly along time.
+:::
+
+::: {#S4.SS3.p2 .ltx_para .ltx_noindent}
+We further visualize the decision boundary learned by other comparison
+methods in Figure [[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf1 "3(a) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref} -
+[[3(f)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf6 "3(f) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+Firstly, the left subfigure in Figure [[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf1 "3(a) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+shows the decision boundary learned by the Offline method on the
+concatenated training domains $\{\mathcal{D}_{1:T}\}$, and the learned
+decision boundary overfits the training data and shows poor performance
+when generalizing on the unseen testing domain (the right subfigure of
+[[3(a)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf1 "3(a) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}).
+Furthermore, as the current state-of-the-art continuous domain
+adaptation methods, CDOT transports the most recent labeled data points
+in $\mathcal{D}_{T}$ to the future, which makes the learned decision
+boundary almost temporal-invariant (Figure [[3(d)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf4 "3(d) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref})
+and cannot generalize well in the scenario of domain generalization.
+CIDA utilizes the adversarial training technique to solve the domain
+adaptation, yet the predicted decision boundary in Figure
+[[3(e)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf5 "3(e) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+is less stable than other state-of-the-art methods due to its model
+complexity. Lastly, even though GI is the only method proposed to tackle
+the temporal domain generalization problem, the produced decision
+boundaries, as shown in both the training domain and testing domain
+(Figure [[3(f)]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf6 "3(f) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}),
+are still less accurate than our proposed method, since they heavily
+utilize heuristics to regularize the gradient.
+:::
+
+<figure id="S4.F3" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F2.sf1" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x3.png" id="S4.F2.sf1.g1"
+class="ltx_graphics ltx_img_landscape" width="203" height="135"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(a)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F2.sf2" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x4.png" id="S4.F2.sf2.g1"
+class="ltx_graphics ltx_img_landscape" width="203" height="135"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(b)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F2.sf3" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x5.png" id="S4.F2.sf3.g1"
+class="ltx_graphics ltx_img_landscape" width="203" height="135"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(c)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F2.sf4" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x6.png" id="S4.F2.sf4.g1"
+class="ltx_graphics ltx_img_landscape" width="203" height="135"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(d)
+</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 3: </span>The
+visualization of decision boundary of DRAIN (blue dots and red stars
+represent different data classes). As the distribution of data points
+are consistently changing, as shown in Figure <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F2.sf1"
+class="ltx_ref"
+title="2(a) ‣ Figure 3 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">2(a)</span></a> - <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F2.sf3"
+class="ltx_ref"
+title="2(c) ‣ Figure 3 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">2(c)</span></a>, DRAIN can effectively
+characterize such a temporal drift and predict accurate decision
+boundaries on the unseen testing domain in Figure <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F2.sf4"
+class="ltx_ref"
+title="2(d) ‣ Figure 3 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">2(d)</span></a>.</figcaption>
+</figure>
+
+<figure id="S4.F4" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F3.sf1" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x7.png" id="S4.F3.sf1.g1"
+class="ltx_graphics ltx_img_landscape" width="274" height="183"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(a)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F3.sf2" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x8.png" id="S4.F3.sf2.g1"
+class="ltx_graphics ltx_img_landscape" width="274" height="183"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(b)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F3.sf3" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x9.png" id="S4.F3.sf3.g1"
+class="ltx_graphics ltx_img_landscape" width="274" height="183"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(c)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F3.sf4" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x10.png" id="S4.F3.sf4.g1"
+class="ltx_graphics ltx_img_landscape" width="274" height="183"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(d)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F3.sf5" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x11.png" id="S4.F3.sf5.g1"
+class="ltx_graphics ltx_img_landscape" width="274" height="183"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(e)
+</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+<figure id="S4.F3.sf6" class="ltx_figure ltx_flex_size_1">
+<img src="./2205.10664_files/x12.png" id="S4.F3.sf6.g1"
+class="ltx_graphics ltx_img_landscape" width="274" height="183"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(f)
+</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 4: </span><span
+id="S4.F4.10.1" class="ltx_text ltx_font_bold">Visualization of decision
+boundary</span> (blue dots and red stars represent different data
+classes), where the right subfigure of comparison methods Figure <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf1"
+class="ltx_ref"
+title="3(a) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">3(a)</span></a> - <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf6"
+class="ltx_ref"
+title="3(f) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">3(f)</span></a> demonstrate the decision
+boundary predicted for the test domain <span
+class="math inline">𝒟<sub><em>T</em> + 1</sub></span>, the left
+subfigure in Figure <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf1"
+class="ltx_ref"
+title="3(a) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">3(a)</span></a> shows the decision boundary
+learned from the all data points in the concatenated training domain
+(<span
+class="math inline">[𝒟<sub>1</sub>, ⋯, 𝒟<sub><em>T</em></sub>]</span>),
+the left subfigure in Figure <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf2"
+class="ltx_ref"
+title="3(b) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">3(b)</span></a> shows the decision boundary
+learned from all samples in the last training domain <span
+class="math inline">𝒟<sub><em>T</em></sub></span>, and the left
+subfigures in Figure <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf3"
+class="ltx_ref"
+title="3(c) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">3(c)</span></a> - <a
+href="https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F3.sf6"
+class="ltx_ref"
+title="3(f) ‣ Figure 4 ‣ 4.3 Qualitative analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"><span
+class="ltx_text ltx_ref_tag">3(f)</span></a> show the decision boundary
+learned on <span class="math inline">𝒟<sub>4</sub></span>.</figcaption>
+</figure>
+:::
+
+::: {#S4.SS4 .section .ltx_subsection .ltx_indent_first}
+### [4.4 ]{.ltx_tag .ltx_tag_subsection}Sensitivity analysis {#sensitivity-analysis .ltx_title .ltx_title_subsection}
+
+<figure id="S4.F5" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S4.F5.1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./2205.10664_files/sensitivity_moons.png" id="S4.F5.1.g1"
+class="ltx_graphics ltx_img_landscape" width="598" height="422"
+alt="Refer to caption" />
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="S4.F5.2"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./2205.10664_files/sensitivity_elec2.png" id="S4.F5.2.g1"
+class="ltx_graphics ltx_img_landscape" width="598" height="422"
+alt="Refer to caption" />
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 5:
+</span>Sensitivity analysis on the number of layers of the generated
+neural network by DRAIN.</figcaption>
+</figure>
+
+::: {#S4.SS4.p1 .ltx_para .ltx_noindent}
+We conduct sensitivity analysis on the depth of the neural network
+$g_{\omega_{s}}$ for DRAIN. As shown in Figure [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.F5 "Figure 5 ‣ 4.4 Sensitivity analysis ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+the optimal number of hidden layers for $g_{\omega_{s}}$ is 2 and 1 on
+2-Moons and Electric dataset, respectively. The curve on both datasets
+has an inverse \"U\" shape, meaning that too few layers may limit the
+general expressiveness of our model, while too many layers could
+potentially hurt the generalization ability due to overfitting.
+:::
+:::
+
+::: {#S4.SS5 .section .ltx_subsection .ltx_indent_first}
+### [4.5 ]{.ltx_tag .ltx_tag_subsection}Ablation study {#ablation-study .ltx_title .ltx_title_subsection}
+
+<figure id="S4.T2" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 2: </span>Ablation
+study. Comparison of performance between our method and two alternatives
+across two datasets for classification tasks and one datasets for
+regression tasks.</figcaption>
+</figure>
+
+::: {#S4.SS5.p1 .ltx_para .ltx_noindent}
+We further conduct ablation study on three datasets to evaluate the
+effect of different components in DRAIN, and the results are exhibited
+in Table [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S4.T2 "Table 2 ‣ 4.5 Ablation study ‣ 4 Experiment ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+Specifically, we remove the sequential learning model in DRAIN, and the
+resulted ablated model ✗ RNN corresponds to the IncFinetune baseline
+model. We also independently remove the skip connection module to let
+the sequential learning model uniformally acquire information from all
+previous domains, and the resulting model is named ✗ Skip.C.
+:::
+
+::: {#S4.SS5.p2 .ltx_para .ltx_noindent}
+As shown in the table, yet each component can effectively contribute to
+the overall model performance, modeling the temporal correlation between
+all domains by a sequential model can provide a rather larger
+performance gain. In addition, removing the skip connection in the
+sequential learning model would make DRAIN hard to capture the long
+range temporal dependency among domains since long range domain
+information could potentially be forgotten during the model learning.
+:::
+:::
+:::
+
+::: {#S5 .section .ltx_section .ltx_indent_first}
+## [5 ]{.ltx_tag .ltx_tag_section}Conclusion {#conclusion .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para .ltx_noindent}
+We tackle the problem of temporal domain generalization by proposing a
+dynamic neural network framework. We build a Bayesian framework to model
+the concept drift and treat a neural network as a dynamic graph to
+capture the evolving pattern. We provide theoretical analyses of our
+proposed method, such as uncertainty and generalization error, and
+extensive empirical results to demonstrate the efficacy and efficiency
+of our method compared with state-of-the-art DA and DG methods.
+:::
+:::
+
+::: {#bib .section .ltx_bibliography}
+## References {#references .ltx_title .ltx_title_bibliography}
+
+-   [[\[1\]]{.ltx_tag .ltx_tag_bibitem} [ M. Arjovsky, L. Bottou,
+    I. Gulrajani, and D. Lopez-Paz. ]{.ltx_bibblock} [Invariant risk
+    minimization. ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:1907.02893]{#bib.bib1.1.1 .ltx_text .ltx_font_italic}, 2019.
+    ]{.ltx_bibblock}]{#bib.bib1}
+-   [[\[2\]]{.ltx_tag .ltx_tag_bibitem} [ Y. Balaji,
+    S. Sankaranarayanan, and R. Chellappa. ]{.ltx_bibblock} [Metareg:
+    Towards domain generalization using meta-regularization.
+    ]{.ltx_bibblock} [[Advances in neural information processing
+    systems]{#bib.bib2.1.1 .ltx_text .ltx_font_italic}, 31, 2018.
+    ]{.ltx_bibblock}]{#bib.bib2}
+-   [[\[3\]]{.ltx_tag .ltx_tag_bibitem} [ S. Ben-David, J. Blitzer,
+    K. Crammer, A. Kulesza, F. Pereira, and J. W. Vaughan.
+    ]{.ltx_bibblock} [A theory of learning from different domains.
+    ]{.ltx_bibblock} [[Machine learning]{#bib.bib3.1.1 .ltx_text
+    .ltx_font_italic}, 79(1):151--175, 2010.
+    ]{.ltx_bibblock}]{#bib.bib3}
+-   [[\[4\]]{.ltx_tag .ltx_tag_bibitem} [ L. M. Candanedo, V. Feldheim,
+    and D. Deramaix. ]{.ltx_bibblock} [Data driven prediction models of
+    energy use of appliances in a low-energy house. ]{.ltx_bibblock}
+    [[Energy and buildings]{#bib.bib4.1.1 .ltx_text .ltx_font_italic},
+    140:81--97, 2017. ]{.ltx_bibblock}]{#bib.bib4}
+-   [[\[5\]]{.ltx_tag .ltx_tag_bibitem} [ L. Deng. ]{.ltx_bibblock} [The
+    mnist database of handwritten digit images for machine learning
+    research \[best of the web\]. ]{.ltx_bibblock} [[IEEE signal
+    processing magazine]{#bib.bib5.1.1 .ltx_text .ltx_font_italic},
+    29(6):141--142, 2012. ]{.ltx_bibblock}]{#bib.bib5}
+-   [[\[6\]]{.ltx_tag .ltx_tag_bibitem} [ A. Dosovitskiy, L. Beyer,
+    A. Kolesnikov, D. Weissenborn, X. Zhai, T. Unterthiner, M. Dehghani,
+    M. Minderer, G. Heigold, S. Gelly, et al. ]{.ltx_bibblock} [An image
+    is worth 16x16 words: Transformers for image recognition at scale.
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2010.11929]{#bib.bib6.1.1
+    .ltx_text .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib6}
+-   [[\[7\]]{.ltx_tag .ltx_tag_bibitem} [ Q. Dou, D. Coelho de Castro,
+    K. Kamnitsas, and B. Glocker. ]{.ltx_bibblock} [Domain
+    generalization via model-agnostic learning of semantic features.
+    ]{.ltx_bibblock} [[Advances in Neural Information Processing
+    Systems]{#bib.bib7.1.1 .ltx_text .ltx_font_italic}, 32, 2019.
+    ]{.ltx_bibblock}]{#bib.bib7}
+-   [[\[8\]]{.ltx_tag .ltx_tag_bibitem} [ K. Fernandes, P. Vinagre, and
+    P. Cortez. ]{.ltx_bibblock} [A proactive intelligent decision
+    support system for predicting the popularity of online news.
+    ]{.ltx_bibblock} [In [Portuguese conference on artificial
+    intelligence]{#bib.bib8.1.1 .ltx_text .ltx_font_italic}, pages
+    535--546. Springer, 2015. ]{.ltx_bibblock}]{#bib.bib8}
+-   [[\[9\]]{.ltx_tag .ltx_tag_bibitem} [ C. Finn, P. Abbeel, and
+    S. Levine. ]{.ltx_bibblock} [Model-agnostic meta-learning for fast
+    adaptation of deep networks. ]{.ltx_bibblock} [In [International
+    conference on machine learning]{#bib.bib9.1.1 .ltx_text
+    .ltx_font_italic}, pages 1126--1135. PMLR, 2017.
+    ]{.ltx_bibblock}]{#bib.bib9}
+-   [[\[10\]]{.ltx_tag .ltx_tag_bibitem} [ Y. Ganin, E. Ustinova,
+    H. Ajakan, P. Germain, H. Larochelle, F. Laviolette, M. Marchand,
+    and V. Lempitsky. ]{.ltx_bibblock} [Domain-adversarial training of
+    neural networks. ]{.ltx_bibblock} [[The journal of machine learning
+    research]{#bib.bib10.1.1 .ltx_text .ltx_font_italic},
+    17(1):2096--2030, 2016. ]{.ltx_bibblock}]{#bib.bib10}
+-   [[\[11\]]{.ltx_tag .ltx_tag_bibitem} [ R. Gong, W. Li, Y. Chen, and
+    L. V. Gool. ]{.ltx_bibblock} [Dlow: Domain flow for adaptation and
+    generalization. ]{.ltx_bibblock} [In [Proceedings of the IEEE/CVF
+    conference on computer vision and pattern
+    recognition]{#bib.bib11.1.1 .ltx_text .ltx_font_italic}, pages
+    2477--2486, 2019. ]{.ltx_bibblock}]{#bib.bib11}
+-   [[\[12\]]{.ltx_tag .ltx_tag_bibitem} [ F. He and D. Tao.
+    ]{.ltx_bibblock} [Recent advances in deep learning theory.
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2012.10931]{#bib.bib12.1.1
+    .ltx_text .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib12}
+-   [[\[13\]]{.ltx_tag .ltx_tag_bibitem} [ J. Hoffman, T. Darrell, and
+    K. Saenko. ]{.ltx_bibblock} [Continuous manifold based adaptation
+    for evolving visual domains. ]{.ltx_bibblock} [In [Proceedings of
+    the IEEE Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib13.1.1 .ltx_text .ltx_font_italic}, pages
+    867--874, 2014. ]{.ltx_bibblock}]{#bib.bib13}
+-   [[\[14\]]{.ltx_tag .ltx_tag_bibitem} [ Z. Huang, H. Wang, E. P.
+    Xing, and D. Huang. ]{.ltx_bibblock} [Self-challenging improves
+    cross-domain generalization. ]{.ltx_bibblock} [In [European
+    Conference on Computer Vision]{#bib.bib14.1.1 .ltx_text
+    .ltx_font_italic}, pages 124--140. Springer, 2020.
+    ]{.ltx_bibblock}]{#bib.bib14}
+-   [[\[15\]]{.ltx_tag .ltx_tag_bibitem} [ A. Krizhevsky, I. Sutskever,
+    and G. E. Hinton. ]{.ltx_bibblock} [Imagenet classification with
+    deep convolutional neural networks. ]{.ltx_bibblock} [[Advances in
+    neural information processing systems]{#bib.bib15.1.1 .ltx_text
+    .ltx_font_italic}, 25, 2012. ]{.ltx_bibblock}]{#bib.bib15}
+-   [[\[16\]]{.ltx_tag .ltx_tag_bibitem} [ A. Kumagai and T. Iwata.
+    ]{.ltx_bibblock} [Learning future classifiers without additional
+    data. ]{.ltx_bibblock} [In [Thirtieth AAAI Conference on Artificial
+    Intelligence]{#bib.bib16.1.1 .ltx_text .ltx_font_italic}, 2016.
+    ]{.ltx_bibblock}]{#bib.bib16}
+-   [[\[17\]]{.ltx_tag .ltx_tag_bibitem} [ A. Kumagai and T. Iwata.
+    ]{.ltx_bibblock} [Learning non-linear dynamics of decision
+    boundaries for maintaining classification performance.
+    ]{.ltx_bibblock} [In [Proceedings of the AAAI Conference on
+    Artificial Intelligence]{#bib.bib17.1.1 .ltx_text .ltx_font_italic},
+    volume 31, 2017. ]{.ltx_bibblock}]{#bib.bib17}
+-   [[\[18\]]{.ltx_tag .ltx_tag_bibitem} [ Y. LeCun, L. Bottou,
+    Y. Bengio, and P. Haffner. ]{.ltx_bibblock} [Gradient-based learning
+    applied to document recognition. ]{.ltx_bibblock} [[Proceedings of
+    the IEEE]{#bib.bib18.1.1 .ltx_text .ltx_font_italic},
+    86(11):2278--2324, 1998. ]{.ltx_bibblock}]{#bib.bib18}
+-   [[\[19\]]{.ltx_tag .ltx_tag_bibitem} [ D. Li, Y. Yang, Y.-Z. Song,
+    and T. Hospedales. ]{.ltx_bibblock} [Sequential learning for domain
+    generalization. ]{.ltx_bibblock} [In [European Conference on
+    Computer Vision]{#bib.bib19.1.1 .ltx_text .ltx_font_italic}, pages
+    603--619. Springer, 2020. ]{.ltx_bibblock}]{#bib.bib19}
+-   [[\[20\]]{.ltx_tag .ltx_tag_bibitem} [ D. Li, Y. Yang, Y.-Z. Song,
+    and T. M. Hospedales. ]{.ltx_bibblock} [Deeper, broader and artier
+    domain generalization. ]{.ltx_bibblock} [In [Proceedings of the IEEE
+    international conference on computer vision]{#bib.bib20.1.1
+    .ltx_text .ltx_font_italic}, pages 5542--5550, 2017.
+    ]{.ltx_bibblock}]{#bib.bib20}
+-   [[\[21\]]{.ltx_tag .ltx_tag_bibitem} [ W. Li, Z. Xu, D. Xu, D. Dai,
+    and L. Van Gool. ]{.ltx_bibblock} [Domain generalization and
+    adaptation using low rank exemplar svms. ]{.ltx_bibblock} [[IEEE
+    transactions on pattern analysis and machine
+    intelligence]{#bib.bib21.1.1 .ltx_text .ltx_font_italic},
+    40(5):1114--1127, 2017. ]{.ltx_bibblock}]{#bib.bib21}
+-   [[\[22\]]{.ltx_tag .ltx_tag_bibitem} [ T.-Y. Lin, M. Maire,
+    S. Belongie, J. Hays, P. Perona, D. Ramanan, P. Dollár, and C. L.
+    Zitnick. ]{.ltx_bibblock} [Microsoft coco: Common objects in
+    context. ]{.ltx_bibblock} [In [European conference on computer
+    vision]{#bib.bib22.1.1 .ltx_text .ltx_font_italic}, pages 740--755.
+    Springer, 2014. ]{.ltx_bibblock}]{#bib.bib22}
+-   [[\[23\]]{.ltx_tag .ltx_tag_bibitem} [ A. H. Liu, Y.-C. Liu, Y.-Y.
+    Yeh, and Y.-C. F. Wang. ]{.ltx_bibblock} [A unified feature
+    disentangler for multi-domain image translation and manipulation.
+    ]{.ltx_bibblock} [[Advances in neural information processing
+    systems]{#bib.bib23.1.1 .ltx_text .ltx_font_italic}, 31, 2018.
+    ]{.ltx_bibblock}]{#bib.bib23}
+-   [[\[24\]]{.ltx_tag .ltx_tag_bibitem} [ M. Mancini, S. R. Bulo,
+    B. Caputo, and E. Ricci. ]{.ltx_bibblock} [Best sources forward:
+    domain generalization through source-specific nets. ]{.ltx_bibblock}
+    [In [2018 25th IEEE international conference on image processing
+    (ICIP)]{#bib.bib24.1.1 .ltx_text .ltx_font_italic}, pages
+    1353--1357. IEEE, 2018. ]{.ltx_bibblock}]{#bib.bib24}
+-   [[\[25\]]{.ltx_tag .ltx_tag_bibitem} [ M. Mancini, S. R. Bulo,
+    B. Caputo, and E. Ricci. ]{.ltx_bibblock} [Adagraph: Unifying
+    predictive and continuous domain adaptation through graphs.
+    ]{.ltx_bibblock} [In [Proceedings of the IEEE/CVF Conference on
+    Computer Vision and Pattern Recognition]{#bib.bib25.1.1 .ltx_text
+    .ltx_font_italic}, pages 6568--6577, 2019.
+    ]{.ltx_bibblock}]{#bib.bib25}
+-   [[\[26\]]{.ltx_tag .ltx_tag_bibitem} [ S. Motiian, M. Piccirilli,
+    D. A. Adjeroh, and G. Doretto. ]{.ltx_bibblock} [Unified deep
+    supervised domain adaptation and generalization. ]{.ltx_bibblock}
+    [In [Proceedings of the IEEE international conference on computer
+    vision]{#bib.bib26.1.1 .ltx_text .ltx_font_italic}, pages
+    5715--5725, 2017. ]{.ltx_bibblock}]{#bib.bib26}
+-   [[\[27\]]{.ltx_tag .ltx_tag_bibitem} [ K. Muandet, D. Balduzzi, and
+    B. Schölkopf. ]{.ltx_bibblock} [Domain generalization via invariant
+    feature representation. ]{.ltx_bibblock} [In [International
+    Conference on Machine Learning]{#bib.bib27.1.1 .ltx_text
+    .ltx_font_italic}, pages 10--18. PMLR, 2013.
+    ]{.ltx_bibblock}]{#bib.bib27}
+-   [[\[28\]]{.ltx_tag .ltx_tag_bibitem} [ A. Nasery, S. Thakur,
+    V. Piratla, A. De, and S. Sarawagi. ]{.ltx_bibblock} [Training for
+    the future: A simple gradient interpolation loss to generalize along
+    time. ]{.ltx_bibblock} [[Advances in Neural Information Processing
+    Systems]{#bib.bib28.1.1 .ltx_text .ltx_font_italic}, 34, 2021.
+    ]{.ltx_bibblock}]{#bib.bib28}
+-   [[\[29\]]{.ltx_tag .ltx_tag_bibitem} [ Y. Netzer, T. Wang,
+    A. Coates, A. Bissacco, B. Wu, and A. Y. Ng. ]{.ltx_bibblock}
+    [Reading digits in natural images with unsupervised feature
+    learning. ]{.ltx_bibblock} [2011. ]{.ltx_bibblock}]{#bib.bib29}
+-   [[\[30\]]{.ltx_tag .ltx_tag_bibitem} [ G. Ortiz-Jimenez, M. E.
+    Gheche, E. Simou, H. P. Maretic, and P. Frossard. ]{.ltx_bibblock}
+    [Cdot: Continuous domain adaptation using optimal transport.
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:1909.11448]{#bib.bib30.1.1
+    .ltx_text .ltx_font_italic}, 2019. ]{.ltx_bibblock}]{#bib.bib30}
+-   [[\[31\]]{.ltx_tag .ltx_tag_bibitem} [ F. Qiao, L. Zhao, and
+    X. Peng. ]{.ltx_bibblock} [Learning to learn single domain
+    generalization. ]{.ltx_bibblock} [In [Proceedings of the IEEE/CVF
+    Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib31.1.1 .ltx_text .ltx_font_italic}, pages
+    12556--12565, 2020. ]{.ltx_bibblock}]{#bib.bib31}
+-   [[\[32\]]{.ltx_tag .ltx_tag_bibitem} [ S. Shankar, V. Piratla,
+    S. Chakrabarti, S. Chaudhuri, P. Jyothi, and S. Sarawagi.
+    ]{.ltx_bibblock} [Generalizing across domains via cross-gradient
+    training. ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:1804.10745]{#bib.bib32.1.1 .ltx_text .ltx_font_italic}, 2018.
+    ]{.ltx_bibblock}]{#bib.bib32}
+-   [[\[33\]]{.ltx_tag .ltx_tag_bibitem} [ J. Tobin, R. Fong, A. Ray,
+    J. Schneider, W. Zaremba, and P. Abbeel. ]{.ltx_bibblock} [Domain
+    randomization for transferring deep neural networks from simulation
+    to the real world. ]{.ltx_bibblock} [In [2017 IEEE/RSJ international
+    conference on intelligent robots and systems (IROS)]{#bib.bib33.1.1
+    .ltx_text .ltx_font_italic}, pages 23--30. IEEE, 2017.
+    ]{.ltx_bibblock}]{#bib.bib33}
+-   [[\[34\]]{.ltx_tag .ltx_tag_bibitem} [ J. Tremblay, A. Prakash,
+    D. Acuna, M. Brophy, V. Jampani, C. Anil, T. To, E. Cameracci,
+    S. Boochoon, and S. Birchfield. ]{.ltx_bibblock} [Training deep
+    networks with synthetic data: Bridging the reality gap by domain
+    randomization. ]{.ltx_bibblock} [In [Proceedings of the IEEE
+    conference on computer vision and pattern recognition
+    workshops]{#bib.bib34.1.1 .ltx_text .ltx_font_italic}, pages
+    969--977, 2018. ]{.ltx_bibblock}]{#bib.bib34}
+-   [[\[35\]]{.ltx_tag .ltx_tag_bibitem} [ E. Tzeng, J. Hoffman,
+    K. Saenko, and T. Darrell. ]{.ltx_bibblock} [Adversarial
+    discriminative domain adaptation. ]{.ltx_bibblock} [In [Proceedings
+    of the IEEE conference on computer vision and pattern
+    recognition]{#bib.bib35.1.1 .ltx_text .ltx_font_italic}, pages
+    7167--7176, 2017. ]{.ltx_bibblock}]{#bib.bib35}
+-   [[\[36\]]{.ltx_tag .ltx_tag_bibitem} [ H. Wang, H. He, and
+    D. Katabi. ]{.ltx_bibblock} [Continuously indexed domain adaptation.
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2007.01807]{#bib.bib36.1.1
+    .ltx_text .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib36}
+-   [[\[37\]]{.ltx_tag .ltx_tag_bibitem} [ J. Wang, C. Lan, C. Liu,
+    Y. Ouyang, W. Zeng, and T. Qin. ]{.ltx_bibblock} [Generalizing to
+    unseen domains: A survey on domain generalization. ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2103.03097]{#bib.bib37.1.1 .ltx_text
+    .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib37}
+-   [[\[38\]]{.ltx_tag .ltx_tag_bibitem} [ M. Wang and W. Deng.
+    ]{.ltx_bibblock} [Deep visual domain adaptation: A survey.
+    ]{.ltx_bibblock} [[Neurocomputing]{#bib.bib38.1.1 .ltx_text
+    .ltx_font_italic}, 312:135--153, 2018. ]{.ltx_bibblock}]{#bib.bib38}
+-   [[\[39\]]{.ltx_tag .ltx_tag_bibitem} [ J. You, J. Leskovec, K. He,
+    and S. Xie. ]{.ltx_bibblock} [Graph structure of neural networks.
+    ]{.ltx_bibblock} [In [International Conference on Machine
+    Learning]{#bib.bib39.1.1 .ltx_text .ltx_font_italic}, pages
+    10881--10891. PMLR, 2020. ]{.ltx_bibblock}]{#bib.bib39}
+:::
+
+::: {#A1 .section .ltx_appendix .ltx_indent_first}
+## [Appendix A ]{.ltx_tag .ltx_tag_appendix}Appendix {#appendix-a-appendix .ltx_title .ltx_title_appendix}
+
+::: {#A1.SS1 .section .ltx_subsection .ltx_indent_first}
+### [A.1 ]{.ltx_tag .ltx_tag_subsection}Experimental Details {#a.1-experimental-details .ltx_title .ltx_title_subsection}
+
+::: {#A1.SS1.SSS1 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.1.1 ]{.ltx_tag .ltx_tag_subsubsection}Dataset Details {#a.1.1-dataset-details .ltx_title .ltx_title_subsubsection}
+
+::: {#A1.SS1.SSS1.p1 .ltx_para .ltx_noindent}
+We expand upon the datasets used for our experiments in this section. We
+highlighted the sentence that describes the domain drift within each
+dataset.
+:::
+
+::: {#A1.SS1.SSS1.p2 .ltx_para .ltx_noindent}
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I1.i1}
+
+    ::: {#A1.I1.i1.p1 .ltx_para}
+    [Rotated 2 Moons:]{#A1.I1.i1.p1.2.2 .ltx_text .ltx_font_bold} This
+    is a variant of the 2-entangled moons dataset, with a lower moon and
+    an upper moon labeled 0 and 1 respectively. Each moon consists of
+    100 instances, and 10 domains are obtained by sampling 200 data
+    points from the 2-Moons distribution, and rotating them
+    counter-clockwise in units of $18^{\circ}$. Domains 0 to 8 (both
+    inclusive) are our training domains, and domain 9 is for testing.
+    *Each domain is obtained by rotating the moons counter-clockwise in
+    units of $18^{\circ}$, hence the concept drift means the rotation of
+    the moon-shape clusters.*
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I1.i2}
+
+    ::: {#A1.I1.i2.p1 .ltx_para}
+    [Rotated MNIST:]{#A1.I1.i2.p1.3.2 .ltx_text .ltx_font_bold} This is
+    an adaptation of the popular MNIST digit
+    dataset \[[5](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib5){.ltx_ref}\],
+    where the task is to classify a digit from 0 to 9 given an image of
+    the digit. We generate 5 domains by rotating the images in steps of
+    15 degrees. To generate the $i$-th domain, we sample 1,000 images
+    from the MNIST dataset and rotate them counter-clockwise by
+    $15 \times$ i degrees. We take the first four domains as train
+    domains and the fifth domain as test. *Similar to 2-Moons, each
+    domain here is generated by rotating the images of digits by
+    $15^{\circ}$, hence the concept drift means the rotation of the
+    images.*
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I1.i3}
+
+    ::: {#A1.I1.i3.p1 .ltx_para}
+    [Online News Popularity:]{#A1.I1.i3.p1.1.1 .ltx_text .ltx_font_bold}
+    This
+    dataset \[[8](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib8){.ltx_ref}\]
+    summarizes a heterogeneous set of features about articles published
+    by Mashable in a period of two years. The goal is to predict the
+    number of shares in social networks (popularity). We split the
+    dataset by time into 6 domains and use the first 5 for training.
+    *The concept drift is reflected in the change of time, but previous
+    works have proven
+    \[[28](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib28){.ltx_ref}\]
+    the concept drift is not strong.*
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I1.i4}
+
+    ::: {#A1.I1.i4.p1 .ltx_para}
+    [Shuttle:]{#A1.I1.i4.p1.1.1 .ltx_text .ltx_font_bold} This dataset
+    provides about 58,000 data points for space shuttles in flight. The
+    task is multiclass classification with a heavy class imbalance. The
+    dataset was divided into 8 domains based on the time points
+    associated with points, with times between 30-70 being the train
+    domains and 70 -80 being the test domain.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I1.i5}
+
+    ::: {#A1.I1.i5.p1 .ltx_para}
+    [Electrical Demand]{#A1.I1.i5.p1.1.1 .ltx_text .ltx_font_bold} This
+    contains information about the demand of electricity in a particular
+    province. The task is, again binary classification, to predict if
+    the demand of electricity in each period (of 30 mins) was higher or
+    lower than the average demand over the last day. We consider two
+    weeks to be one time domain, and train on 29 domains while testing
+    on domain 30. *Each domain is generated by considering the demand of
+    electricity within certain two weeks, so the domain drift can be
+    regarded as how the electricity demand is changing seasonally.*
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I1.i6}
+
+    ::: {#A1.I1.i6.p1 .ltx_para}
+    [House Prices Dataset:]{#A1.I1.i6.p1.1.1 .ltx_text .ltx_font_bold}
+    This dataset has housing price data from 2013-2019. This is a
+    regression task to predict the price of a house given the features.
+    We treat each year as a separate domain, but also give information
+    about the exact date of purchase to the models. We take data from
+    the year 2019 to be test data and prior data as training. *Similar
+    to Elec2, the concept drift in this dataset is how the housing price
+    changed from 2013-2019 for a certain region.*
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I1.i7}
+
+    ::: {#A1.I1.i7.p1 .ltx_para .ltx_noindent}
+    [Appliances Energy Prediction:]{#A1.I1.i7.p1.1.1 .ltx_text
+    .ltx_font_bold} This
+    dataset \[[4](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib4){.ltx_ref}\]
+    is used to create regression models of appliances energy use in a
+    low energy building. The data set is at 10 min for about 4.5 months
+    in 2016, and we treat each half month as a single domain, resulting
+    in 9 domains in total. The first 8 domains are used for training and
+    the last one is for testing. *Similar to Elec2, the drift for this
+    dataset corresponds to how the appliances energy usage changes in a
+    low energy building over about 4.5 months in 2016.*
+    :::
+:::
+:::
+
+::: {#A1.SS1.SSS2 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.1.2 ]{.ltx_tag .ltx_tag_subsubsection}Details of Comparison Methods {#a.1.2-details-of-comparison-methods .ltx_title .ltx_title_subsubsection}
+
+::: {#A1.SS1.SSS2.p1 .ltx_para .ltx_noindent}
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I2.i1}
+
+    ::: {#A1.I2.i1.p1 .ltx_para}
+    [Practical Baseline.]{#A1.I2.i1.p1.1.1 .ltx_text .ltx_font_bold}
+    *1). Offline:* this is a time-oblivious model that is trained using
+    ERM on all the source domains. *2). LastDomain:* this is a
+    time-oblivious model that is trained using ERM on the last source
+    domains. *3). IncFinetune:* we bias the training towards more recent
+    data by applying the Baseline method described above on the first
+    time point and then, fine-tuning with a reduced learning rate on the
+    subsequent time points in sequential manner. This baseline
+    corresponds to the online model we defined in
+    Definition [[1]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#Thmdefinition1 "Definition 1. ‣ 3.3 Theoretical analysis ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I2.i2}
+
+    ::: {#A1.I2.i2.p1 .ltx_para}
+    [Continuous Domain Adaptation Methods.]{#A1.I2.i2.p1.1.1 .ltx_text
+    .ltx_font_bold} *1). CDOT:* this model transports most recent
+    labeled examples $\mathcal{D}^{T}$ to the future using a learned
+    coupling from past data, and trains a classifier on them.. *2).
+    CIDA:* this method is representative of typical domain erasure
+    methods applied to continuous domain adaptation problems. *3).
+    Adagraph:* This method makes the batch norm parameters
+    time-sensitive and smooths them using a given kernel.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I2.i3}
+
+    ::: {#A1.I2.i3.p1 .ltx_para .ltx_noindent}
+    [Temporal Domain Generalization Method.]{#A1.I2.i3.p1.1.1 .ltx_text
+    .ltx_font_bold} *1). GI:* this method proposes a training algorithm
+    to encourage a model to learn functions which can extrapolate well
+    to the near future by supervising the first order Taylor expansion
+    of the learnt function.
+    :::
+:::
+:::
+
+::: {#A1.SS1.SSS3 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.1.3 ]{.ltx_tag .ltx_tag_subsubsection}Parameter Setting {#a.1.3-parameter-setting .ltx_title .ltx_title_subsubsection}
+
+::: {#A1.SS1.SSS3.p1 .ltx_para .ltx_noindent}
+We use Adam optimizer for all our experiments, and the learning rate for
+all datasets are uniformly set to be ${1\operatorname{}e} - 4$. All
+experiments are conducted on a $64$-bit machine with $4$-core Intel Xeon
+W-2123 @ 3.60GHz, 32GB memory and NVIDIA Quadro RTX 5000. We set
+hyperparameters for each comparison method with respect to the
+recommendation in their original paper, and we specify the architecture
+as well as other details for each dataset's experiments as follows.
+
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I3.i1}
+
+    ::: {#A1.I3.i1.p1 .ltx_para}
+    [2-Moons.]{#A1.I3.i1.p1.3.1 .ltx_text .ltx_font_bold} The number of
+    layers in the LSTM is set to be $10$, and the network architecture
+    of $g_{\omega_{t}}$ consists of 2 hidden layers, with a dimension of
+    50 each. We use ReLU layer after each hidden layer and a Sigmoid
+    layer after the output layer. The learning rate is set to be
+    ${1\operatorname{}e} - 4$.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I3.i2}
+
+    ::: {#A1.I3.i2.p1 .ltx_para}
+    [Rot-MNIST.]{#A1.I3.i2.p1.9.1 .ltx_text .ltx_font_bold} The number
+    of layers in the LSTM is set to be $10$, and the network
+    architecture of $g_{\omega_{t}}$ consists of $2$ convolution layers
+    with kernel shape $3 \times 3$, and each convolution layer is
+    followed by a max pooling layer with kernel size $2$ and stride
+    $= 2$. The latent representation is then transformed by two linear
+    layers with dimensions $256$ and $10$. We use ReLU layer after each
+    hidden layer and a Sigmoid layer after the output layer. The
+    learning rate is set to be ${1\operatorname{}e} - 3$.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I3.i3}
+
+    ::: {#A1.I3.i3.p1 .ltx_para}
+    [ONP.]{#A1.I3.i3.p1.3.1 .ltx_text .ltx_font_bold} The number of
+    layers in the LSTM is set to be $10$, and the network architecture
+    of $g_{\omega_{t}}$ consists of 2 hidden layers with bias terms, and
+    the dimensions of each layer are 20. We use ReLU layer after each
+    hidden layer and a Sigmoid layer after the output layer. The
+    learning rate is set to be ${1\operatorname{}e} - 4$.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I3.i4}
+
+    ::: {#A1.I3.i4.p1 .ltx_para}
+    [Shuttle.]{#A1.I3.i4.p1.5.1 .ltx_text .ltx_font_bold} The number of
+    layers in the LSTM is set to be $5$, and the network architecture of
+    $g_{\omega_{t}}$ consists of $3$ hidden layers with bias terms, and
+    the dimensions of each layer are $128$. We use ReLU layer after each
+    hidden layer and a Sigmoid layer after the output layer. The
+    learning rate is set to be ${5\operatorname{}e} - 5$.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I3.i5}
+
+    ::: {#A1.I3.i5.p1 .ltx_para}
+    [Elec2.]{#A1.I3.i5.p1.4.1 .ltx_text .ltx_font_bold} The number of
+    layers in the LSTM is set to be $10$, and the network architecture
+    of $g_{\omega_{t}}$ consists of 2 hidden layers with bias terms, and
+    the dimensions of each layer are $128$. We use ReLU layer after each
+    hidden layer and a Sigmoid layer after the output layer. The
+    learning rate is set to be ${5\operatorname{}e} - 5$.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I3.i6}
+
+    ::: {#A1.I3.i6.p1 .ltx_para}
+    [House.]{#A1.I3.i6.p1.4.1 .ltx_text .ltx_font_bold} The number of
+    layers in the LSTM is set to be $10$, and the network architecture
+    of $g_{\omega_{t}}$ consists of 2 hidden layers with bias terms, and
+    the dimensions of each layer are $128$. We use ReLU layer after each
+    hidden layer and no activation layer after the output layer. The
+    learning rate is set to be ${1\operatorname{}e} - 5$.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I3.i7}
+
+    ::: {#A1.I3.i7.p1 .ltx_para .ltx_noindent}
+    [Appliance.]{#A1.I3.i7.p1.4.1 .ltx_text .ltx_font_bold} The number
+    of layers in the LSTM is set to be $10$, and the network
+    architecture of $g_{\omega_{t}}$ consists of 2 hidden layers with
+    bias terms, and the dimensions of each layer are $128$. We use ReLU
+    layer after each hidden layer and no activation layer after the
+    output layer. The learning rate is set to be
+    ${1\operatorname{}e} - 5$.
+    :::
+:::
+:::
+
+::: {#A1.SS1.SSS4 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.1.4 ]{.ltx_tag .ltx_tag_subsubsection}Training Time Analysis {#a.1.4-training-time-analysis .ltx_title .ltx_title_subsubsection}
+
+<figure id="A1.T3" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 3:
+</span>Comparison of training time (seconds) between our method and two
+baselines across two datasets for classification tasks and one datasets
+for regression tasks.</figcaption>
+</figure>
+
+::: {#A1.SS1.SSS4.p1 .ltx_para .ltx_noindent}
+We further conduct the model scalability analysis by comparing the
+running time of our proposed method with two other state-of-the-art
+baselines: GI and CIDA on three datasets (i.e., 2-Moons, Elec2, and
+Appliance). As shown in Table [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.T3 "Table 3 ‣ A.1.4 Training Time Analysis ‣ A.1 Experimental Details ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+our proposed method can generally achieve the shortest training time
+among the three methods. However, we notice that GI is relatively slower
+in the total running time due to the model pretraining and finetuning
+step, and the low efficiency in CIDA is due to the expensive computation
+cost for training GAN. Compared to these approaches, DRAIN only consists
+of one sequential learning model to address the data distribution drift
+in the end-to-end manner, which could achieve generally better
+performance while attaining its efficiency.
+:::
+:::
+
+::: {#A1.SS1.SSS5 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.1.5 ]{.ltx_tag .ltx_tag_subsubsection}Scalability of Number of Domains {#a.1.5-scalability-of-number-of-domains .ltx_title .ltx_title_subsubsection}
+
+::: {#A1.SS1.SSS5.p1 .ltx_para .ltx_noindent}
+The time complexity of our framework with respect to the number of
+domains is linear (equivalent to the complexity of the recurrent neural
+network with respect to the input sequence length). The number of
+domains can only affect the total training time since we need to
+iteratively feed in a new domain to train the proposed recurrent model.
+:::
+
+::: {#A1.SS1.SSS5.p2 .ltx_para .ltx_noindent}
+We conduct the following experiment to support our argument. We create
+synthetic datasets with 10, 100, and 1000 domains, each of which has two
+labels with 10 training instances. We follow the parameter setting in
+the 2-Moons dataset (the exact parameter setting can be found in
+Appendix A.3), and their runtime is demonstrated in the following table.
+:::
+
+<figure id="A1.T4" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 4:
+</span>Scalability of DRAIN for number of training domains.</figcaption>
+</figure>
+:::
+
+::: {#A1.SS1.SSS6 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.1.6 ]{.ltx_tag .ltx_tag_subsubsection}Important Remarks {#a.1.6-important-remarks .ltx_title .ltx_title_subsubsection}
+
+::: {#A1.SS1.SSS6.p1 .ltx_para .ltx_noindent}
+In this section, we provide some important remarks over the proposed
+DRAIN framework.
+
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I4.i1}
+
+    ::: {#A1.I4.i1.p1 .ltx_para}
+    Graph generation can handle large graphs and there are a number of
+    existing works that can handle large graphs. Our model is a general
+    framework that can choose different graph generation methods as
+    needed.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#A1.I4.i2}
+
+    ::: {#A1.I4.i2.p1 .ltx_para .ltx_noindent}
+    Neural networks are networks (i.e., graphs) of neurons, which have
+    gained lots of research interest in recent years. Recent research
+    (e.g., \[[39](https://ar5iv.labs.arxiv.org/html/2205.10664#bib.bib39){.ltx_ref}\])
+    have found that the performance of neural network architectures is
+    highly correlated with certain graph characteristics. In this work,
+    we aim at characterizing the potential drift across the domains by
+    optimizing and updating the graph structure of the neural network
+    because optimizing the graph structure of a neural network has been
+    proven to have a smaller search space and a more smooth optimization
+    procedure than exhaustively searching over all possible connectivity
+    patterns. Last but not least, our approach allows the entire neural
+    network/model to change across time, which in turn maximizes our
+    model's expressiveness.
+    :::
+:::
+:::
+
+::: {#A1.SS1.SSS7 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.1.7 ]{.ltx_tag .ltx_tag_subsubsection}Enlarged Decision Boundary Figures of GI and DRAIN {#a.1.7-enlarged-decision-boundary-figures-of-gi-and-drain .ltx_title .ltx_title_subsubsection}
+
+<figure id="A1.F6" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="A1.F5.sf1"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./2205.10664_files/x13.png" id="A1.F5.sf1.g1"
+class="ltx_graphics ltx_img_landscape" width="830" height="553"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(a) </span><span
+id="A1.F5.sf1.4.1"
+class="ltx_text ltx_markedasmath ltx_font_bold">GI</span></figcaption>
+</figure>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<figure id="A1.F5.sf2"
+class="ltx_figure ltx_flex_size_2 ltx_align_center">
+<img src="./2205.10664_files/x14.png" id="A1.F5.sf2.g1"
+class="ltx_graphics ltx_img_landscape" width="830" height="553"
+alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">(b) </span><span
+id="A1.F5.sf2.4.1"
+class="ltx_text ltx_markedasmath ltx_font_bold">DRAIN</span></figcaption>
+</figure>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 6:
+</span>Comparison of the decision boundary on the future domain of
+2-Moons dataset between the state-of-the-art model - GI and the proposed
+model - DRAIN.</figcaption>
+</figure>
+
+::: {#A1.SS1.SSS7.p1 .ltx_para .ltx_noindent}
+Figure [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.F6 "Figure 6 ‣ A.1.7 Enlarged Decision Boundary Figures of GI and DRAIN ‣ A.1 Experimental Details ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+is a direct comparison of decision boundaries predicted by the
+state-of-the-art method GI (Figure [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.F6 "Figure 6 ‣ A.1.7 Enlarged Decision Boundary Figures of GI and DRAIN ‣ A.1 Experimental Details ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}a)
+and the proposed method DRAIN (Figure [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.F6 "Figure 6 ‣ A.1.7 Enlarged Decision Boundary Figures of GI and DRAIN ‣ A.1 Experimental Details ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}b).
+As can be seen from the figure, the decision boundary predicted by DRAIN
+can consistently classify two classes with a few exceptions. the
+decision boundary predicted by GI has less confidence (i.e., wider band)
+in predicting middle points, and a few errors are also made in
+predicting points on the right side.
+:::
+:::
+:::
+
+::: {#A1.SS2 .section .ltx_subsection .ltx_indent_first}
+### [A.2 ]{.ltx_tag .ltx_tag_subsection}Overall generation process {#a.2-overall-generation-process .ltx_title .ltx_title_subsection}
+
+::: {#A1.SS2.p1 .ltx_para .ltx_noindent}
+We summarize the detailed forward propagation of DRAIN as below (better
+viewed along with Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#S3.F2 "Figure 2 ‣ 3.2 Proposed Method ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}):
+:::
+
+::: {#A1.SS2.p2 .ltx_para .ltx_noindent}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+     ${a_{1} = 0},{{m_{1} = {G_{0}\operatorname{}{(z)}}},{z \sim {\mathcal{N}\operatorname{}{(0,1)}}}}$                                                                                                                                                                
+     ${a_{1} = {G_{\eta}\operatorname{}{(\omega_{1})}}},{{\omega_{1} \sim {F_{\xi}\operatorname{}{(h_{1})}}},{{(m_{1},h_{1})} = {f_{\theta}\operatorname{}{(m_{0},a_{0})}}}}$                                                                                          
+     $\cdots$                                                                                                                                                                                                                                                          
+     ${a_{1} = {G_{\eta}\operatorname{}{(\omega_{1})}}},{{\omega_{1} \sim {G_{o}\operatorname{}{(h_{1})}}},{{(m_{1},h_{1})} = {f_{\theta}\operatorname{}{(m_{1},a_{1})}}}}$                                                                                            
+     ${a_{2} = {G_{\eta}\operatorname{}{(\omega_{2})}}},{{\omega_{2} = {\Phi\operatorname{}{(\omega_{2},{\{\omega_{1}\}})}}},{{\omega_{2} = {F_{\xi}\operatorname{}{(h_{1})}}},{{(m_{2},h_{2})} = {f_{\theta}\operatorname{}{(m_{1},a_{1})}}}}}$                       
+     $\cdots$                                                                                                                                                                                                                                                          
+     ${a_{2} = {G_{\eta}\operatorname{}{(\omega_{2})}}},{{\omega_{2} = {\Phi\operatorname{}{(\omega_{2},{\{\omega_{1}\}})}}},{{\omega_{2} = {F_{\xi}\operatorname{}{(h_{1})}}},{{(m_{2},h_{2})} = {f_{\theta}\operatorname{}{(m_{2},a_{2})}}}}}$                       
+     $\cdots$                                                                                                                                                                                                                                                          
+     ${{a_{t} = {G_{\eta}\operatorname{}{(\omega_{2})}}},{{\omega_{t} = {\Phi\operatorname{}{(\omega_{t},{\{\omega_{{t - \tau}:{t - 1}}\}})}}},{{\omega_{2} = {F_{\xi}\operatorname{}{(h_{1})}}},{{(m_{t},h_{t})} = {f_{\theta}\operatorname{}{(m_{t},a_{t})}}}}}},$   
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
+
+\
+
+where each $a_{i}$ denotes the input of $f_{\theta}$. In this work, we
+utilize LSTM as the recurrent architecture, and $f_{\theta}$ becomes a
+single LSTM unit. To initialize the whole generative process, we take a
+random noise $z$ as input for the first domain $\mathcal{D}_{1}$, which
+is drawn from a standard Gaussian distribution. The initial memory state
+$m_{1}$ is also transformed from $z$ by an initial encoding function
+$G_{0}\operatorname{}{( \cdot )}$.
+:::
+:::
+
+::: {#A1.SS3 .section .ltx_subsection .ltx_indent_first}
+### [A.3 ]{.ltx_tag .ltx_tag_subsection}Theory Proof {#a.3-theory-proof .ltx_title .ltx_title_subsection}
+
+::: {#A1.SS3.p1 .ltx_para .ltx_noindent}
+In this section, we provide the formal proof for Theorem 1 and Theorem 2
+in our main context.
+:::
+
+::: {#A1.SS3.SSS1 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.3.1 ]{.ltx_tag .ltx_tag_subsubsection}Proof for Theorem 1 {#a.3.1-proof-for-theorem-1 .ltx_title .ltx_title_subsubsection}
+
+::: {#A1.SS3.SSS1.27 .ltx_proof}
+###### Proof. {#proof. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A1.SS3.SSS1.1.p1 .ltx_para .ltx_noindent}
+By definition of the predictive distribution,
+:::
+
+::: {#A1.SS3.SSS1.2.p2 .ltx_para .ltx_noindent}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $$\begin{aligned}                                                                                                                                                                                                                                                                                                                               [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     {{P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\mathcal{D}_{1:T}} \right.)}} =} & {\oint_{\Omega}{P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\omega_{T + 1}} \right.)}\operatorname{}P\operatorname{}{(\left. \omega_{T + 1} \middle| \mathcal{D}_{1:T} \right.)}\operatorname{}{d\omega_{T + 1}}}} \\      
+      = & {\oint_{\Omega}{P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\omega_{T + 1}} \right.)}\operatorname{}P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}\operatorname{}P\operatorname{}{(\left. \omega_{1:T} \middle| \mathcal{D}_{1:T} \right.)}\operatorname{}{d\omega_{1:{T + 1}}}}}               
+     \end{aligned}$$                                                                                                                                                                                                                                                                                                                                 
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS1.3.p3 .ltx_para .ltx_noindent}
+Our goal is to prove that the variance of this predictive distribution
+for our proposed method, online baseline and offline baseline follows
+the inequality as in Theorem 1.
+:::
+
+::: {#A1.SS3.SSS1.4.p4 .ltx_para .ltx_noindent}
+[Ours v.s. Online Baseline]{#A1.SS3.SSS1.4.p4.1.1 .ltx_text
+.ltx_font_bold}
+:::
+
+::: {#A1.SS3.SSS1.5.p5 .ltx_para .ltx_noindent}
+Here we prove that
+${\text{Var}\operatorname{}{(\mathcal{M}_{\text{ours}})}} < {\text{Var}\operatorname{}{(\mathcal{M}_{\text{on}})}}$.
+:::
+
+::: {#A1.SS3.SSS1.6.p6 .ltx_para .ltx_noindent}
+Notice that the first term on the right hand side of Eq. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E5 "5 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+namely
+$P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\omega_{T + 1}} \right.)}$,
+corresponds to deployment of the model with parameter $\omega_{T + 1}$
+on the future domain $\mathcal{D}_{T + 1}$, hence the variance of
+$P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\omega_{T + 1}} \right.)}$
+only depends on the noise or randomness coming from $\mathbf{x}_{T + 1}$
+as long as $\omega_{T + 1}$ is given. In other words, the uncertainty
+coming from
+$P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\omega_{T + 1}} \right.)}$
+can be cancelled for both methods since we are considering the same set
+of domains. Now the problem reduces to prove that the variance of the
+second and third terms on the right hand side of Eq. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E5 "5 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+for our model is smaller than those for the online baseline.
+:::
+
+::: {#A1.SS3.SSS1.7.p7 .ltx_para .ltx_noindent}
+By Bayesian statistics, we know that
+:::
+
+::: {#A1.SS3.SSS1.8.p8 .ltx_para .ltx_noindent}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $$\begin{array}{cl}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     {{P\operatorname{}{(\left. \omega_{1:T} \middle| \mathcal{D}_{1:T} \right.)}} =} & {\int_{\Theta}{{{{{{{{{P\operatorname{}{(\left. \omega_{1} \middle| \mathcal{D}_{1} \right.)}} \cdot P}\operatorname{}{(\left. \omega_{2} \middle| {\omega_{1},\mathcal{D}_{2},\theta_{0}} \right.)}} \cdot P}\operatorname{}{(\left. \theta_{1} \middle| {\omega_{1},\omega_{2},\theta_{0}} \right.)}} \cdot P}\operatorname{}{(\left. \omega_{3} \middle| {\omega_{2},\mathcal{D}_{3},\theta_{1}} \right.)}} \cdot P}\operatorname{}{(\left. \theta_{2} \middle| {\omega_{2},\omega_{3},\theta_{1}} \right.)}}} \\      
+      & {{{\cdots\operatorname{}P\operatorname{}{(\left. \omega_{T} \middle| {\omega_{T - 1},\mathcal{D}_{T},\theta_{T - 2}} \right.)}} \cdot P}\operatorname{}{(\left. \theta_{T - 1} \middle| {\omega_{T - 1},\omega_{T},\theta_{T - 2}} \right.)}\operatorname{}d\operatorname{}\theta_{0:{T - 1}}}                                                                                                                                                                                                                                                                                                            
+     \end{array}$$                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS1.9.p9 .ltx_para .ltx_noindent}
+where $\theta$ is the parameter of the parameterized function to
+approximate the ground-truth drift of $\omega$, as defined in Assumption
+ [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#Thmassumption1 "Assumption 1 (Prior on Concept Drift). ‣ 3.3 Theoretical analysis ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+For example,
+$P\operatorname{}{(\left. \omega_{1} \middle| \mathcal{D}_{1} \right.)}$
+denotes that we train the model on the very first domain and
+$P\operatorname{}{(\left. \omega_{2} \middle| {\omega_{1},\mathcal{D}_{2},\theta_{0}} \right.)}$
+denotes that we continue to train the model on the second domain but
+with initialization of $\omega_{2}$ as
+$q_{\theta_{0}}\operatorname{}{(\omega_{1})}$ where $\omega_{1}$ is
+learned from the previous domain and $q_{\theta_{0}}$ is trying to
+capture the conditional probability or drift between $\omega_{2}$ and
+$\omega_{1}$, i.e.,
+$P\operatorname{}{(\left. \omega_{2} \middle| \omega_{1} \right.)}$. In
+our Bayesian framework, we treat $q_{\theta}$ as a learnable function
+(e.g., LSTM unit in our proposed method) and we use subscript of
+$\theta$ to differentiate the status of $\theta$ after the training on
+each domain. In other words, $q_{\theta}$ will be updated after the
+training on each domain (at least for our method). Notice that
+$\theta_{0}$ always denotes the prior distribution as in
+Assumption [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#Thmassumption1 "Assumption 1 (Prior on Concept Drift). ‣ 3.3 Theoretical analysis ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+:::
+
+::: {#A1.SS3.SSS1.10.p10 .ltx_para .ltx_noindent}
+By Bayes' rule, we have:
+:::
+
+::: {#A1.SS3.SSS1.11.p11 .ltx_para .ltx_noindent}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${P\operatorname{}{(\left. \omega_{t + 1} \middle| {\omega_{t},\mathcal{D}_{t + 1},\theta_{t - 1}} \right.)}} \propto {\underset{\text{prior on~}\omega_{t + 1}}{\underbrace{P{({q_{\theta_{t-1}}{(\omega_{t})}})}}} \cdot \underset{\text{likelihood}}{\underbrace{P{(\left. \mathcal{D}_{t+1} \middle| \omega_{t+1} \right.)}}}}$$      [(7)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS1.12.p12 .ltx_para .ltx_noindent}
+where
+$P\operatorname{}{({q_{\theta_{t - 1}}\operatorname{}{(\omega_{t})}})}$
+can be regarded as the prior of $\omega_{t + 1}$ because as we mentioned
+$q_{\theta_{t - 1}}$ denotes the initialization of $\omega_{t + 1}$
+before we train the model on domain $\mathcal{D}_{t + 1}$, and
+$P\operatorname{}{(\left. \mathcal{D}_{t + 1} \middle| \omega_{t + 1} \right.)}$
+corresponds to the likelihood of training $\omega_{t + 1}$ on
+$\mathcal{D}_{t + 1}$.
+:::
+
+::: {#A1.SS3.SSS1.13.p13 .ltx_para .ltx_noindent}
+In addition,
+:::
+
+::: {#A1.SS3.SSS1.14.p14 .ltx_para .ltx_noindent}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $$\begin{array}{cl}                                                                                                                                                                                                                                     [(8)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     {{P\operatorname{}{(\left. \theta_{t} \middle| {\omega_{t},\omega_{t + 1},\theta_{t - 1}} \right.)}} \propto} & {{{P\operatorname{}{(\theta_{t - 1})}} \cdot P}\operatorname{}{(\omega_{t},\left. \omega_{t + 1} \middle| \theta_{t} \right.)}} \\      
+      \propto & {{{{{P\operatorname{}{(\theta_{t - 2})}} \cdot P}\operatorname{}{(\omega_{t - 1},\left. \omega_{t} \middle| \theta_{t - 1} \right.)}} \cdot P}\operatorname{}{(\omega_{t},\left. \omega_{t + 1} \middle| \theta_{t} \right.)}} \\            
+      & \cdots \\                                                                                                                                                                                                                                            
+      \propto & {\underset{\text{prior on~}\theta}{\underbrace{P{(\theta_{0})}}} \cdot \underset{\text{likelihood}}{\underbrace{\underset{i=1}{\overset{t}{\prod}}{P{(\omega_{i},\left. \omega_{i+1} \middle| \theta_{i} \right.)}}}}}                       
+     \end{array}$$                                                                                                                                                                                                                                           
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS1.15.p15 .ltx_para .ltx_noindent}
+for any $t = {1,2,3,\cdots,{T - 1}}$. In the equation above, this time
+the prior is over parameter $\theta$ and $\omega_{i}$, $\omega_{i + 1}$
+can be regarded as the \"training data\" for $\theta_{i}$.
+:::
+
+::: {#A1.SS3.SSS1.16.p16 .ltx_para .ltx_noindent}
+For the online baseline, since it only keeps one-step finetuning of the
+model and does not learn how $\omega_{t}$ evolves, the $\theta_{t}$ for
+the online baseline is always equal to the prior, i.e.
+$\theta_{t} = \theta_{0}$. In other words,
+${P\operatorname{}{({q_{\theta_{t - 1}}\operatorname{}{(\omega_{t})}})}} = {P\operatorname{}{({q_{\theta_{0}}\operatorname{}{(\omega_{t})}})}}$
+and
+${P\operatorname{}{(\left. \theta_{t} \middle| {\omega_{t},\omega_{t + 1},\theta_{t - 1}} \right.)}} = {P\operatorname{}{(\theta_{0})}}$,
+$\forall t$ for the online baseline.
+:::
+
+::: {#A1.SS3.SSS1.17.p17 .ltx_para .ltx_noindent}
+Since we follow the standard routine and assume all distributions are
+Gaussian, by Bayesian Theorem, we know that the posterior distribution
+always has variance smaller than the prior distribution, hence we know
+that
+:::
+
+::: {#A1.SS3.SSS1.18.p18 .ltx_para .ltx_noindent}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${V\operatorname{}a\operatorname{}r\operatorname{}{(\left. \theta_{t} \middle| {\omega_{t},\omega_{t + 1},\theta_{t - 1}} \right.)}} < {V\operatorname{}a\operatorname{}r\operatorname{}{(\theta_{0})}}$$      [(9)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS1.19.p19 .ltx_para .ltx_noindent}
+which proves that our method has smaller variance in terms of
+Eq. [[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E8 "8 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+On the other hand, since the second term on the right hand side of
+Eq. [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E7 "7 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+is the same for both methods, and for the first term
+$P\operatorname{}{({q_{\theta_{t - 1}}\operatorname{}{(\omega_{t})}})}$,
+by our Assumption  [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#Thmassumption1 "Assumption 1 (Prior on Concept Drift). ‣ 3.3 Theoretical analysis ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}
+we know that for baseline
+${\Pr{({q_{\theta_{t - 1}}\operatorname{}{(\omega_{t})}})}} = {\Pr{({q_{\theta_{0}}\operatorname{}{(\omega_{t})}})}}$
+so the variance is basically $\sigma_{\theta_{0}}$. For our method,
+after each training step across a new domain our $\theta$ will get
+updated and achieve smaller variance (because of posterior variance of
+Gaussian) so we also prove that our method has smaller variance in terms
+of Eq. [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E7 "7 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref}.
+Two parts combined prove that our method has smaller variance in the
+third term of Eq. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E5 "5 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+namely
+$P\operatorname{}{(\left. \omega_{1:T} \middle| \mathcal{D}_{1:T} \right.)}$.
+:::
+
+::: {#A1.SS3.SSS1.20.p20 .ltx_para .ltx_noindent}
+The last step is to compare the variance from the second term in
+Eq. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E5 "5 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+namely
+$P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}$.
+For online baseline, basically it uses the parameter from the last
+training domain, i.e., $\omega_{T}$ as the final model on the future
+domain, i.e.,
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}} = {P\operatorname{}{({q_{\theta_{0}}\operatorname{}{(\omega_{T})}})}}$$      [(10)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS1.21.p21 .ltx_para .ltx_noindent}
+On the other hand, for our method,
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}} = {P\operatorname{}{({q_{\theta_{T - 1}}\operatorname{}{(\omega_{T})}})}}$$      [(11)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+which has smaller variance due to the posterior variance of Gaussian.
+:::
+
+::: {#A1.SS3.SSS1.22.p22 .ltx_para .ltx_noindent}
+All together we finish the proof for
+${\text{Var}\operatorname{}{(\mathcal{M}_{\text{ours}})}} < {\text{Var}\operatorname{}{(\mathcal{M}_{\text{on}})}}$.
+:::
+
+::: {#A1.SS3.SSS1.23.p23 .ltx_para .ltx_noindent}
+[Online Baseline v.s. Offline Baseline]{#A1.SS3.SSS1.23.p23.1.1
+.ltx_text .ltx_font_bold}
+:::
+
+::: {#A1.SS3.SSS1.24.p24 .ltx_para .ltx_noindent}
+This case is simpler to prove. Again, the first term on the right hand
+side of Eq [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E5 "5 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+namely
+$P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\omega_{T + 1}} \right.)}$
+can be cancelled in this case. Moreover, the second term, namely
+$P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}$
+has the same variance for both baselines, i.e.,
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${V\operatorname{}a\operatorname{}r\operatorname{}{({P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}})}} = {V\operatorname{}a\operatorname{}r\operatorname{}{({P\operatorname{}{({q_{\theta_{0}}\operatorname{}{(\omega_{T})}})}})}} = \sigma_{\theta_{0}}$$      [(12)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+This makes sense since two baselines do not learn the drift and the
+uncertainty in predicting $\omega_{T + 1}$ based on $\omega_{T}$ is
+always the same as the prior distribution of $\theta_{0}$.
+:::
+
+::: {#A1.SS3.SSS1.25.p25 .ltx_para .ltx_noindent}
+Hence, it suffices to compare the uncertainty of the last term of
+Eq. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#A1.E5 "5 ‣ Proof. ‣ A.3.1 Proof for Theorem 1 ‣ A.3 Theory Proof ‣ Appendix A Appendix ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+namely
+$P\operatorname{}{(\left. \omega_{1:T} \middle| \mathcal{D}_{1:T} \right.)}$.
+Recall that
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $$\begin{array}{cl}                                                                                                                                 [(13)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+      & {\mathcal{M}_{\text{on}}:\mspace{23mu}\omega_{t + 1} = \text{argmax}_{\omega_{t + 1}}P{(\omega_{t + 1}|\omega_{t},\mathcal{D}_{t + 1})}} \\      
+      & {\mathcal{M}_{\text{off}}:\mspace{23mu}\omega_{t + 1} = \text{argmax}_{\omega_{t + 1}}P{(\omega_{t + 1}|\mathcal{D}_{1:{t + 1}})}}               
+     \end{array}$$                                                                                                                                       
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS1.26.p26 .ltx_para .ltx_noindent}
+For offline baseline, we are using all dataset so far, namely
+$\mathcal{D}_{1:{t + 1}}$ to train the model while the online baseline
+only uses $\mathcal{D}_{t + 1}$. Since in this paper, we are considering
+domain generalization with temporal concept drift, i.e., for each
+$i \neq j$ we have $\mathcal{D}_{i} \neq \mathcal{D}_{j}$ (otherwise we
+marge them), the randomness of $\bigcup_{i = 1}^{t + 1}\mathcal{D}_{i}$
+is at least as large as that of $\mathcal{D}_{t + 1}$ alone, i.e.,
+${V\operatorname{}a\operatorname{}r\operatorname{}{({\bigcup_{i = 1}^{t + 1}\mathcal{D}_{i}})}} \geq {V\operatorname{}a\operatorname{}r\operatorname{}{(\mathcal{D}_{t + 1})}}$.
+Again, by Bayes' rule, we can finish the proof.
+:::
+
+::: {#A1.SS3.SSS1.27.p27 .ltx_para}
+∎
+:::
+:::
+:::
+
+::: {#A1.SS3.SSS2 .section .ltx_subsubsection .ltx_indent_first}
+#### [A.3.2 ]{.ltx_tag .ltx_tag_subsubsection}Proof of Theorem 2 {#a.3.2-proof-of-theorem-2 .ltx_title .ltx_title_subsubsection}
+
+::: {#A1.SS3.SSS2.13 .ltx_proof}
+###### Proof. {#proof.-1 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A1.SS3.SSS2.1.p1 .ltx_para .ltx_noindent}
+Recall that
+:::
+
+::: {#A1.SS3.SSS2.2.p2 .ltx_para .ltx_noindent}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${e\operatorname{}r\operatorname{}r} ≔ {\ell\operatorname{}{({{\mathbb{E}}\operatorname{}{\lbrack{P\operatorname{}{(\left. \hat{y} \middle| {\mathbf{x}_{T + 1},\mathcal{D}_{1:T}} \right.)}}\rbrack}},y_{T + 1})}}$$      [(14)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS2.3.p3 .ltx_para .ltx_noindent}
+First denote the ground-truth $\theta$ for the parameterized function
+$q_{\theta}$ as $q_{\theta^{*}}$. The general idea of the proof below is
+to show that our method can achieve $\theta$ that is closer to the
+ground-truth $\theta^{*}$, i.e., learning the dynamics of
+${\{\omega_{t}\}}_{t = 1}^{T}$ more accurately.
+:::
+
+::: {#A1.SS3.SSS2.4.p4 .ltx_para .ltx_noindent}
+Notice that
+
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{\mathbb{E}}\operatorname{}{\lbrack{P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}}\rbrack}} = {{\mathbb{E}}\operatorname{}{\lbrack{q_{\theta}\operatorname{}{(\omega_{T})}}\rbrack}}$$      [(15)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS2.5.p5 .ltx_para .ltx_noindent}
+By Assumption [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2205.10664#Thmassumption1 "Assumption 1 (Prior on Concept Drift). ‣ 3.3 Theoretical analysis ‣ 3 Methodology ‣ Temporal Domain Generalization with Drift-Aware Dynamic Neural Network"){.ltx_ref},
+we know that by learning the conditional probability
+$P\operatorname{}{(\left. \omega_{t + 1} \middle| \omega_{t} \right.)}$
+our method can update $\theta$ of $q_{\theta}$. Assume that after
+training on the first $T$ domains, our model can achieve error as
+defined by:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{\mathbb{E}}\operatorname{}{\lbrack{\|{{q_{\theta_{T - 1}}\operatorname{}{(\omega_{T})}} - {q_{\theta^{*}}\operatorname{}{(\omega_{T})}}}\|}_{2}\rbrack}} < {{\mathbb{E}}\operatorname{}{\lbrack{\|{{q_{\theta_{0}}\operatorname{}{(\omega_{T})}} - {q_{\theta^{*}}\operatorname{}{(\omega_{T})}}}\|}_{2}\rbrack}}$$      [(16)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS2.6.p6 .ltx_para .ltx_noindent}
+where the left hand side denotes the expected error between the
+predicted $\omega_{T + 1}$ and the ground-truth for our method while the
+right hand side denotes that for the online baseline.
+:::
+
+::: {#A1.SS3.SSS2.7.p7 .ltx_para .ltx_noindent}
+With some mild assumptions over the neural network, i.e., Lipschitz
+continuity of the neural network w.r.t the parameter, we can measure
+that the prediction error for our model is smaller than that of online
+baseline.
+:::
+
+::: {#A1.SS3.SSS2.8.p8 .ltx_para .ltx_noindent}
+On the other hand, for the comparison between two baselines, we consider
+a simpler case where the drift of $\omega_{t}$ is monotonic but our
+proof can be generalized to other cases easily.
+:::
+
+::: {#A1.SS3.SSS2.9.p9 .ltx_para .ltx_noindent}
+As can be shown,
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $$\begin{array}{cl}                                                                                                                                                                                                                                                                                                                                                                       [(17)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+      & {{\text{Online baseline:}\quad{{\mathbb{E}}\operatorname{}{\lbrack{P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}}\rbrack}}} = {{\mathbb{E}}\operatorname{}{\lbrack{q_{\theta_{0}}\operatorname{}{(\omega_{T})}}\rbrack}} = \omega_{T}} \\                                                                                                                    
+      & {{\text{Offline baseline:}\quad{{\mathbb{E}}\operatorname{}{\lbrack{P\operatorname{}{(\left. \omega_{T + 1} \middle| \omega_{1:T} \right.)}}\rbrack}}} = {{\mathbb{E}}\operatorname{}{\lbrack{q_{\theta_{0}}\operatorname{}{(\overline{\omega})}}\rbrack}} = {{\mathbb{E}}\operatorname{}{\lbrack{P\operatorname{}{(\left. \omega \middle| \mathcal{D}_{1:T} \right.)}}\rbrack}}}      
+     \end{array}$$                                                                                                                                                                                                                                                                                                                                                                             
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS2.10.p10 .ltx_para .ltx_noindent}
+If we denote a distance function over the domains, as $d$, we assume
+that
+:::
+
+::: {#A1.SS3.SSS2.11.p11 .ltx_para .ltx_noindent}
+  -- ------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${d\operatorname{}{(\mathcal{D}_{t + 1},\mathcal{D}_{T + 1})}} < {d\operatorname{}{(\mathcal{D}_{t},\mathcal{D}_{T + 1})}}$$      [(18)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#A1.SS3.SSS2.12.p12 .ltx_para .ltx_noindent}
+By the monotonic assumption, the distribution of each
+$\mathcal{D}_{1:T}$ is changing along a certain direction. Hence, among
+them $\mathcal{D}_{T}$ has the distribution most close to that of
+$\mathcal{D}_{T + 1}$. In other words, the online baseline finetunes the
+model so its $\omega_{T}$ is leaning towards the last domain while the
+offline baseline is using the averaged domains to train the model, which
+finishes the proof.
+:::
+
+::: {#A1.SS3.SSS2.13.p13 .ltx_para}
+∎
+:::
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2205.10663){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./2205.10664_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2205.10664){.ar5iv-text-button
+.ar5iv-severity-warning} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2205.10664){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2205.10664){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2205.10665){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Sat Dec 24 23:19:50 2022 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+
+::: {#simplifyJobsPortals}
+:::
+:::

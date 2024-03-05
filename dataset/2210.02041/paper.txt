@@ -1,0 +1,2135 @@
+::: ltx_page_main
+::: ltx_page_content
+# Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks {#natural-color-fool-towards-boosting-black-box-unrestricted-attacks .ltx_title .ltx_centering .ltx_title_document}
+
+::: ltx_authors
+[ [Shengming Yuan\
+[shengming.yuan@outlook.com]{#id3.1.id1 .ltx_text .ltx_font_typewriter}\
+&Qilong Zhang\
+[qilong.zhangdl@gmail.com]{#id4.2.id2 .ltx_text .ltx_font_typewriter}\
+&Lianli Gao\
+[lianli.gao@uestc.edu.cn]{#id5.3.id3 .ltx_text .ltx_font_typewriter}\
+&Yaya Cheng\
+[yaya.cheng@hotmail.com]{#id6.4.id4 .ltx_text .ltx_font_typewriter}\
+&Jingkuan Song\
+[jingkuan.song@gmail.com]{#id7.5.id5 .ltx_text .ltx_font_typewriter}\
+Center for Future Media, University of Electronic Science and Technology
+of China\
+]{.ltx_personname}[Corresponding
+author]{.ltx_author_notes}]{.ltx_creator .ltx_centering
+.ltx_role_author}
+:::
+
+::: {.ltx_abstract .ltx_centering}
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Unrestricted color attacks, which manipulate semantically meaningful
+color of an image, have shown their stealthiness and success in fooling
+both human eyes and deep neural networks. However, current works usually
+sacrifice the flexibility of the uncontrolled setting to ensure the
+naturalness of adversarial examples. As a result, the black-box attack
+performance of these methods is limited. To boost transferability of
+adversarial examples without damaging image quality, we propose a novel
+Natural Color Fool (NCF) which is guided by realistic color
+distributions sampled from a publicly available dataset and optimized by
+our neighborhood search and initialization reset. By conducting
+extensive experiments and visualizations, we convincingly demonstrate
+the effectiveness of our proposed method. Notably, on average, results
+show that our NCF can outperform state-of-the-art approaches by
+[15.0%$\sim$`<!-- -->`{=html}32.9%]{#id1.1.1 .ltx_text .ltx_font_bold}
+for fooling normally trained models and
+[10.0%$\sim$`<!-- -->`{=html}25.3%]{#id2.2.2 .ltx_text .ltx_font_bold}
+for evading defense methods. Our code is available at
+[https://github.com/ylhz/Natural-Color-Fool](https://github.com/ylhz/Natural-Color-Fool){.ltx_ref
+.ltx_url .ltx_font_typewriter target="_blank"}.
+:::
+
+::: {#S1 .section .ltx_section .ltx_centering}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+Deep neural networks (DNNs) have achieved excellent performance on a
+large number of tasks, such as image
+recognition [alex2012imagenet](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib1){.ltx_ref}
+;
+[he2016deep](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib2){.ltx_ref}
+, medical
+diagnostics [macnamee2002the](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib3){.ltx_ref}
+;
+[peng2021self](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib4){.ltx_ref}
+, and autonomous
+driving [tian2018deeptest](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib5){.ltx_ref}
+. However, with the rise of the field of adversarial
+attack [szegedy2014intriguing](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib6){.ltx_ref}
+;
+[goodfellow2015explaining](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib7){.ltx_ref}
+;
+[naseer2021on](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib8){.ltx_ref}
+;
+[zhang2022bia](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib9){.ltx_ref}
+;
+[chen2022understanding](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib10){.ltx_ref}
+;
+[zhang2020dual](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib11){.ltx_ref}
+;
+[zhang2020principal](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib12){.ltx_ref}
+, the robustness of state-of-the-art
+DNNs [he2016deep](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib2){.ltx_ref}
+;
+[huang2017densely](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib13){.ltx_ref}
+;
+[Dosovitskiy2021an](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib14){.ltx_ref}
+;
+[touvron2021going](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib15){.ltx_ref}
+;
+[zhang2022progressive](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib16){.ltx_ref}
+is put in question. Adversarial examples thus reveal the vulnerability
+of DNNs and inevitably raise concerns about widely deployed models. To
+avoid potential risks, it is crucial to expose as many of the model's
+"blind spots" as possible at this stage.
+:::
+
+::: {#S1.p2 .ltx_para}
+Generally, scenarios of adversarial attacks can divide into white-box
+and black-box. For the white-box
+scenario [dezfooli2016deepfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib17){.ltx_ref}
+;
+[carlini2017towards](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib18){.ltx_ref}
+;
+[zhao2020towards](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib19){.ltx_ref}
+;
+[liu2022practical](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib20){.ltx_ref}
+, all information about the target model is publicly available, such as
+the architecture and parameters. Although the attacker can easily fool
+them with human-imperceptible perturbations in this case, it is not
+practical in the real world since deployed models are usually opaque to
+unauthorized users. To overcome this limitation, numerous works begin to
+study the black-box
+attack [goodfellow2015explaining](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib7){.ltx_ref}
+;
+[dong2018boosting](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib21){.ltx_ref}
+;
+[xie2019improving](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib22){.ltx_ref}
+;
+[gao2020patch](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib23){.ltx_ref}
+;
+[cheng2021fast](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib24){.ltx_ref}
+;
+[naseer2022on](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib25){.ltx_ref}
+, which relies on the cross-model transferability of adversarial
+examples. Typically, most existing black-box attacks maintain image
+quality by constraining the $L_{p}$-norm of
+perturbation [dong2019evading](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib26){.ltx_ref}
+;
+[gao2020patch](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib23){.ltx_ref}
+;
+[gao2020patch++](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib27){.ltx_ref}
+;
+[naseer2021on](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib8){.ltx_ref}
+. However, the $L_{p}$-norm constraint in RGB color space is not an
+ideal indicator for measuring the perceptual distance between two images
+since adversarial examples with a small perturbation size may still look
+unnatural to human
+eyes [zhao2020towards](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib19){.ltx_ref}
+. Thus the unrestricted
+attack [hosseini2018semantic](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib28){.ltx_ref}
+;
+[shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+;
+[laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+;
+[zhao2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib31){.ltx_ref}
+;
+[bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+;
+[shamsabadi2020edgefool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib33){.ltx_ref}
+;
+[song2018constructing](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib34){.ltx_ref}
+is proposed --- replacing the traditional small $L_{p}$-norm
+perturbations with uncontrolled yet human-imperceptible ones, which is
+more practically meaningful. Among existing unrestricted attacks, the
+unrestricted color branch is a very promising direction. As demonstrated
+in previous
+works [laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+;
+[bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+;
+[shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+, only manipulating the color of an image is not noticeable to human
+eyes but can easily fool DNNs. This is mainly because global uniform
+changes in images are usually imperceptible, and DNNs are vulnerable to
+certain large-scale patterns.
+:::
+
+::: {#S1.p3 .ltx_para}
+However, current unrestricted color attacks usually sacrifice the
+flexibility of the uncontrolled setting to ensure the naturalness of
+adversarial examples: either rely on
+intuition [hosseini2018semantic](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib28){.ltx_ref}
+;
+[shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+and objective
+metric [bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+or use relatively small
+changes [laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+;
+[zhao2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib31){.ltx_ref}
+. Consequently, the transferability of adversarial examples generated by
+these methods is limited.
+:::
+
+::: {#S1.p4 .ltx_para}
+To remedy this, we propose a [Natural Color Fool (NCF)]{#S1.p4.1.1
+.ltx_text .ltx_font_bold} based on a more flexible perturbation space.
+Specifically, we build a color distribution library that contains
+diverse yet realistic color distributions sampled from the ADE20K
+dataset [zhou2017scene](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib35){.ltx_ref}
+for each semantic class. By borrowing the color mapping technique
+of [pitie2007the](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib36){.ltx_ref}
+, we utilize the library to generate a set of image variants with
+realistic color distribution for each clean image. Then we use the
+substitute model to select the most adversarial variant. To boost its
+transferability, we further introduce [neighborhood search]{#S1.p4.1.2
+.ltx_text .ltx_font_bold} and [initialization reset]{#S1.p4.1.3
+.ltx_text .ltx_font_bold} to optimize, thus obtaining the resulting
+adversarial example. Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.F1 "Figure 1 ‣ 3.1 Problem Formulation ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+illustrates the simplified pipeline for our method.
+:::
+
+::: {#S1.p5 .ltx_para}
+In summary, our main contributions are:
+
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i1}
+
+    ::: {#S1.I1.i1.p1 .ltx_para}
+    We observe that current unrestricted color attacks lack flexibility,
+    which results in limited transferability of the adversarial
+    examples.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i2}
+
+    ::: {#S1.I1.i2.p1 .ltx_para}
+    To alleviate this issue, we propose a Natural Color Fool (NCF),
+    which fully exploits color distributions of semantic classes in an
+    image to craft human-imperceptible, flexible, and highly
+    transferable adversarial examples.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i3}
+
+    ::: {#S1.I1.i3.p1 .ltx_para}
+    Extensive experiments and visualizations demonstrate the
+    effectiveness of our proposed method. Significantly, with high NIMA
+    scores [talebi2018nima](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib37){.ltx_ref}
+    , NCF averagely outperforms state-of-the-art methods by
+    [15.0%$\sim$`<!-- -->`{=html}32.9%]{#S1.I1.i3.p1.1.1 .ltx_text
+    .ltx_font_bold} for fooling normally trained models, and
+    [10.0%$\sim$`<!-- -->`{=html}25.3%]{#S1.I1.i3.p1.2.2 .ltx_text
+    .ltx_font_bold} for evading defense models.
+    :::
+:::
+:::
+
+::: {#S2 .section .ltx_section .ltx_centering}
+## [2 ]{.ltx_tag .ltx_tag_section}Related Works {#related-works .ltx_title .ltx_title_section}
+
+::: {#S2.SS1 .section .ltx_subsection}
+### [2.1 ]{.ltx_tag .ltx_tag_subsection}Unrestricted Attacks {#unrestricted-attacks .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS1.p1 .ltx_para}
+Unrestricted
+attacks [laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+;
+[xu2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib38){.ltx_ref}
+;
+[duan2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib39){.ltx_ref}
+;
+[bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+, which usually significantly modify the image but can yield
+human-imperceptible adversarial examples, have been widely studied in
+recent years. For example, some works modify domain-specific structural
+attributes of the image.
+SemanticAdv [xu2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib38){.ltx_ref}
+uses an attribute-conditioned image editing model to modify the
+attributes of the face (e.g., modifying the degree of mouth opening).
+advCam [duan2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib39){.ltx_ref}
+hides adversarial perturbations by using the style transfer technique
+(e.g., changing a traffic sign to a rust style). Of course, there are
+also many works modify generic attributes of images, such as texture and
+color. Specifically,
+tAdv [bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+infuses the texture of another image to generate adversarial examples.
+EdgeFool [shamsabadi2020edgefool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib33){.ltx_ref}
+craft adversarial perturbations by enhancing edge details of an image.
+:::
+
+::: {#S2.SS1.p2 .ltx_para}
+Compared with texture-based attacks, color-based ones usually yield more
+natural results since manipulating groups of pixels along dimensions is
+less perceptible to human eyes. To our knowledge,
+Hosseini&Poovendran [hosseini2018semantic](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib28){.ltx_ref}
+first proposed the Semantic Adversarial Examples (SAE) in this branch.
+Specifically, they convert the image from the RGB color space to the HSV
+one, then uniformly and randomly perturbed the H (Hue) and S
+(Saturation) channels of the entire image.
+Laidlaw&Feizi [laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+also notice that RGB color space is not a perceptually uniform space.
+Thus, they operate in the CIELUV color space and propose a ReColorAdv
+that uses a specific function to uniformly transform all pixels
+belonging to the same color. Similar to ReColorAdv,
+ACE [zhao2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib31){.ltx_ref}
+proposes a simple piecewise-linear color adjustment filter to manipulate
+the image. The main difference is that ACE treats three channels of an
+image independent of each other when transformed.
+AGV [baia2022one](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib40){.ltx_ref}
+increases the attack effectiveness by filter composition. Unlike them,
+cAdv [bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+performs color transformation using a pretrained colorization network
+and jointly varies input hints and masks to manipulate adversarial
+examples.
+:::
+
+::: {#S2.SS1.p3 .ltx_para}
+Among existing unrestricted color attacks,
+ColorFool [shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+, which exploits image semantics to modify colors selectively, is the
+most related to ours. Nevertheless, there are several significant
+differences between our work and ColorFool. First, ColorFool requires
+manually selecting several human-sensitive semantic classes (i.e., sky,
+water, plants, and humans), while our approach does not need. Second,
+ColorFool adds uncontrolled perturbations on human-insensitive semantic
+classes, while our approach utilizes a color distribution library as a
+guide. Third, ColorFool optimizes adversarial examples only via multiple
+random trials, while our approach also utilizes the gradient of the
+substitute model to fine-tune results.
+:::
+:::
+
+::: {#S2.SS2 .section .ltx_subsection}
+### [2.2 ]{.ltx_tag .ltx_tag_subsection}Adversarial Defenses {#adversarial-defenses .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS2.p1 .ltx_para}
+To mitigate the threat of adversarial examples, various defense methods
+have been proposed for the past few years. Generally, existing defense
+techniques can fall into two categories: adversarial
+training [madry2018towards](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib41){.ltx_ref}
+;
+[tramer2018ensemble](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib42){.ltx_ref}
+;
+[xie2019feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib43){.ltx_ref}
+;
+[zhang2022adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib44){.ltx_ref}
+and input
+pre-process [guo2018countering](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib45){.ltx_ref}
+;
+[jia2019comdefend](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib46){.ltx_ref}
+;
+[naseer2020a](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib47){.ltx_ref}
+. The former gains immunity to attacks by leveraging adversarial
+examples during the training phase. For example, Tram$\grave{e}$r [et
+al.]{#S2.SS2.p1.1.1 .ltx_text
+.ltx_font_italic} [tramer2018ensemble](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib42){.ltx_ref}
+improve the black-box robustness by considering adversarial examples
+generated by other irrelevant models. Xie [et al.]{#S2.SS2.p1.1.2
+.ltx_text
+.ltx_font_italic} [xie2019feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib43){.ltx_ref}
+introduce feature denoising modules and train them on adversarial
+examples to build white-box robust models. Although adversarial training
+is usually the most robust strategy, it suffers from expensive training
+costs. To overcome this limitation, the input pre-process branch is
+designed to cure the infection of adversarial examples before feeding to
+DNNs. For example, Guo [et al.]{#S2.SS2.p1.1.3 .ltx_text
+.ltx_font_italic} [guo2018countering](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib45){.ltx_ref}
+introduce several input transformation techniques (e.g., JPEG
+compression [guo2018countering](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib45){.ltx_ref}
+) to recover from the adversarial perturbations. Xie [et
+al.]{#S2.SS2.p1.1.4 .ltx_text
+.ltx_font_italic} [xie2018mitigating](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib48){.ltx_ref}
+propose R&P which mitigates the adversarial influence through random
+resizing and padding. Liao [et al.]{#S2.SS2.p1.1.5 .ltx_text
+.ltx_font_italic} [liao2018defense](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib49){.ltx_ref}
+come up with a high-level representation guided denoiser (HGD) to reduce
+the effect of adversarial perturbations. Jia [et al.]{#S2.SS2.p1.1.6
+.ltx_text
+.ltx_font_italic} [jia2019comdefend](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib46){.ltx_ref}
+propose an end-to-end image compression model called ComDefend against
+adversarial examples. Naseer [et al.]{#S2.SS2.p1.1.7 .ltx_text
+.ltx_font_italic} [naseer2020a](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib47){.ltx_ref}
+train a neural representation purifier model (NRP) that cleans
+adversarial perturbation based on the automatically derived supervision.
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section .ltx_centering}
+## [3 ]{.ltx_tag .ltx_tag_section}Methodology {#methodology .ltx_title .ltx_title_section}
+
+::: {#S3.SS1 .section .ltx_subsection}
+### [3.1 ]{.ltx_tag .ltx_tag_subsection}Problem Formulation {#problem-formulation .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS1.p1 .ltx_para}
+Let $\mathbf{x}$ be a clean image with true label $y$ and
+$\mathcal{F}_{\theta}\operatorname{}{( \cdot )}$ denote the deep
+learning classifier with parameters $\theta$. Formally, unrestricted
+attacks aim to craft human-imperceptible adversarial perturbations (may
+be very large in RGB color space) for $\mathbf{x}$ so that the resulting
+adversarial examples ${\mathbf{x}}^{\prime}$ can induce
+$\mathcal{F}_{\theta}\operatorname{}{( \cdot )}$ to misclassify:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\mathcal{F}_{\theta}\operatorname{}{({\mathbf{x}}^{\prime})}} \neq {y,s}}.t.{{\mathbf{x}}^{\prime}\operatorname{}{{is}{{natural}.}}}$$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+In this paper, we focus on a more challenging black-box scenario
+(compared to the white-box scenario), where the target model's
+information (e.g., parameters and structure) is inaccessible. Therefore,
+adversarial examples can only be crafted via the accessible substitute
+model $\mathcal{F}_{\phi}\operatorname{}{( \cdot )}$ and rely upon their
+transferability to fool target models.
+:::
+
+<figure id="S3.F1" class="ltx_figure">
+<img src="./ncf_files/x1.png" id="S3.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="415" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span
+id="S3.F1.24.1" class="ltx_text ltx_font_bold">The simplified pipeline
+of NCF</span> (optimizing one image variant without initialization
+reset). For the input image <span
+class="math inline"><strong>x</strong></span>, we first obtain its mask
+by a segmentation model (Segm). Then we randomly assign a realistic
+color distribution <span class="math inline"><strong>c</strong></span>
+for each class via our color distribution library <span
+class="math inline">ℂ</span> and fuse them into a target <span
+class="math inline"><strong>H</strong></span> based on the proportion of
+corresponding area <span class="math inline"><em>w</em></span> in the
+image. Here <span
+class="math inline"><strong>x</strong><sub><em>H</em></sub></span> is an
+image (without spatial information) directly converted by <span
+class="math inline"><strong>H</strong></span> so that we can adopt
+Monge-Kantorovitch (MK) solution to obtain the transfer matrix <span
+class="math inline"><strong>T</strong></span>. With it and Eq. <a
+href="https://ar5iv.labs.arxiv.org/html/2210.02041#S3.E4"
+class="ltx_ref"
+title="4 ‣ 3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"><span
+class="ltx_text ltx_ref_tag">4</span></a>, we can get the color mapping
+image variant <span
+class="math inline"><strong>x</strong><sub><strong>H</strong></sub><sup>′</sup></span>.
+Finally, we fine-tune <span
+class="math inline"><strong>T</strong></span> (i.e., neighborhood
+search) according to the loss <span
+class="math inline">ℒ<sub><em>a</em> <em>d</em> <em>v</em></sub></span>
+so that more threatening adversarial examples can be
+mapped.</figcaption>
+</figure>
+:::
+
+::: {#S3.SS2 .section .ltx_subsection}
+### [3.2 ]{.ltx_tag .ltx_tag_subsection}Color Distribution Library {#color-distribution-library .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS2.p1 .ltx_para}
+Existing unrestricted color attacks tend to sacrifice their flexibility
+so that they can generate human-imperceptible adversarial examples. For
+example,
+ReColorAdv [laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+requires constraining the perturbation to a relatively small range,
+which cannot take full advantage of the "unrestricted" setting;
+cAdv [bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+enforces the color belonging to the low-entropy cluster to remain
+unchanged, which inevitably reduces the attack space;
+ColorFool [shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+manually splits an image into two parts and adds controlled noises on
+the human-sensitive part, which largely depends on the authors'
+intuition (but it varies from person to person).
+:::
+
+::: {#S3.SS2.p2 .ltx_para}
+To remedy the above limitation, we borrow the idea
+of [afifi2019image](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib50){.ltx_ref}
+to construct a "distribution of color distributions" (DoD) for different
+semantic classes based on the
+ADE20K [zhou2017scene](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib35){.ltx_ref}
+dataset. Specifically, for each class, DoD provides 20 different
+dominant distribution sets (represented by the color distributions),
+which are obtained by a hierarchical clustering based on color
+palettes[^1^[[^1^[1]{.ltx_tag .ltx_tag_note}Color palette is a
+simplified color distribution composed of object's primary colors. It is
+used to reduce the computation cost of
+clustering.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote1 .ltx_note
+.ltx_role_footnote} of corresponding segmentation class in the dataset.
+:::
+
+::: {#S3.SS2.p3 .ltx_para}
+Since the color distributions in each distribution set are similar and
+averaging all color distributions of a specific distribution set may not
+yield a natural representation, we randomly select a color distribution
+to represent the overall color characteristics for simplicity.
+Therefore, for a semantic class $\overset{\sim}{y}$, its realistic color
+distribution space can be expressed as:
+
+  -- --------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\mathbb{C}}_{\overset{\sim}{y}} = {\{{\mathbf{c}}_{\overset{\sim}{y}}^{m}\}}_{m = 1}^{20}},$$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where ${\mathbf{c}}_{\overset{\sim}{\mathbf{y}}}^{\mathbf{m}}$ is a
+randomly sampled distribution from the $m$-th set, and our color
+distribution library $\mathbb{C}$ can be denoted as:
+
+  -- -------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\mathbb{C}} = {{\mathbb{C}}_{1} \cup {\mathbb{C}}_{2} \cup \ldots \cup {\mathbb{C}}_{M}}},$$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $M$ denotes the total number of semantic classes contained in our
+library (see Appendix [[A]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A1 "Appendix A Color Distribution Library ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+for the pipeline of building color distribution library). In the
+following, we adopt this color distribution library to ensure the colors
+of adversarial examples are natural and coordinated, thus making our
+attack more flexible.
+:::
+:::
+
+::: {#S3.SS3 .section .ltx_subsection}
+### [3.3 ]{.ltx_tag .ltx_tag_subsection}Natural Color Fool {#natural-color-fool .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS3.p1 .ltx_para}
+To generate natural adversarial examples, precisely controlling the
+color perception is necessary. In this paper, we craft adversarial
+perturbations in CIELab color space where the perception is more uniform
+than RGB color space. The framework of our proposed [Natural Color Fool
+(NCF)]{#S3.SS3.p1.11.1 .ltx_text .ltx_font_bold} is illustrated in
+Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.F1 "Figure 1 ‣ 3.1 Problem Formulation ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+(refer to Appendix [[B]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A2 "Appendix B Algorithm ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+for Algorithm of NCF). Formally, for a given image $\mathbf{x}$, we
+first obtain a semantic mask through a semantic segmentation model.
+Then, for each semantic class $\overset{\sim}{y}$ in $\mathbf{x}$, we
+randomly select a color distribution
+${\mathbf{c}}_{\overset{\sim}{\mathbf{y}}}^{\mathbf{i}}$ from
+${\mathbb{C}}_{\overset{\sim}{y}}$ in the color distribution library.
+After that, we fuse the color distributions of all semantic classes
+based on the proportion of images occupied by each class (e.g.,
+$w_{c\operatorname{}a\operatorname{}r}$,
+$w_{m\operatorname{}o\operatorname{}u}$ in Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.F1 "Figure 1 ‣ 3.1 Problem Formulation ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}),
+thus generating a target color distribution $\mathbf{H}$. With it, we
+can use the following Eq. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.E4 "4 ‣ 3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+to generate a target image variant ${\mathbf{x}}_{\mathbf{H}}^{\prime}$
+(refer to Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.F1 "Figure 1 ‣ 3.1 Problem Formulation ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref})
+which approximately replaces the color distribution of each semantic
+class of $\mathbf{x}$ with corresponding one in target
+$\mathbf{H}$ [pitie2007the](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib36){.ltx_ref}
+:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\mathbf{x}}_{\mathbf{H}}^{\prime} = {{{\mathbf{T}}\operatorname{}{({{\mathbf{x}} - {\mathbf{μ}}_{\mathbf{x}}})}} + {\mathbf{μ}}_{{\mathbf{x}}_{\mathbf{H}}}}},$$      [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $${{{\mathbf{T}}\operatorname{}\mathbf{\Sigma}_{\mathbf{x}}\operatorname{}{\mathbf{T}}^{\top}} = \mathbf{\Sigma}_{{\mathbf{x}}_{\mathbf{H}}}},$$                          [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where ${\mathbf{T}} \in {\mathbb{R}}^{3 \times 3}$ is the transfer
+matrix, ${\mathbf{x}}_{\mathbf{H}}$ is an image reconstructed by
+$\mathbf{H}$ but without spatial information[^2^[[^2^[2]{.ltx_tag
+.ltx_tag_note}${\mathbf{x}}_{\mathbf{H}}$ is used to calculate the
+covariance matrix. Please note that calculation result is the same no
+matter how we reconstruct
+it.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote2 .ltx_note
+.ltx_role_footnote} (see Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.F1 "Figure 1 ‣ 3.1 Problem Formulation ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}),
+and
+${\mathbf{μ}}_{\mathbf{x}},{{\mathbf{μ}}_{{\mathbf{x}}_{\mathbf{H}}}\mspace{7mu}{({\in {\mathbb{R}}^{3}})}},\mathbf{\Sigma}_{\mathbf{x}},{\mathbf{\Sigma}_{{\mathbf{x}}_{\mathbf{H}}}\mspace{7mu}{({\in {\mathbb{R}}^{3 \times 3}})}}$
+are channel means of $\mathbf{x}$, channel means of
+${\mathbf{x}}_{\mathbf{H}}$, the covariance matrix of $\mathbf{x}$, and
+the covariance matrix of ${\mathbf{x}}_{\mathbf{H}}$, respectively.
+:::
+
+::: {#S3.SS3.p2 .ltx_para}
+Formally, there are numerous
+solutions [reinhard2002photo](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib51){.ltx_ref}
+;
+[abadpour2004fast](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib52){.ltx_ref}
+;
+[kotera2005a](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib53){.ltx_ref}
+;
+[pitie2007automated](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib54){.ltx_ref}
+for $\mathbf{T}$. However, most of them may not obtain an intended color
+mapping, i.e., only color proportions are expected. To tackle this
+issue, we follow Piti$\acute{e}$ [et al.]{#S3.SS3.p2.3.1 .ltx_text
+.ltx_font_italic} [pitie2007the](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib36){.ltx_ref}
+and convert color mapping into a Monge--Kantorovich transportation
+problem, thus getting the solution for $\mathbf{T}$:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{\mathbf{T}} = {\mathbf{\Sigma}_{\mathbf{x}}^{- {\mathbf{1}/\mathbf{2}}}\operatorname{}\left( {\mathbf{\Sigma}_{\mathbf{x}}^{\mathbf{1}/\mathbf{2}}\operatorname{}\mathbf{\Sigma}_{{\mathbf{x}}_{\mathbf{H}}}\operatorname{}\mathbf{\Sigma}_{\mathbf{x}}^{\mathbf{1}/\mathbf{2}}} \right)^{1/2}\operatorname{}\mathbf{\Sigma}_{\mathbf{x}}^{- {\mathbf{1}/\mathbf{2}}}}}.$$      [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#S3.SS3.p3 .ltx_para}
+Intuitively, relying solely on randomly picking color distribution may
+limit the attack success rate. Since our color distribution library
+contains a wide variety of color combinations and we have accessible
+substitute models, there is no reason not to take advantage of them.
+Thus, we utilize the substitute model
+$\mathcal{F}_{\phi}\operatorname{}{( \cdot )}$ to select a most
+adversarial distribution from $\eta$ different color distributions
+sampled from our color distribution library:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathbf{H}}^{*} = {\underset{{\mathbf{H}}\in{\mathbb{H}}}{\arg ⁡\max}\operatorname{}\mathcal{L}_{a\operatorname{}d\operatorname{}v}\operatorname{}{({\mathcal{F}_{\phi}\operatorname{}{({\mathbf{x}}_{\mathbf{H}}^{\prime})}},y)}}$$      [(7)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $\mathbb{H}$ is the set containing $\eta$ different color
+distributions and $\mathcal{L}_{a\operatorname{}d\operatorname{}v}$ is
+the C&W
+loss [carlini2017towards](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib18){.ltx_ref}
+:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${{\mathcal{L}_{a\operatorname{}d\operatorname{}v}\operatorname{}{({\mathbf{z}},y)}} = {{\max{\{{{\mathbf{z}}_{j}:{j \neq y}}\}}} - {\mathbf{z}}_{y}}},$$      [(8)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+where ${\mathbf{z}}_{j}$ denotes the logit concerning the $j$-th class.
+To further boost our attack, we propose two techniques: [neighborhood
+search]{#S3.SS3.p3.8.1 .ltx_text .ltx_font_bold} and [initialization
+reset]{#S3.SS3.p3.8.2 .ltx_text .ltx_font_bold}. Specifically, the
+former aims to slightly adjust $\mathbf{T}$ (derived from
+Eq. [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.E6 "6 ‣ 3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref})
+to improve the attack success rate while ensuring a natural mapping
+result (see the comparison of adversarial examples with or without
+adopting neighborhood search in Appendix [[E]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A5 "Appendix E Neighborhood Search Impact on Human Perception ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}).
+Thus, the neighborhood search can be formulated as the following
+optimization problem:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{{\underset{{\mathbf{T}}^{\prime}}{\arg ⁡\max}\operatorname{}\mathcal{L}_{a\operatorname{}d\operatorname{}v}\operatorname{}{({\mathcal{F}_{\phi}\operatorname{}{({{{\mathbf{T}}^{\prime}\operatorname{}{({{\mathbf{x}} - {\mathbf{μ}}_{\mathbf{x}}})}} + {\mathbf{μ}}_{{\mathbf{x}}_{{\mathbf{H}}^{*}}}})}},y)}}\mspace{21mu} s}.t.{{\|{{\mathbf{T}} - {\mathbf{T}}^{\prime}}\|}_{\infty} \leq \epsilon}},$$      [(9)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $\epsilon$ denotes the maximal perturbation size for $\mathbf{T}$.
+In our paper, we adopt
+MI-FGSM [dong2018boosting](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib21){.ltx_ref}
+with $N$ iterations to optimize Eq. [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.E9 "9 ‣ 3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+Nonetheless, an adversarial transfer matrix ${\mathbf{T}}^{\prime}$
+found in the neighborhood of a specific $\mathbf{T}$ may not be
+effective, since the search space is indeed limited. To alleviate this
+issue, the initialization reset repeats the operation of selecting one
+from $\eta$ randomly sampled color distributions (i.e.,
+Eq. [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.E7 "7 ‣ 3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref})
+$K$ times, thus obtaining $K$ ideal initial color distributions for the
+neighborhood search. Then we choose the best one among them:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${i^{\prime} = {\underset{i\in 1,2,..,K}{\arg ⁡\max}\operatorname{}\mathcal{L}_{a\operatorname{}d\operatorname{}v}\operatorname{}{({\mathcal{F}_{\phi}\operatorname{}{({{{\mathbf{T}}_{\mathbf{i}}^{\prime}\operatorname{}{({{\mathbf{x}} - {\mathbf{μ}}_{\mathbf{x}}})}} + {\mathbf{μ}}_{{\mathbf{x}}_{{\mathbf{H}}_{\mathbf{i}}^{*}}}})}},y)}}},$$      [(10)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+
+where ${\mathbf{H}}_{\mathbf{i}}^{*}$ and
+${\mathbf{T}}_{\mathbf{i}}^{\prime}$ denote the resulting color
+distribution and corresponding transfer matrix of the $i$-th reset.
+Consequently, resulting adversarial examples can be obtained by:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${{\mathbf{x}}^{\prime} = {{{\mathbf{T}}_{{\mathbf{i}}^{\prime}}^{\prime}\operatorname{}{({{\mathbf{x}} - {\mathbf{μ}}_{\mathbf{x}}})}} + {\mathbf{μ}}_{{\mathbf{x}}_{{\mathbf{H}}_{{\mathbf{i}}^{\prime}}^{*}}}}}.$$      [(11)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+:::
+
+::: {#S3.SS3.p4 .ltx_para}
+In Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.F2 "Figure 2 ‣ 3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+we show resulting adversarial examples generated by our proposed method
+and recent works, i.e.,
+cAdv [bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+,
+ColorFool [shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+, and
+ACE [zhao2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib31){.ltx_ref}
+(see Appendix [[G]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A7 "Appendix G Visualization of Adversarial Examples ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+for more comparisons). Notably, despite our NCF implements significant
+modifications to the color distribution of the original images, the
+adversarial examples still look very natural.
+:::
+
+<figure id="S3.F2" class="ltx_figure">
+<img src="./ncf_files/x2.png" id="S3.F2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="350" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 2:
+</span>Adversarial examples generated by different unrestricted color
+attacks and ours.</figcaption>
+</figure>
+:::
+:::
+
+::: {#S4 .section .ltx_section .ltx_centering}
+## [4 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para}
+In this section, we first introduce the setup for our experiments in
+Section [[4.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS1 "4.1 Setup ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+Then we report attack success rates on normally trained and defense
+models in Section [[4.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS2 "4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+After that, we compare the image quality of adversarial examples in
+Section [[4.3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS3 "4.3 Image Quality ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+Finally, we conduct a series of ablation studies in
+Section [[4.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS4 "4.4 Ablation Studies ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+To better analyze the adversarial example, we also provide an
+illustration of attention
+shift [selvaraju2017gradcam](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib55){.ltx_ref}
+in Appendix [[F]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A6 "Appendix F Visualization of Attention ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Setup {#setup .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para}
+[Dataset.]{#S4.SS1.p1.1.1 .ltx_text .ltx_font_bold} We conduct our
+experiments on the ImageNet-compatible Dataset[^3^[[^3^[3]{.ltx_tag
+.ltx_tag_note}[https://github.com/cleverhans-lab/cleverhans/tree/master/cleverhans_v3.1.0/examples/nips17_adversarial_competition/dataset](https://github.com/cleverhans-lab/cleverhans/tree/master/cleverhans_v3.1.0/examples/nips17_adversarial_competition/dataset){.ltx_ref
+.ltx_url .ltx_font_typewriter
+target="_blank"}.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote3
+.ltx_note .ltx_role_footnote}. This dataset is comprised of 1,000 images
+and is widely used in recent transfer-based
+attacks [dong2019evading](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib26){.ltx_ref}
+;
+[xie2019improving](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib22){.ltx_ref}
+;
+[gao2020patch](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib23){.ltx_ref}
+;
+[cheng2021PAA](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib56){.ltx_ref}
+;
+[wang2021feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib57){.ltx_ref}
+;
+[zhang2021staircase](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib58){.ltx_ref}
+;
+[Long2022ssa](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib59){.ltx_ref}
+.
+:::
+
+::: {#S4.SS1.p2 .ltx_para}
+[Models.]{#S4.SS1.p2.5.1 .ltx_text .ltx_font_bold} In this paper, we
+evaluate the vulnerability of various convolutional neural networks
+(CNNs) and vision transformers (ViTs). For CNNs, we consider both
+normally trained models and defense models. Normally trained models
+include
+VGG-19 [simonyan2015very](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib60){.ltx_ref}
+, ResNet-18 (Res-18), ResNet-50
+(Res-50) [he2016deep](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib2){.ltx_ref}
+, Inception-v3
+(Inc-v3) [szegedy2016rethinking](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib61){.ltx_ref}
+, DenseNet-121
+(Dense-121) [huang2017densely](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib13){.ltx_ref}
+, and MobileNet-v2
+(Mobile-v2) [sandler2018mobilenetv2](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib62){.ltx_ref}
+. Defense methods contain
+JPEG [guo2018countering](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib45){.ltx_ref}
+, Gray (gray-scale conversion),
+HGD [liao2018defense](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib49){.ltx_ref}
+,
+R&P [xie2018mitigating](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib48){.ltx_ref}
+,
+ComDefend [jia2019comdefend](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib46){.ltx_ref}
+,
+NRP [naseer2020a](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib47){.ltx_ref}
+,[^4^[[^4^[4]{.ltx_tag .ltx_tag_note}For HGD and R&P, we adopt the
+official models used in corresponding papers. For JPEG, Gray, ComDefend,
+and NRP, we adopt VGG-19 as the target
+model.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote4 .ltx_note
+.ltx_role_footnote} Inc-${v3}_{ens3}$,
+IncRes-${v2}_{ens}$ [tramer2018ensemble](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib42){.ltx_ref}
+, Res152$_{B}$, Res152$_{D}$ and
+ResNeXt$_{DA}$ [xie2019feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib43){.ltx_ref}
+. For ViT, we consider normally trained ViT-S/16
+(ViT-S) [touvron2021training](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib63){.ltx_ref}
+, XCiT-N12/16
+(XCiT-N12) [ali2021xcit](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib64){.ltx_ref}
+, and
+DeiT-S [touvron2021training](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib63){.ltx_ref}
+.
+:::
+
+::: {#S4.SS1.p3 .ltx_para}
+[Implementation Details.]{#S4.SS1.p3.8.1 .ltx_text .ltx_font_bold} In
+all experiments, the semantic segmentation model is
+Swin-T [liu2021swin](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib65){.ltx_ref}
+(the influence of different segmentation models on the results can be
+found in Appendix [[H]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A8 "Appendix H The Influence of Segmentation Models ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref})
+and the color distribution library size $M = 150$, the number of random
+searches $\eta = 50$, the iteration of neighborhood search $N = 15$, the
+maximum perturbation of transfer matrix $\epsilon = 0.2$, the step size
+$\alpha = {\epsilon/N} \approx 0.013$, the momentum $u = 0.6$ (for
+MI-FGSM), and the reset number $K = 10$ (see Appendix [[C]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A3 "Appendix C Initialization Reset ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+for ablation of $K$). We compare our proposed method with Semantic
+Adversarial Examples
+(SAE) [hosseini2018semantic](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib28){.ltx_ref}
+,
+ReColorAdv [laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+,
+cAdv [bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+,
+ColorFool [shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+, and
+ACE [zhao2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib31){.ltx_ref}
+. The parameters of each competitor follow the corresponding default
+setting. Our experiments are run on an NVIDIA TITAN Xp GPU with 12GB of
+memory.
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Transferability Comparison {#transferability-comparison .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.SSS1 .section .ltx_subsubsection}
+#### [4.2.1 ]{.ltx_tag .ltx_tag_subsubsection}Results on Normally Trained Models {#results-on-normally-trained-models .ltx_title .ltx_title_subsubsection}
+
+::: {#S4.SS2.SSS1.p1 .ltx_para}
+In this section, we compare our proposed method with
+SA [hosseini2018semantic](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib28){.ltx_ref}
+,
+ReColorAdv [laidlaw2019functional](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib30){.ltx_ref}
+,
+cAdv [bhattad2020unrestricted](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib32){.ltx_ref}
+,
+ColorFool [shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+and
+ACE [zhao2020adversarial](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib31){.ltx_ref}
+on a variety of normally trained CNNs and Vision Transformers (ViTs).
+Adversarial examples are crafted via Res-18, VGG-19, Mobile-V2, and
+Inc-V3, respectively. For the results of ensemble
+attack [dong2018boosting](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib21){.ltx_ref}
+and using ViTs as the substitute model, please refer to
+Appendix [[I]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A9 "Appendix I The Effect of Ensemble Attack ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+and [[D]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A4 "Appendix D Transferability on ViTs ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+:::
+
+::: {#S4.SS2.SSS1.p2 .ltx_para}
+:::
+
+<figcaption><span class="ltx_tag ltx_tag_table">Table 1: </span><span
+id="S4.T1.2.1" class="ltx_text ltx_font_bold">Transferability comparison
+on normally trained CNNs and ViTs</span>. We report attack success rates
+(%) of each method and the leftmost model column denotes the substitute
+model (“*” means white-box attack results).</figcaption>
+</figure>
+
+<figure id="S4.T2" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 2: </span><span
+id="S4.T2.7.1" class="ltx_text ltx_font_bold">Transferability comparison
+on defense CNNs</span>. We report attack success rates (%) of each
+method and the substitute model is Inc-v3.</figcaption>
+</figure>
+:::
+
+::: {#S4.SS2.SSS2 .section .ltx_subsubsection}
+#### [4.2.2 ]{.ltx_tag .ltx_tag_subsubsection}Results on Defense Models {#results-on-defense-models .ltx_title .ltx_title_subsubsection}
+
+::: {#S4.SS2.SSS2.p1 .ltx_para}
+Threats posed by $L_{p}$-norm adversarial
+attacks [goodfellow2015explaining](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib7){.ltx_ref}
+;
+[dong2018boosting](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib21){.ltx_ref}
+;
+[gao2020patch](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib23){.ltx_ref}
+;
+[wang2021feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib57){.ltx_ref}
+promote the emergence of adversarial
+defenses [madry2018towards](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib41){.ltx_ref}
+;
+[xie2019feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib43){.ltx_ref}
+;
+[naseer2020a](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib47){.ltx_ref}
+. However, whether these defense mechanisms are robust against
+unrestricted attacks has not been extensively explored. Therefore, in
+this section, we consider both input pre-process defenses (i.e.,
+JPEG [guo2018countering](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib45){.ltx_ref}
+, Gray,
+R&P [xie2018mitigating](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib48){.ltx_ref}
+,
+HGD [liao2018defense](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib49){.ltx_ref}
+,
+ComDefend [jia2019comdefend](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib46){.ltx_ref}
+, and
+NRP [naseer2020a](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib47){.ltx_ref}
+) and adversarially trained models (i.e., Inc-v3$_{ens3}$,
+IncRes-v2$_{ens}$,
+Res$_{B}$ [tramer2018ensemble](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib42){.ltx_ref}
+, Res$_{D}$, and
+ResNext$_{DA}$ [xie2019feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib43){.ltx_ref}
+) to fully investigate the performance of our method.
+:::
+
+::: {#S4.SS2.SSS2.p2 .ltx_para}
+The black-box success rates of unrestricted attacks are reported in
+Table [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.T2 "Table 2 ‣ 4.2.1 Results on Normally Trained Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+Similar to Table [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.T1 "Table 1 ‣ 4.2.1 Results on Normally Trained Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+our approach still consistently outperforms existing advanced methods by
+a large margin. On average, our proposed NCF is capable of making
+{#S4.SS2.SSS2.p2.1.1 .ltx_text .ltx_font_bold} adversarial
+examples fool these defenses, while SA, ReColorAdv, cAdv, ColorFool, and
+ACE only obtain success rates of 
+respectively. Another interesting observation from Table [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.T2 "Table 2 ‣ 4.2.1 Results on Normally Trained Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+is that advanced defense algorithms are not necessarily effective when
+faced with unrestricted adversarial examples. For example, even
+white-box robust feature denoising
+models [xie2019feature](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib43){.ltx_ref}
+are vulnerable, e.g., [60.1%]{#S4.SS2.SSS2.p2.1.2 .ltx_text
+.ltx_font_bold} adversarial examples can fool ResNeXt$_{DA}$. We
+speculate the main reason is that the defense mechanism is intermediate
+feature denoising, while unrestricted color attacks mainly manipulate
+the color and do not generate significant high-frequency noise.
+:::
+
+::: {#S4.SS2.SSS2.p3 .ltx_para}
+In addition, we notice that many input pre-process defenses with target
+model VGG-19 cannot defend against our proposed NCF, but instead boost
+the transferability of adversarial examples (compare to the VGG-19
+results of Table [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.T1 "Table 1 ‣ 4.2.1 Results on Normally Trained Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}).
+To better analyze this abnormal phenomenon, we visualize the purified
+images generated by JPEG, ComDefend, and NRP in Figure [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.F3 "Figure 3 ‣ 4.2.2 Results on Defense Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+Interestingly, we observe that all defenses have little effect on our
+unrestricted color perturbations. It is mainly because our adversarial
+examples are crafted using realistic colors as a guide and, therefore,
+can circumvent these defenses designed for common perturbation
+characteristics. Besides, we observe that JPEG and NRP suppress key
+features of "Great egret", and ComDefend generates many irrelevant
+repeating patterns. As discussed
+in [zhang2022practical](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib66){.ltx_ref}
+, these side effects of defense methods can reduce the confidence of the
+model concerning the true class, resulting in our adversarial examples
+instead of boosting the transferability after being processed by these
+approaches. This result also reminds us that the robustness evaluation
+of defenses needs to be more comprehensive.
+:::
+
+<figure id="S4.F3" class="ltx_figure">
+<img src="./ncf_files/x3.png" id="S4.F3.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="186" alt="Refer to caption" />
+<br />
+
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 3: </span><span
+id="S4.F3.2.1" class="ltx_text ltx_font_bold">Visualization for the
+adversarial example and purified images</span>. This result shows that
+JPEG, ComDefend, and NRP cannot remove our unrestricted perturbation,
+but instead may distort key features (e.g., feather) of the object (the
+label is “Great egret”). Zoom in for better comparison.</figcaption>
+</figure>
+:::
+:::
+
+::: {#S4.SS3 .section .ltx_subsection}
+### [4.3 ]{.ltx_tag .ltx_tag_subsection}Image Quality {#image-quality .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS3.p1 .ltx_para}
+Following
+ColorFool [shamsabadi2020colorfool](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib29){.ltx_ref}
+, we quantitatively evaluate image quality by a non-reference perceptual
+image quality measure called neural image assessment
+(NIMA) [talebi2018nima](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib37){.ltx_ref}
+which is highly correlated with human perception. In our paper, NIMA is
+based on the architecture of
+MobileNet [howard2017mobilenets](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib67){.ltx_ref}
+and is a composite of two models: one trains on
+AVA [murray2012ava](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib68){.ltx_ref}
+for image technical assessment and another trains on
+TID2013 [ponomarenko2013color](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib69){.ltx_ref}
+for image aesthetics assessment. As reported in Table [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.T3 "Table 3 ‣ 4.4 Ablation Studies ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+image quality assessment results of our NCF are on par with those of
+state-of-the-art competitors. For NIMA (technical), both ACE and our NCF
+obtain a high score of over [4.939]{#S4.SS3.p1.1.1 .ltx_text
+.ltx_font_bold}, which is just [0.094]{#S4.SS3.p1.1.2 .ltx_text
+.ltx_font_bold} lower than clean images. The case of NIMA (aesthetic) is
+similar, where aesthetic scores of our adversarial examples and clean
+images differ by only [0.097]{#S4.SS3.p1.1.3 .ltx_text .ltx_font_bold},
+indicating that our NCF does not destroy the perceptual quality of
+images.
+:::
+:::
+
+::: {#S4.SS4 .section .ltx_subsection}
+### [4.4 ]{.ltx_tag .ltx_tag_subsection}Ablation Studies {#ablation-studies .ltx_title .ltx_title_subsection}
+
+<figure id="S4.T3" class="ltx_table ltx_align_floatright">
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 3: </span><span
+id="S4.T3.4.1" class="ltx_text ltx_font_bold">Image quality
+comparison.</span></figcaption>
+</figure>
+
+::: {#S4.SS4.p1 .ltx_para}
+[About neighborhood search and initialization reset.]{#S4.SS4.p1.1.1
+.ltx_text .ltx_font_bold} In this section, we investigate the effect of
+neighborhood search and initialization reset. Specifically, we use
+Inc-v3 to craft adversarial examples, and then evaluate the
+transferability towards Res-18, VGG-19, Mobile-v2, Dense-121, Res-50,
+ViT-S, XCiT-N12, and DeiT-S. The results are shown in
+Table [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.T4 "Table 4 ‣ 4.4 Ablation Studies ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+In terms of the white-box attack, NCF outperforms NCF-NS (NCF without
+NS), NCF-IR (NCF without IR), and NCF-IR-NS (NCF without IR and NS) by
+[17.7%]{#S4.SS4.p1.1.2 .ltx_text .ltx_font_bold},  respectively. On the black-box attacks, neighborhood
+search and initialization reset bring an average performance improvement
+of  and
+[. When both neighborhood
+search and initialization reset techniques are used, the transferability
+towards black-box models can be improved by an average of
+[12.5%]{#S4.SS4.p1.1.7 .ltx_text .ltx_font_bold}. The significant
+performance gain confirms the effectiveness of neighborhood search and
+initialization reset. In addition, we notice that even if neither
+proposed technique is used, our method still surpasses state-of-the-art
+competitors, except for SAE. We attribute this phenomenon to the
+flexibility of our approach, which can naturally modify the whole image
+without restriction. Note that NCF-IR-NS does not mean selecting random
+colors to attack. The difference of them is discussed in
+Appendix [[J]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A10 "Appendix J Attack by Selecting Random Colors ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+:::
+
+<figure id="S4.T4" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 4: </span><span
+id="S4.T4.6.1" class="ltx_text ltx_font_bold">The effect of neighborhood
+search (NS) and initialization reset (IR).</span> Adversarial examples
+are crafted via Inc-v3 (“*” denotes white-box attack).</figcaption>
+</figure>
+
+::: {#S4.SS4.p2 .ltx_para}
+[About color distribution library size.]{#S4.SS4.p2.4.1 .ltx_text
+.ltx_font_bold} In this section, we investigate the influence of color
+distribution library size $M$ on attack success rates. Specifically, we
+tune $M$ from 0 to 150 with an interval of 15 and freeze other
+hyper-parameters, and adversarial examples are crafted via Inc-v3. Note
+that $M = 0$ means that our proposed library is not used, thus T is an
+identity matrix. The attack success rate is reported in
+Figure [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.F4 "Figure 4 ‣ 4.4 Ablation Studies ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+where the dashed line indicates the white-box attack success rate and
+solid lines refer to the black-box ones. It can be observed that the
+library size $M$ plays a key role
+:::
+
+<figure id="S4.F4" class="ltx_figure ltx_align_floatright">
+<img src="./ncf_files/number_classes.png" id="S4.F4.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="598"
+height="399" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 4: </span><span
+id="S4.F4.2.1" class="ltx_text ltx_font_bold">Attack success rates (%)
+w.r.t. the number of semantic classes <span
+class="math inline"><em>M</em></span></span>. The substitute model is
+Inc-v3.</figcaption>
+
+:::
+:::
+:::
+
+::: {#S5 .section .ltx_section .ltx_centering}
+## [5 ]{.ltx_tag .ltx_tag_section}Conclusion {#conclusion .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para}
+In this paper, we propose a black-box unrestricted color attack called
+Natural Color Fool (NCF). Different from existing works which either
+rely on intuition and objective metrics or use relatively small changes
+to yield natural results, our method instead exploits color distribution
+to craft human-imperceptible, flexible, and highly transferable
+adversarial examples. Extensive experiments and visualizations
+demonstrate the effectiveness of our NCF. Notably, our adversarial
+examples can easily evade current $L_{p}$ robust defense techniques.
+Furthermore, the transferability of our adversarial examples is even
+boosted after being processed by several input pre-process defenses. We
+hope our work can draw researchers' attention to unrestricted color
+attacks.
+:::
+
+::: {#S5.p2 .ltx_para}
+[Limitation.]{#S5.p2.1.1 .ltx_text .ltx_font_bold} In our paper, for
+each semantic class, we provide 20 different color distributions for
+choosing. Therefore, this library is discrete, which may be insufficient
+to model the whole color space. In the future, we will try to build a
+continuous color space to expand the spatial range and more accurately
+simulate the color range of objects.
+:::
+
+::: {#S5.p3 .ltx_para}
+[Negative Societal Impacts.]{#S5.p3.1.1 .ltx_text .ltx_font_bold}
+Adversarial examples crafted by our proposed unrestricted color attack
+look very natural but are with strong black-box transferability even
+towards defenses. Therefore, unscrupulous people may adopt our method to
+undermine real-world applications, which inevitably raises new concerns
+about AI safety.
+:::
+:::
+
+::: {#S6 .section .ltx_section .ltx_centering}
+## [6 ]{.ltx_tag .ltx_tag_section}Acknowledgments {#acknowledgments .ltx_title .ltx_title_section}
+
+::: {#S6.p1 .ltx_para}
+This study is supported by grants from National Key R&D Program of China
+(2022YFC2009903/2022YFC2009900), the National Natural Science Foundation
+of China (Grant No. 62122018, No. 62020106008, No. 61772116, No.
+61872064).
+:::
+:::
+
+::: {#bib .section .ltx_bibliography .ltx_centering}
+## References {#references .ltx_title .ltx_title_bibliography}
+
+-   [[(1)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Alex
+    Krizhevsky, Ilya Sutskever, and Geoffrey E. Hinton. ]{.ltx_bibblock}
+    [Imagenet classification with deep convolutional neural networks.
+    ]{.ltx_bibblock} [In [NIPS]{#bib.bib1.1.1 .ltx_text
+    .ltx_font_italic}, 2012. ]{.ltx_bibblock}]{#bib.bib1}
+-   [[(2)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Kaiming He,
+    Xiangyu Zhang, Shaoqing Ren, and Jian Sun. ]{.ltx_bibblock} [Deep
+    residual learning for image recognition. ]{.ltx_bibblock} [In
+    [CVPR]{#bib.bib2.1.1 .ltx_text .ltx_font_italic}, 2016.
+    ]{.ltx_bibblock}]{#bib.bib2}
+-   [[(3)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Brian MacNamee,
+    Padraig Cunningham, Stephen Byrne, and O. I. Corrigan.
+    ]{.ltx_bibblock} [The problem of bias in training data in regression
+    problems in medical decision support. ]{.ltx_bibblock} [[Artif.
+    Intell. Medicine]{#bib.bib3.1.1 .ltx_text .ltx_font_italic}, 2002.
+    ]{.ltx_bibblock}]{#bib.bib3}
+-   [[(4)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Jizong Peng,
+    Ping Wang, Christian Desrosiers, and Marco Pedersoli.
+    ]{.ltx_bibblock} [Self-paced contrastive learning for
+    semi-supervised medical image segmentation with meta-labels.
+    ]{.ltx_bibblock} [In [NeurIPS]{#bib.bib4.1.1 .ltx_text
+    .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib4}
+-   [[(5)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yuchi Tian,
+    Kexin Pei, Suman Jana, and Baishakhi Ray. ]{.ltx_bibblock}
+    [Deeptest: automated testing of deep-neural-network-driven
+    autonomous cars. ]{.ltx_bibblock} [In [ICSE]{#bib.bib5.1.1 .ltx_text
+    .ltx_font_italic}, 2018. ]{.ltx_bibblock}]{#bib.bib5}
+-   [[(6)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Christian
+    Szegedy, Wojciech Zaremba, Ilya Sutskever, Joan Bruna, Dumitru
+    Erhan, Ian J. Goodfellow, and Rob Fergus. ]{.ltx_bibblock}
+    [Intriguing properties of neural networks. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib6.1.1 .ltx_text .ltx_font_italic}, 2014.
+    ]{.ltx_bibblock}]{#bib.bib6}
+-   [[(7)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ian Goodfellow,
+    Jonathon Shlens, and Christian Szegedy. ]{.ltx_bibblock} [Explaining
+    and harnessing adversarial examples. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib7.1.1 .ltx_text .ltx_font_italic}, 2015.
+    ]{.ltx_bibblock}]{#bib.bib7}
+-   [[(8)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Muzammal
+    Naseer, Kanchana Ranasinghe, Salman H. Khan, Fahad Shahbaz Khan, and
+    Fatih Porikli. ]{.ltx_bibblock} [On improving adversarial
+    transferability of vision transformers. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib8.1.1 .ltx_text .ltx_font_italic}, 2021.
+    ]{.ltx_bibblock}]{#bib.bib8}
+-   [[(9)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Qilong Zhang,
+    Xiaodan Li, Yuefeng Chen, Jingkuan Song, Lianli Gao, Yuan He, and
+    Hui Xue. ]{.ltx_bibblock} [Beyond imagenet attack: Towards crafting
+    adversarial examples for black-box domains. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib9.1.1 .ltx_text .ltx_font_italic}, 2022.
+    ]{.ltx_bibblock}]{#bib.bib9}
+-   [[(10)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yongqiang
+    Chen, Han Yang, Yonggang Zhang, Kaili Ma, Tongliang Liu, Bo Han, and
+    James Cheng. ]{.ltx_bibblock} [Understanding and improving graph
+    injection attack by promoting unnoticeability. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib10.1.1 .ltx_text .ltx_font_italic}, 2022.
+    ]{.ltx_bibblock}]{#bib.bib10}
+-   [[(11)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yonggang
+    Zhang, Ya Li, Tongliang Liu, and Xinmei Tian. ]{.ltx_bibblock}
+    [Dual-path distillation: A unified framework to improve black-box
+    attacks. ]{.ltx_bibblock} [In [ICML]{#bib.bib11.1.1 .ltx_text
+    .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib11}
+-   [[(12)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yonggang
+    Zhang, Xinmei Tian, Ya Li, Xinchao Wang, and Dacheng Tao.
+    ]{.ltx_bibblock} [Principal component adversarial example.
+    ]{.ltx_bibblock} [[IEEE Trans. Image Process.]{#bib.bib12.1.1
+    .ltx_text .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib12}
+-   [[(13)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Gao Huang,
+    Zhuang Liu, Laurens van der Maaten, and Kilian Q. Weinberger.
+    ]{.ltx_bibblock} [Densely connected convolutional networks.
+    ]{.ltx_bibblock} [In [CVPR]{#bib.bib13.1.1 .ltx_text
+    .ltx_font_italic}, 2017. ]{.ltx_bibblock}]{#bib.bib13}
+-   [[(14)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Alexey
+    Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn,
+    Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias
+    Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszkoreit, and Neil
+    Houlsby. ]{.ltx_bibblock} [An image is worth 16x16 words:
+    Transformers for image recognition at scale. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib14.1.1 .ltx_text .ltx_font_italic}, 2021.
+    ]{.ltx_bibblock}]{#bib.bib14}
+-   [[(15)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Hugo Touvron,
+    Matthieu Cord, Alexandre Sablayrolles, Gabriel Synnaeve, and Hervé
+    Jégou. ]{.ltx_bibblock} [Going deeper with image transformers.
+    ]{.ltx_bibblock} [In [ICCV]{#bib.bib15.1.1 .ltx_text
+    .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib15}
+-   [[(16)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ji Zhang,
+    Jingkuan Song, Lianli Gao, Ye Liu, and Heng Tao Shen.
+    ]{.ltx_bibblock} [Progressive meta-learning with curriculum.
+    ]{.ltx_bibblock} [[IEEE Trans. Circuits Syst. Video
+    Technol.]{#bib.bib16.1.1 .ltx_text .ltx_font_italic}, 2022.
+    ]{.ltx_bibblock}]{#bib.bib16}
+-   [[(17)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Seyed-Mohsen
+    Moosavi-Dezfooli, Alhussein Fawzi, and Pascal Frossard.
+    ]{.ltx_bibblock} [Deepfool: A simple and accurate method to fool
+    deep neural networks. ]{.ltx_bibblock} [In [CVPR]{#bib.bib17.1.1
+    .ltx_text .ltx_font_italic}, 2016. ]{.ltx_bibblock}]{#bib.bib17}
+-   [[(18)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Nicholas
+    Carlini and David Wagner. ]{.ltx_bibblock} [Towards evaluating the
+    robustness of neural networks. ]{.ltx_bibblock} [In [IEEE
+    S&P]{#bib.bib18.1.1 .ltx_text .ltx_font_italic}, 2017.
+    ]{.ltx_bibblock}]{#bib.bib18}
+-   [[(19)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Zhengyu Zhao,
+    Zhuoran Liu, and Martha A. Larson. ]{.ltx_bibblock} [Towards large
+    yet imperceptible adversarial image perturbations with perceptual
+    color distance. ]{.ltx_bibblock} [In [CVPR]{#bib.bib19.1.1 .ltx_text
+    .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib19}
+-   [[(20)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ye Liu, Yaya
+    Cheng, Lianli Gao, Xianglong Liu, Qilong Zhang, and Jingkuan Song.
+    ]{.ltx_bibblock} [Practical evaluation of adversarial robustness via
+    adaptive auto attack. ]{.ltx_bibblock} [In [CVPR]{#bib.bib20.1.1
+    .ltx_text .ltx_font_italic}, 2022. ]{.ltx_bibblock}]{#bib.bib20}
+-   [[(21)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yinpeng Dong,
+    Fangzhou Liao, Tianyu Pang, Hang Su, Jun Zhu, Xiaolin Hu, and
+    Jianguo Li. ]{.ltx_bibblock} [Boosting adversarial attacks with
+    momentum. ]{.ltx_bibblock} [In [CVPR]{#bib.bib21.1.1 .ltx_text
+    .ltx_font_italic}, 2018. ]{.ltx_bibblock}]{#bib.bib21}
+-   [[(22)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Cihang Xie,
+    Zhishuai Zhang, Yuyin Zhou, Song Bai, Jianyu Wang, Zhou Ren, and
+    Alan L Yuille. ]{.ltx_bibblock} [Improving transferability of
+    adversarial examples with input diversity. ]{.ltx_bibblock} [In
+    [CVPR]{#bib.bib22.1.1 .ltx_text .ltx_font_italic}, 2019.
+    ]{.ltx_bibblock}]{#bib.bib22}
+-   [[(23)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Lianli Gao,
+    Qilong Zhang, Jingkuan Song, Xianglong Liu, and Heng Tao Shen.
+    ]{.ltx_bibblock} [Patch-wise attack for fooling deep neural network.
+    ]{.ltx_bibblock} [In [ECCV]{#bib.bib23.1.1 .ltx_text
+    .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib23}
+-   [[(24)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yaya Cheng,
+    Xiaosu Zhu, Qilong Zhang, Lianli Gao, and Jingkuan Song.
+    ]{.ltx_bibblock} [Fast gradient non-sign methods. ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2110.12734]{#bib.bib24.1.1 .ltx_text
+    .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib24}
+-   [[(25)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Muzammal
+    Naseer, Kanchana Ranasinghe, Salman Khan, Fahad Khan, and Fatih
+    Porikli. ]{.ltx_bibblock} [On improving adversarial transferability
+    of vision transformers. ]{.ltx_bibblock} [In [ICLR]{#bib.bib25.1.1
+    .ltx_text .ltx_font_italic}, 2022. ]{.ltx_bibblock}]{#bib.bib25}
+-   [[(26)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yinpeng Dong,
+    Tianyu Pang, Hang Su, and Jun Zhu. ]{.ltx_bibblock} [Evading
+    defenses to transferable adversarial examples by
+    translation-invariant attacks. ]{.ltx_bibblock} [In
+    [CVPR]{#bib.bib26.1.1 .ltx_text .ltx_font_italic}, 2019.
+    ]{.ltx_bibblock}]{#bib.bib26}
+-   [[(27)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Lianli Gao,
+    Qilong Zhang, Jingkuan Song, and Heng Tao Shen. ]{.ltx_bibblock}
+    [Patch-wise++ perturbation for adversarial targeted attacks.
+    ]{.ltx_bibblock} [[CoRR]{#bib.bib27.1.1 .ltx_text .ltx_font_italic},
+    abs/2012.15503, 2020. ]{.ltx_bibblock}]{#bib.bib27}
+-   [[(28)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Hossein
+    Hosseini and Radha Poovendran. ]{.ltx_bibblock} [Semantic
+    adversarial examples. ]{.ltx_bibblock} [In [CVPR
+    Workshops]{#bib.bib28.1.1 .ltx_text .ltx_font_italic}, 2018.
+    ]{.ltx_bibblock}]{#bib.bib28}
+-   [[(29)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ali Shahin
+    Shamsabadi, Ricardo Sánchez-Matilla, and Andrea Cavallaro.
+    ]{.ltx_bibblock} [Colorfool: Semantic adversarial colorization.
+    ]{.ltx_bibblock} [In [CVPR]{#bib.bib29.1.1 .ltx_text
+    .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib29}
+-   [[(30)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Cassidy
+    Laidlaw and Soheil Feizi. ]{.ltx_bibblock} [Functional adversarial
+    attacks. ]{.ltx_bibblock} [In [NeurIPS]{#bib.bib30.1.1 .ltx_text
+    .ltx_font_italic}, 2019. ]{.ltx_bibblock}]{#bib.bib30}
+-   [[(31)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Zhengyu Zhao,
+    Zhuoran Liu, and Martha A. Larson. ]{.ltx_bibblock} [Adversarial
+    color enhancement: Generating unrestricted adversarial images by
+    optimizing a color filter. ]{.ltx_bibblock} [In
+    [BMVC]{#bib.bib31.1.1 .ltx_text .ltx_font_italic}, 2020.
+    ]{.ltx_bibblock}]{#bib.bib31}
+-   [[(32)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Anand Bhattad,
+    Min Jin Chong, Kaizhao Liang, Bo Li, and David A. Forsyth.
+    ]{.ltx_bibblock} [Unrestricted adversarial examples via semantic
+    manipulation. ]{.ltx_bibblock} [In [ICLR]{#bib.bib32.1.1 .ltx_text
+    .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib32}
+-   [[(33)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ali Shahin
+    Shamsabadi, Changjae Oh, and Andrea Cavallaro. ]{.ltx_bibblock}
+    [Edgefool: an adversarial image enhancement filter. ]{.ltx_bibblock}
+    [In [ICASSP]{#bib.bib33.1.1 .ltx_text .ltx_font_italic}, 2020.
+    ]{.ltx_bibblock}]{#bib.bib33}
+-   [[(34)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yang Song, Rui
+    Shu, Nate Kushman, and Stefano Ermon. ]{.ltx_bibblock} [Constructing
+    unrestricted adversarial examples with generative models.
+    ]{.ltx_bibblock} [In [NeurIPS]{#bib.bib34.1.1 .ltx_text
+    .ltx_font_italic}, 2018. ]{.ltx_bibblock}]{#bib.bib34}
+-   [[(35)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Bolei Zhou,
+    Hang Zhao, Xavier Puig, Sanja Fidler, Adela Barriuso, and Antonio
+    Torralba. ]{.ltx_bibblock} [Scene parsing through ADE20K dataset.
+    ]{.ltx_bibblock} [In [CVPR]{#bib.bib35.1.1 .ltx_text
+    .ltx_font_italic}, 2017. ]{.ltx_bibblock}]{#bib.bib35}
+-   [[(36)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ F. Pitie and
+    A. Kokaram. ]{.ltx_bibblock} [The linear monge-kantorovitch linear
+    colour mapping for example-based colour transfer. ]{.ltx_bibblock}
+    [In [4th European Conference on Visual Media
+    Production]{#bib.bib36.1.1 .ltx_text .ltx_font_italic}, 2007.
+    ]{.ltx_bibblock}]{#bib.bib36}
+-   [[(37)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Hossein Talebi
+    Esfandarani and Peyman Milanfar. ]{.ltx_bibblock} [NIMA: neural
+    image assessment. ]{.ltx_bibblock} [[IEEE Trans. Image
+    Process.]{#bib.bib37.1.1 .ltx_text .ltx_font_italic}, 2018.
+    ]{.ltx_bibblock}]{#bib.bib37}
+-   [[(38)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Kaidi Xu,
+    Gaoyuan Zhang, Sijia Liu, Quanfu Fan, Mengshu Sun, Hongge Chen,
+    Pin-Yu Chen, Yanzhi Wang, and Xue Lin. ]{.ltx_bibblock} [Adversarial
+    t-shirt! evading person detectors in a physical world.
+    ]{.ltx_bibblock} [In [ECCV]{#bib.bib38.1.1 .ltx_text
+    .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib38}
+-   [[(39)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ranjie Duan,
+    Xingjun Ma, Yisen Wang, James Bailey, A. Kai Qin, and Yun Yang.
+    ]{.ltx_bibblock} [Adversarial camouflage: Hiding physical-world
+    attacks with natural styles. ]{.ltx_bibblock} [In
+    [CVPR]{#bib.bib39.1.1 .ltx_text .ltx_font_italic}, 2020.
+    ]{.ltx_bibblock}]{#bib.bib39}
+-   [[(40)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Alina Elena
+    Baia, Alfredo Milani, and Valentina Poggioni. ]{.ltx_bibblock} [One
+    for many: an instagram inspired black-box adversarial attack, 2022.
+    ]{.ltx_bibblock}]{#bib.bib40}
+-   [[(41)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Aleksander
+    Madry, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, and
+    Adrian Vladu. ]{.ltx_bibblock} [Towards deep learning models
+    resistant to adversarial attacks. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib41.1.1 .ltx_text .ltx_font_italic}, 2018.
+    ]{.ltx_bibblock}]{#bib.bib41}
+-   [[(42)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Florian
+    Tramèr, Alexey Kurakin, Nicolas Papernot, Ian J. Goodfellow, Dan
+    Boneh, and Patrick D. McDaniel. ]{.ltx_bibblock} [Ensemble
+    adversarial training: Attacks and defenses. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib42.1.1 .ltx_text .ltx_font_italic}, 2018.
+    ]{.ltx_bibblock}]{#bib.bib42}
+-   [[(43)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Cihang Xie,
+    Yuxin Wu, Laurens van der Maaten, Alan L. Yuille, and Kaiming He.
+    ]{.ltx_bibblock} [Feature denoising for improving adversarial
+    robustness. ]{.ltx_bibblock} [In [CVPR]{#bib.bib43.1.1 .ltx_text
+    .ltx_font_italic}, 2019. ]{.ltx_bibblock}]{#bib.bib43}
+-   [[(44)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yonggang
+    Zhang, Mingming Gong, Tongliang Liu, Gang Niu, Xinmei Tian, Bo Han,
+    Bernhard Schölkopf, and Kun Zhang. ]{.ltx_bibblock} [Adversarial
+    robustness through the lens of causality. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib44.1.1 .ltx_text .ltx_font_italic}, 2022.
+    ]{.ltx_bibblock}]{#bib.bib44}
+-   [[(45)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Chuan Guo,
+    Mayank Rana, Moustapha Cissé, and Laurens van der Maaten.
+    ]{.ltx_bibblock} [Countering adversarial images using input
+    transformations. ]{.ltx_bibblock} [In [ICLR]{#bib.bib45.1.1
+    .ltx_text .ltx_font_italic}, 2018. ]{.ltx_bibblock}]{#bib.bib45}
+-   [[(46)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Xiaojun Jia,
+    Xingxing Wei, Xiaochun Cao, and Hassan Foroosh. ]{.ltx_bibblock}
+    [Comdefend: An efficient image compression model to defend
+    adversarial examples. ]{.ltx_bibblock} [In [CVPR]{#bib.bib46.1.1
+    .ltx_text .ltx_font_italic}, 2019. ]{.ltx_bibblock}]{#bib.bib46}
+-   [[(47)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Muzammal
+    Naseer, Salman H. Khan, Munawar Hayat, Fahad Shahbaz Khan, and Fatih
+    Porikli. ]{.ltx_bibblock} [A self-supervised approach for
+    adversarial robustness. ]{.ltx_bibblock} [In [CVPR]{#bib.bib47.1.1
+    .ltx_text .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib47}
+-   [[(48)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Cihang Xie,
+    Jianyu Wang, Zhishuai Zhang, Zhou Ren, and Alan L. Yuille.
+    ]{.ltx_bibblock} [Mitigating adversarial effects through
+    randomization. ]{.ltx_bibblock} [In [ICLR]{#bib.bib48.1.1 .ltx_text
+    .ltx_font_italic}, 2018. ]{.ltx_bibblock}]{#bib.bib48}
+-   [[(49)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Fangzhou Liao,
+    Ming Liang, Yinpeng Dong, Tianyu Pang, Xiaolin Hu, and Jun Zhu.
+    ]{.ltx_bibblock} [Defense against adversarial attacks using
+    high-level representation guided denoiser. ]{.ltx_bibblock} [In
+    [CVPR]{#bib.bib49.1.1 .ltx_text .ltx_font_italic}, 2018.
+    ]{.ltx_bibblock}]{#bib.bib49}
+-   [[(50)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Mahmoud Afifi,
+    Brian L. Price, Scott Cohen, and Michael S. Brown. ]{.ltx_bibblock}
+    [Image recoloring based on object color distributions.
+    ]{.ltx_bibblock} [In [Eurographics]{#bib.bib50.1.1 .ltx_text
+    .ltx_font_italic}, 2019. ]{.ltx_bibblock}]{#bib.bib50}
+-   [[(51)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Erik Reinhard,
+    Michael M. Stark, Peter Shirley, and James A. Ferwerda.
+    ]{.ltx_bibblock} [Photographic tone reproduction for digital images.
+    ]{.ltx_bibblock} [[ACM Trans. Graph.]{#bib.bib51.1.1 .ltx_text
+    .ltx_font_italic}, 2002. ]{.ltx_bibblock}]{#bib.bib51}
+-   [[(52)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Arash Abadpour
+    and Shohreh Kasaei. ]{.ltx_bibblock} [A fast and efficient fuzzy
+    color transfer method. ]{.ltx_bibblock} [In [International Symposium
+    on Signal Processing and Information Technology]{#bib.bib52.1.1
+    .ltx_text .ltx_font_italic}. IEEE, 2004.
+    ]{.ltx_bibblock}]{#bib.bib52}
+-   [[(53)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Hiroaki
+    Kotera. ]{.ltx_bibblock} [A scene-referred color transfer for
+    pleasant imaging on display. ]{.ltx_bibblock} [In
+    [ICIP]{#bib.bib53.1.1 .ltx_text .ltx_font_italic}, 2005.
+    ]{.ltx_bibblock}]{#bib.bib53}
+-   [[(54)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ François
+    Pitié, Anil C. Kokaram, and Rozenn Dahyot. ]{.ltx_bibblock}
+    [Automated colour grading using colour distribution transfer.
+    ]{.ltx_bibblock} [[Comput. Vis. Image Underst.]{#bib.bib54.1.1
+    .ltx_text .ltx_font_italic}, 2007. ]{.ltx_bibblock}]{#bib.bib54}
+-   [[(55)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ramprasaath R.
+    Selvaraju, Michael Cogswell, Abhishek Das, Ramakrishna Vedantam,
+    Devi Parikh, and Dhruv Batra. ]{.ltx_bibblock} [Grad-cam: Visual
+    explanations from deep networks via gradient-based localization.
+    ]{.ltx_bibblock} [In [ICCV]{#bib.bib55.1.1 .ltx_text
+    .ltx_font_italic}, 2017. ]{.ltx_bibblock}]{#bib.bib55}
+-   [[(56)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Lianli Gao,
+    Yaya Cheng, Qilong Zhang, Xing Xu, and Jingkuan Song.
+    ]{.ltx_bibblock} [Feature space targeted attacks by statistic
+    alignment. ]{.ltx_bibblock} [In [IJCAI]{#bib.bib56.1.1 .ltx_text
+    .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib56}
+-   [[(57)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Zhibo Wang,
+    Hengchang Guo, Zhifei Zhang, Wenxin Liu, Zhan Qin, and Kui Ren.
+    ]{.ltx_bibblock} [Feature importance-aware transferable adversarial
+    attacks. ]{.ltx_bibblock} [In [ICCV]{#bib.bib57.1.1 .ltx_text
+    .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib57}
+-   [[(58)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Qilong Zhang,
+    Xiaosu Zhu, Jingkuan Song, Lianli Gao, and Heng Tao Shen.
+    ]{.ltx_bibblock} [Staircase sign method for boosting adversarial
+    attacks. ]{.ltx_bibblock} [[CoRR]{#bib.bib58.1.1 .ltx_text
+    .ltx_font_italic}, abs/2104.09722, 2021.
+    ]{.ltx_bibblock}]{#bib.bib58}
+-   [[(59)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yuyang Long,
+    Qilong Zhang, Boheng Zeng, Lianli Gao, Xianglong Liu, Jian Zhang,
+    and Jingkuan Song. ]{.ltx_bibblock} [Frequency domain model
+    augmentation for adversarial attack. ]{.ltx_bibblock} [In [European
+    Conference on Computer Vision]{#bib.bib59.1.1 .ltx_text
+    .ltx_font_italic}, 2022. ]{.ltx_bibblock}]{#bib.bib59}
+-   [[(60)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Karen Simonyan
+    and Andrew Zisserman. ]{.ltx_bibblock} [Very deep convolutional
+    networks for large-scale image recognition. ]{.ltx_bibblock} [In
+    [ICLR]{#bib.bib60.1.1 .ltx_text .ltx_font_italic}, 2015.
+    ]{.ltx_bibblock}]{#bib.bib60}
+-   [[(61)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Christian
+    Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jonathon Shlens, and
+    Zbigniew Wojna. ]{.ltx_bibblock} [Rethinking the inception
+    architecture for computer vision. ]{.ltx_bibblock} [In
+    [CVPR]{#bib.bib61.1.1 .ltx_text .ltx_font_italic}, 2016.
+    ]{.ltx_bibblock}]{#bib.bib61}
+-   [[(62)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Mark Sandler,
+    Andrew G. Howard, Menglong Zhu, Andrey Zhmoginov, and Liang-Chieh
+    Chen. ]{.ltx_bibblock} [Mobilenetv2: Inverted residuals and linear
+    bottlenecks. ]{.ltx_bibblock} [In [CVPR]{#bib.bib62.1.1 .ltx_text
+    .ltx_font_italic}, 2018. ]{.ltx_bibblock}]{#bib.bib62}
+-   [[(63)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Hugo Touvron,
+    Matthieu Cord, Matthijs Douze, Francisco Massa, Alexandre
+    Sablayrolles, and Hervé Jégou. ]{.ltx_bibblock} [Training
+    data-efficient image transformers & distillation through attention.
+    ]{.ltx_bibblock} [In [ICML]{#bib.bib63.1.1 .ltx_text
+    .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib63}
+-   [[(64)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Alaaeldin Ali,
+    Hugo Touvron, Mathilde Caron, Piotr Bojanowski, Matthijs Douze,
+    Armand Joulin, Ivan Laptev, Natalia Neverova, Gabriel Synnaeve,
+    Jakob Verbeek, and Hervé Jégou. ]{.ltx_bibblock} [Xcit:
+    Cross-covariance image transformers. ]{.ltx_bibblock} [In
+    [NeurIPS]{#bib.bib64.1.1 .ltx_text .ltx_font_italic}, 2021.
+    ]{.ltx_bibblock}]{#bib.bib64}
+-   [[(65)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Ze Liu, Yutong
+    Lin, Yue Cao, Han Hu, Yixuan Wei, Zheng Zhang, Stephen Lin, and
+    Baining Guo. ]{.ltx_bibblock} [Swin transformer: Hierarchical vision
+    transformer using shifted windows. ]{.ltx_bibblock} [In
+    [ICCV]{#bib.bib65.1.1 .ltx_text .ltx_font_italic}, pages
+    9992--10002. IEEE, 2021. ]{.ltx_bibblock}]{#bib.bib65}
+-   [[(66)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Qilong Zhang,
+    Chaoning Zhang, Chaoqun Li, Jingkuan Song, Lianli Gao, and Heng Tao
+    Shen. ]{.ltx_bibblock} [Practical no-box adversarial attacks with
+    training-free hybrid image transformation. ]{.ltx_bibblock}
+    [[CoRR]{#bib.bib66.1.1 .ltx_text .ltx_font_italic},
+    abs/2203.04607, 2022. ]{.ltx_bibblock}]{#bib.bib66}
+-   [[(67)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Andrew G.
+    Howard, Menglong Zhu, Bo Chen, Dmitry Kalenichenko, Weijun Wang,
+    Tobias Weyand, Marco Andreetto, and Hartwig Adam. ]{.ltx_bibblock}
+    [Mobilenets: Efficient convolutional neural networks for mobile
+    vision applications. ]{.ltx_bibblock} [[CoRR]{#bib.bib67.1.1
+    .ltx_text .ltx_font_italic}, abs/1704.04861, 2017.
+    ]{.ltx_bibblock}]{#bib.bib67}
+-   [[(68)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Naila Murray,
+    Luca Marchesotti, and Florent Perronnin. ]{.ltx_bibblock} [AVA: A
+    large-scale database for aesthetic visual analysis. ]{.ltx_bibblock}
+    [In [CVPR]{#bib.bib68.1.1 .ltx_text .ltx_font_italic}, 2012.
+    ]{.ltx_bibblock}]{#bib.bib68}
+-   [[(69)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Nikolay N.
+    Ponomarenko, Oleg Ieremeiev, Vladimir V. Lukin, Karen O. Egiazarian,
+    Lina Jin, Jaakko Astola, Benoît Vozel, Kacem Chehdi, Marco Carli,
+    Federica Battisti, and C.-C. Jay Kuo. ]{.ltx_bibblock} [Color image
+    database TID2013: peculiarities and preliminary results.
+    ]{.ltx_bibblock} [In [EUVIP]{#bib.bib69.1.1 .ltx_text
+    .ltx_font_italic}, 2013. ]{.ltx_bibblock}]{#bib.bib69}
+-   [[(70)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Namuk Park and
+    Songkuk Kim. ]{.ltx_bibblock} [How do vision transformers work?
+    ]{.ltx_bibblock} [In [ICLR]{#bib.bib70.1.1 .ltx_text
+    .ltx_font_italic}, 2022. ]{.ltx_bibblock}]{#bib.bib70}
+-   [[(71)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Byeongho Heo,
+    Sangdoo Yun, Dongyoon Han, Sanghyuk Chun, Junsuk Choe, and
+    Seong Joon Oh. ]{.ltx_bibblock} [Rethinking spatial dimensions of
+    vision transformers. ]{.ltx_bibblock} [In [ICCV]{#bib.bib71.1.1
+    .ltx_text .ltx_font_italic}, 2021. ]{.ltx_bibblock}]{#bib.bib71}
+-   [[(72)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Yuhui Yuan,
+    Xilin Chen, and Jingdong Wang. ]{.ltx_bibblock} [Object-contextual
+    representations for semantic segmentation. ]{.ltx_bibblock} [2020.
+    ]{.ltx_bibblock}]{#bib.bib72}
+-   [[(73)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [ Hang Zhang,
+    Chongruo Wu, Zhongyue Zhang, Yi Zhu, Zhi Zhang, Haibin Lin, Yue Sun,
+    Tong He, Jonas Muller, R. Manmatha, Mu Li, and Alexander Smola.
+    ]{.ltx_bibblock} [Resnest: Split-attention networks.
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2004.08955]{#bib.bib73.1.1
+    .ltx_text .ltx_font_italic}, 2020. ]{.ltx_bibblock}]{#bib.bib73}
+:::
+
+::: {.ltx_pagination .ltx_centering .ltx_role_newpage}
+:::
+
+::: {#p1 .ltx_para .ltx_align_center}
+[Natural Color Fool: Towards Boosting Black-box Unrestricted
+Attacks]{#p1.1.1 .ltx_text .ltx_font_bold style="font-size:144%;"}
+
+[(Supplementary Material)]{#p1.2.1 .ltx_text .ltx_font_bold
+style="font-size:144%;"}
+:::
+
+::: {#p2 .ltx_para .ltx_noindent .ltx_align_center .ltx_align_middle style="width:433.6pt;"}
+[ ]{.ltx_rule
+style="width:433.6pt;height:1.4pt;background:black;display:inline-block;"}
+
+[ ]{.ltx_rule
+style="width:433.6pt;height:0.4pt;background:black;display:inline-block;"}
+:::
+
+###### CONTENTS {#contents .ltx_title .ltx_title_contents}
+
+1.  [[[1 ]{.ltx_tag .ltx_tag_ref}Introduction]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S1 "1 Introduction ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+2.  [[[2 ]{.ltx_tag .ltx_tag_ref}Related Works]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S2 "2 Related Works ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    1.  [[[2.1 ]{.ltx_tag .ltx_tag_ref}Unrestricted Attacks]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S2.SS1 "2.1 Unrestricted Attacks ‣ 2 Related Works ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    2.  [[[2.2 ]{.ltx_tag .ltx_tag_ref}Adversarial Defenses]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S2.SS2 "2.2 Adversarial Defenses ‣ 2 Related Works ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+3.  [[[3 ]{.ltx_tag .ltx_tag_ref}Methodology]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3 "3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    1.  [[[3.1 ]{.ltx_tag .ltx_tag_ref}Problem Formulation]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.SS1 "3.1 Problem Formulation ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    2.  [[[3.2 ]{.ltx_tag .ltx_tag_ref}Color Distribution
+        Library]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.SS2 "3.2 Color Distribution Library ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    3.  [[[3.3 ]{.ltx_tag .ltx_tag_ref}Natural Color Fool]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.SS3 "3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+4.  [[[4 ]{.ltx_tag .ltx_tag_ref}Experiments]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4 "4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    1.  [[[4.1 ]{.ltx_tag .ltx_tag_ref}Setup]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS1 "4.1 Setup ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    2.  [[[4.2 ]{.ltx_tag .ltx_tag_ref}Transferability
+        Comparison]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS2 "4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+        1.  [[[4.2.1 ]{.ltx_tag .ltx_tag_ref}Results on Normally Trained
+            Models]{.ltx_text
+            .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS2.SSS1 "4.2.1 Results on Normally Trained Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+        2.  [[[4.2.2 ]{.ltx_tag .ltx_tag_ref}Results on Defense
+            Models]{.ltx_text
+            .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS2.SSS2 "4.2.2 Results on Defense Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    3.  [[[4.3 ]{.ltx_tag .ltx_tag_ref}Image Quality]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS3 "4.3 Image Quality ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+    4.  [[[4.4 ]{.ltx_tag .ltx_tag_ref}Ablation Studies]{.ltx_text
+        .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS4 "4.4 Ablation Studies ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+5.  [[[5 ]{.ltx_tag .ltx_tag_ref}Conclusion]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S5 "5 Conclusion ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+6.  [[[6 ]{.ltx_tag .ltx_tag_ref}Acknowledgments]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#S6 "6 Acknowledgments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+7.  [[[A ]{.ltx_tag .ltx_tag_ref}Color Distribution Library]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A1 "Appendix A Color Distribution Library ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+8.  [[[B ]{.ltx_tag .ltx_tag_ref}Algorithm]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A2 "Appendix B Algorithm ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+9.  [[[C ]{.ltx_tag .ltx_tag_ref}Initialization Reset]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A3 "Appendix C Initialization Reset ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+10. [[[D ]{.ltx_tag .ltx_tag_ref}Transferability on ViTs]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A4 "Appendix D Transferability on ViTs ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+11. [[[E ]{.ltx_tag .ltx_tag_ref}Neighborhood Search Impact on Human
+    Perception]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A5 "Appendix E Neighborhood Search Impact on Human Perception ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+12. [[[F ]{.ltx_tag .ltx_tag_ref}Visualization of Attention]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A6 "Appendix F Visualization of Attention ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+13. [[[G ]{.ltx_tag .ltx_tag_ref}Visualization of Adversarial
+    Examples]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A7 "Appendix G Visualization of Adversarial Examples ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+14. [[[H ]{.ltx_tag .ltx_tag_ref}The Influence of Segmentation
+    Models]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A8 "Appendix H The Influence of Segmentation Models ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+15. [[[I ]{.ltx_tag .ltx_tag_ref}The Effect of Ensemble
+    Attack]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A9 "Appendix I The Effect of Ensemble Attack ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+16. [[[J ]{.ltx_tag .ltx_tag_ref}Attack by Selecting Random
+    Colors]{.ltx_text
+    .ltx_ref_title}](https://ar5iv.labs.arxiv.org/html/2210.02041#A10 "Appendix J Attack by Selecting Random Colors ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+
+::: {#p3 .ltx_para .ltx_noindent .ltx_align_center}
+[ ]{.ltx_rule
+style="width:433.6pt;height:0.4pt;background:black;display:inline-block;"}
+
+[ ]{.ltx_rule
+style="width:433.6pt;height:1.4pt;background:black;display:inline-block;"}
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+
+::: {#A1 .section .ltx_appendix}
+## [Appendix A ]{.ltx_tag .ltx_tag_appendix}Color Distribution Library {#appendix-a-color-distribution-library .ltx_title .ltx_title_appendix}
+
+::: {#A1.p1 .ltx_para}
+In this section, we explain how to build our color distribution library.
+First, all semantic classes are extracted based on the images and
+annotations of the ADE20K training
+set \[[35](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib35){.ltx_ref}\]
+(ADE20K contains 150 semantic classes). The semantic classes are
+clustered into a set of 20 different dominant distribution sets
+according to their color styles using hierarchical clustering, which is
+the "distribution of color distribution"
+(DoD) \[[50](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib50){.ltx_ref}\].
+Then, since the color distributions of semantic classes in each cluster
+are similar, we select one object in each cluster to represent that
+style. Finally, we extract the color distributions to form our color
+distribution library. The pipeline is shown in Figure [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A1.F5 "Figure 5 ‣ Appendix A Color Distribution Library ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+:::
+
+<figure id="A1.F5" class="ltx_figure">
+<img src="./ncf_files/x4.png" id="A1.F5.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="292" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 5: </span><span
+id="A1.F5.2.1" class="ltx_text ltx_font_bold">The pipeline of color
+distribution library.</span> We select 20 objects with different color
+styles for each semantic class and extract their color distributions to
+build a color distribution library.</figcaption>
+</figure>
+:::
+
+::: {#A2 .section .ltx_appendix}
+## [Appendix B ]{.ltx_tag .ltx_tag_appendix}Algorithm {#appendix-b-algorithm .ltx_title .ltx_title_appendix}
+
+::: {#A2.p1 .ltx_para}
+In this section, we provide the algorithm of NCF (see
+Algorithm [[B]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A2 "Appendix B Algorithm ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref
+.ltx_align_left}).  \
+[ ]{.ltx_rule .ltx_align_left
+style="width:100%;height:0.8pt;vertical-align:-0.0pt;background:black;display:inline-block;"}
+[Algorithm 1]{#A2.p1.1.1 .ltx_text .ltx_align_left .ltx_font_bold}
+Natural Color Fool
+:::
+
+::: {#A2.p2 .ltx_para}
+[ ]{.ltx_rule
+style="width:100%;height:1px;background:black;display:inline-block;"}
+:::
+
+::: {#A2.p3 .ltx_para}
+[Input:\
+]{#A2.p3.12.1 .ltx_text .ltx_font_bold} $\mathbf{x}$: clean image, $y$:
+label, $\overset{\sim}{y}$: the semantic class, $\mathcal{S}$: semantic
+segmentation model,\
+$\mathcal{F}_{\phi}\operatorname{}{( \cdot )}$: the substitute model,
+$\mathbb{C}$: color distribution library, $K$: the restart number,\
+$N$: the iteration of NS, $u$: the momentum, $\alpha$: the step size,\
+$\Sigma$: covariance matrix, $\mu$: mean
+:::
+
+::: {#A2.p4 .ltx_para}
+[Output:]{#A2.p4.1.1 .ltx_text .ltx_font_bold} ${\mathbf{x}}^{\prime}$:
+adversarial image
+
+::: {#A2.p4.2 .ltx_listing .ltx_listing}
+::: {#algx1.l1 .ltx_listingline}
+[[1:]{#algx1.l1.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}Obtain all semantic classes $\overset{\sim}{Y}$ of
+image $\mathbf{x}$ by $\mathcal{S}.$
+:::
+
+::: {#algx1.l2 .ltx_listingline}
+[[2:]{#algx1.l2.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}Calculate each semantic class's pixel ratio $w$ in
+the $\mathbf{x}$.
+:::
+
+::: {#algx1.l3 .ltx_listingline}
+[[3:]{#algx1.l3.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}$\overline{\mathbf{x}}\leftarrow{r\operatorname{}g\operatorname{}b\operatorname{}2\operatorname{}l\operatorname{}a\operatorname{}b\operatorname{}{(x)}}$
+:::
+
+::: {#algx1.l4 .ltx_listingline}
+[[4:]{#algx1.l4.2.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}[for]{#algx1.l4.3 .ltx_text
+.ltx_font_bold} $i\leftarrow 1$ to $K$ [do]{#algx1.l4.4 .ltx_text
+.ltx_font_bold} [$\rhd$ [ [Initialization Reset.]{#algx1.l4.1.1.1
+.ltx_p} ]{#algx1.l4.1.1 .ltx_inline-block .ltx_parbox .ltx_align_top
+style="width:216.8pt;"} ]{#algx1.l4.1 .ltx_text style="float:right;"}
+:::
+
+::: {#algx1.l5 .ltx_listingline}
+[[5:]{#algx1.l5.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     [for]{#algx1.l5.2 .ltx_text
+.ltx_font_bold} $j\leftarrow 1$ to $\eta$ [do]{#algx1.l5.3 .ltx_text
+.ltx_font_bold}
+:::
+
+::: {#algx1.l6 .ltx_listingline}
+[[6:]{#algx1.l6.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         Randomly sample the color distribution
+${\mathbf{c}}_{\overset{\sim}{y}}$ of each semantic class
+$\overset{\sim}{y}$ from the library ${\mathbb{C}}_{\overset{\sim}{y}}$
+:::
+
+::: {#algx1.l7 .ltx_listingline}
+[[7:]{#algx1.l7.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${\mathbf{H}}_{j}\leftarrow{\sum\limits_{\overset{\sim}{y} \in \overset{\sim}{Y}}{w_{\overset{\sim}{y}}*{\mathbf{c}}_{\overset{\sim}{y}}}}$
+:::
+
+::: {#algx1.l8 .ltx_listingline}
+[[8:]{#algx1.l8.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${\overline{\mathbf{x}}}_{{\mathbf{H}}_{\mathbf{j}}}\leftarrow$
+Convert ${\mathbf{H}}_{j}$ to an image without spatial information.
+:::
+
+::: {#algx1.l9 .ltx_listingline}
+[[9:]{#algx1.l9.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${\Sigma_{{\overline{\mathbf{x}}}_{{\mathbf{H}}_{\mathbf{j}}}},\mu_{{\overline{x}}_{H_{j}}}}\leftarrow$Calculate
+covariance matrix and channel means for
+${\overline{\mathbf{x}}}_{{\mathbf{H}}_{\mathbf{j}}}.$
+:::
+
+::: {#algx1.l10 .ltx_listingline}
+[[10:]{#algx1.l10.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${\mathbf{T}}\leftarrow{{MKSolution}\operatorname{}{(\Sigma_{\overline{x}},\Sigma_{{\overline{x}}_{H_{j}}})}}$
+(see Eq.(6))
+:::
+
+::: {#algx1.l11 .ltx_listingline}
+[[11:]{#algx1.l11.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${\overline{\mathbf{x}}}_{{\mathbf{H}}_{\mathbf{j}}}^{\prime}\leftarrow{{{\mathbf{T}}\operatorname{}{({\overline{x} - \mu_{\overline{x}}})}} + \mu_{{\overline{\mathbf{x}}}_{{\mathbf{H}}_{\mathbf{j}}}}}$
+:::
+
+::: {#algx1.l12 .ltx_listingline}
+[[12:]{#algx1.l12.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     [end]{#algx1.l12.2 .ltx_text
+.ltx_font_bold} [for]{#algx1.l12.3 .ltx_text .ltx_font_bold}
+:::
+
+::: {#algx1.l13 .ltx_listingline}
+[[13:]{#algx1.l13.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     ${\mathbb{H}}\leftarrow{\{{\mathbf{H}}_{j}\}}_{j = 1}^{\eta}$
+:::
+
+::: {#algx1.l14 .ltx_listingline}
+[[14:]{#algx1.l14.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     ${\mathbf{H}}^{*}\leftarrow{\underset{{\mathbf{H}}\in{\mathbb{H}}}{\arg ⁡\max}\operatorname{}\mathcal{L}_{a\operatorname{}d\operatorname{}v}\operatorname{}{({\mathcal{F}_{\phi}\operatorname{}{({\mathbf{x}}_{\mathbf{H}}^{\prime})}},y)}}$
+:::
+
+::: {#algx1.l15 .ltx_listingline}
+[[15:]{#algx1.l15.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     ${\Sigma_{{\overline{\mathbf{x}}}_{{\mathbf{H}}^{*}}},\mu_{{\overline{x}}_{H^{*}}}}\leftarrow$Calculate
+covariance matrix and channel means for
+${\overline{\mathbf{x}}}_{{\mathbf{H}}^{*}}.$
+:::
+
+::: {#algx1.l16 .ltx_listingline}
+[[16:]{#algx1.l16.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     ${\mathbf{T}}^{*}\leftarrow{{MKSoulution}\operatorname{}{(\Sigma_{\overline{x}},\Sigma_{{\overline{x}}_{H^{*}}})}}$
+(see Eq.(6))
+:::
+
+::: {#algx1.l17 .ltx_listingline}
+[[17:]{#algx1.l17.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     $\mu^{*}\leftarrow\mu_{{\overline{x}}_{H^{*}}}$
+:::
+
+::: {#algx1.l18 .ltx_listingline}
+[[18:]{#algx1.l18.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     Initialize
+${}_{}^{}\leftarrow{\mathbf{T}}^{*}$
+:::
+
+::: {#algx1.l19 .ltx_listingline}
+[[19:]{#algx1.l19.2.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     [for]{#algx1.l19.3 .ltx_text
+.ltx_font_bold} $n\leftarrow 1$ to $N$ [do]{#algx1.l19.4 .ltx_text
+.ltx_font_bold} [$\rhd$ [ [Neighborhood Search.]{#algx1.l19.1.1.1
+.ltx_p} ]{#algx1.l19.1.1 .ltx_inline-block .ltx_parbox .ltx_align_top
+style="width:216.8pt;"} ]{#algx1.l19.1 .ltx_text style="float:right;"}
+:::
+
+::: {#algx1.l20 .ltx_listingline}
+[[20:]{#algx1.l20.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         $\left. {\mathbf{x}} \right.¯_{}^{}\leftarrow{{{}_{}^{}\operatorname{}{({\overline{\mathbf{x}} - \mu_{\overline{\mathbf{x}}}})}} + \mu^{*}}$
+:::
+
+::: {#algx1.l21 .ltx_listingline}
+[[21:]{#algx1.l21.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${\mathbf{g}}\leftarrow{{\nabla_{{\mathbf{T}}^{\prime}}\mathcal{L}_{a\operatorname{}d\operatorname{}v}}\operatorname{}{({\mathcal{F}_{\phi}\operatorname{}{({l\operatorname{}a\operatorname{}b\operatorname{}2\operatorname{}r\operatorname{}g\operatorname{}b\operatorname{}{(\left. {\mathbf{x}} \right.¯_{}^{})}})}},y)}}$
+:::
+
+::: {#algx1.l22 .ltx_listingline}
+[[22:]{#algx1.l22.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${\mathbf{g}}_{n}\leftarrow{{u \cdot {\mathbf{g}}_{n - 1}} + \frac{\mathbf{g}}{\left\| {\mathbf{g}} \right\|_{1}}}$
+:::
+
+::: {#algx1.l23 .ltx_listingline}
+[[23:]{#algx1.l23.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}         ${}_{}^{}\leftarrow{{}_{}^{} + {{\alpha \cdot {sign}}\operatorname{}{({\mathbf{g}}_{n})}}}$
+:::
+
+::: {#algx1.l24 .ltx_listingline}
+[[24:]{#algx1.l24.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     [end]{#algx1.l24.2 .ltx_text
+.ltx_font_bold} [for]{#algx1.l24.3 .ltx_text .ltx_font_bold}
+:::
+
+::: {#algx1.l25 .ltx_listingline}
+[[25:]{#algx1.l25.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}     ${}_{}^{}\leftarrow{l\operatorname{}a\operatorname{}b\operatorname{}2\operatorname{}r\operatorname{}g\operatorname{}b\operatorname{}{(\left. {\mathbf{x}} \right.¯_{}^{})}}$
+:::
+
+::: {#algx1.l26 .ltx_listingline}
+[[26:]{#algx1.l26.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}[end]{#algx1.l26.2 .ltx_text
+.ltx_font_bold} [for]{#algx1.l26.3 .ltx_text .ltx_font_bold}
+:::
+
+::: {#algx1.l27 .ltx_listingline}
+[[27:]{#algx1.l27.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}${\mathbf{i}}^{\prime}\leftarrow{\underset{i\in{1,2,\ldots,K}}{\arg ⁡\max}\operatorname{}\mathcal{L}_{a\operatorname{}d\operatorname{}v}\operatorname{}{({\mathcal{F}_{\phi}\operatorname{}{({}_{}^{})}},y)}}$
+:::
+
+::: {#algx1.l28 .ltx_listingline}
+[[28:]{#algx1.l28.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}${\mathbf{x}}^{\prime}\leftarrow{}_{}^{}$
+:::
+
+::: {#algx1.l29 .ltx_listingline}
+[[29:]{#algx1.l29.1.1.1 .ltx_text style="font-size:80%;"}]{.ltx_tag
+.ltx_tag_listingline}[return]{#algx1.l29.2 .ltx_text .ltx_font_bold}
+${\mathbf{x}}^{\prime}$
+:::
+:::
+
+[ ]{.ltx_rule
+style="width:100%;height:1px;background:black;display:inline-block;"}
+:::
+:::
+
+::: {#A3 .section .ltx_appendix}
+## [Appendix C ]{.ltx_tag .ltx_tag_appendix}Initialization Reset {#appendix-c-initialization-reset .ltx_title .ltx_title_appendix}
+
+::: {#A3.p1 .ltx_para}
+As mentioned in Section [[3.3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S3.SS3 "3.3 Natural Color Fool ‣ 3 Methodology ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+initialization reset (IR) avoids the optimization of convert matrix to
+fall into local optimum. Therefore, we study the appropriate value for
+the number of resets in this section. Our adversarial examples are
+crafted via Inc-v3 by NCF with different resets, i.e., from 1 to 20. We
+report the attack success rate on the victim model in
+Figure [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A3.F6 "Figure 6 ‣ Appendix C Initialization Reset ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}.
+As demonstrated in the figure, in the beginning, there is an approximate
+positive relationship between the attack success rate and the number of
+resets. Once $K = 10$ or larger, the attack success rate maintains
+stable. We choose $K = 10$ to reduce the computational overhead, where
+the attack successes rate is 84.0%, 57.7%, 57.6%, 56.8%, 40.1%, 47.6%
+for
+Inc-v3 \[[61](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib61){.ltx_ref}\],
+Res-18 \[[2](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib2){.ltx_ref}\],
+VGG-19 \[[60](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib60){.ltx_ref}\],
+Mobile-v2 \[[62](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib62){.ltx_ref}\],
+Dense-121 \[[13](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib13){.ltx_ref}\]
+and
+Res-50 \[[2](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib2){.ltx_ref}\],
+respectively.
+:::
+
+<figure id="A3.F6" class="ltx_figure">
+<img src="./ncf_files/num_restart.png" id="A3.F6.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="389"
+height="260" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 6: </span><span
+id="A3.F6.2.1" class="ltx_text ltx_font_bold">Attack success rates (%)
+w.r.t. the number of IR <span
+class="math inline"><em>K</em></span>.</span> The substitute model is
+Inc-v3.</figcaption>
+</figure>
+:::
+
+::: {#A4 .section .ltx_appendix}
+## [Appendix D ]{.ltx_tag .ltx_tag_appendix}Transferability on ViTs {#appendix-d-transferability-on-vits .ltx_title .ltx_title_appendix}
+
+::: {#A4.p1 .ltx_para}
+Recent
+work \[[70](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib70){.ltx_ref}\]
+points out that the vision transformer models are more concerned with
+low-frequency information, thus we further evaluate attack success rate
+of black-box when Transformer models are used as substitute models.
+Specifically, we generate adversarial examples using ViT-S/16
+(ViT-S) \[[63](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib63){.ltx_ref}\]
+and XCiT-N12/16
+(XCiT-N12) \[[64](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib64){.ltx_ref}\]
+as substitute models and evaluate the adversarial examples on multiple
+Transformer models (including
+ViT-S,XCiT-N12,DeiT-S \[[63](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib63){.ltx_ref}\],ViT-B \[[14](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib14){.ltx_ref}\],Swin-T \[[65](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib65){.ltx_ref}\],PiT-Ti \[[71](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib71){.ltx_ref}\])
+and multiple CNNs (including
+Res-18 \[[2](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib2){.ltx_ref}\],
+VGG-19 \[[60](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib60){.ltx_ref}\],
+Mobile-v2 \[[62](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib62){.ltx_ref}\]).
+Table [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A4.T5 "Table 5 ‣ Appendix D Transferability on ViTs ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+summarizes the results on different black-box models. We can observe
+that our NCF usually achieves the highest transferability on black-box.
+In particular, when transferring from ViTs to CNNs, NCF achieves an
+average success rate of 59.8%, but other attacks only achieve 48.3%
+(SAE), 29.9% (ReColorAdv), 36.8% (cAdv), 35.1% (ColorFool), 27.3% (ACE).
+:::
+
+::: {#A4.p2 .ltx_para}
+We observe that the transferability of adversarial examples between ViTs
+is weaker than different CNNs (see Section [[4.2.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#S4.SS2.SSS1 "4.2.1 Results on Normally Trained Models ‣ 4.2 Transferability Comparison ‣ 4 Experiments ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}).
+This is consistent with the observation in
+ \[[25](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib25){.ltx_ref}\].
+It may be since that ViTs have multiple self-attention blocks that can
+generate class tokens independently. However, our loss only utilizes the
+last logit (which is equivalent to utilizing only the last class token).
+The discriminative information in the previous tokens is not directly
+utilized, which results the poor transferability of the adversarial
+examples between different ViTs.
+:::
+
+<figure id="A4.T5" class="ltx_table">
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 5: </span><span
+id="A4.T5.2.1" class="ltx_text ltx_font_bold">Transferability on
+ViTs.</span> We report attack success rates (%) of each method and the
+leftmost model column denotes the substitute model (“*” means white-box
+attack results).</figcaption>
+</figure>
+:::
+
+::: {#A5 .section .ltx_appendix}
+## [Appendix E ]{.ltx_tag .ltx_tag_appendix}Neighborhood Search Impact on Human Perception {#appendix-e-neighborhood-search-impact-on-human-perception .ltx_title .ltx_title_appendix}
+
+::: {#A5.p1 .ltx_para}
+In this section, we study the impact of neighborhood search (NS) on
+human perception. Figure [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A5.F7 "Figure 7 ‣ Appendix E Neighborhood Search Impact on Human Perception ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+shows the adversarial examples with and without NS, and we observe that
+our NS strategy has almost no effect on human perception.
+:::
+
+<figure id="A5.F7" class="ltx_figure">
+<img src="./ncf_files/x5.png" id="A5.F7.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="831"
+height="211" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 7: </span><span
+id="A5.F7.2.1" class="ltx_text ltx_font_bold">Visualizations of NCF-IR
+and NCF-IR-NS.</span> We use Inc-v3 as an alternative model to generate
+adversarial examples. We observe from the results that there is no
+perceptual difference after using NS.</figcaption>
+</figure>
+:::
+
+::: {#A6 .section .ltx_appendix}
+## [Appendix F ]{.ltx_tag .ltx_tag_appendix}Visualization of Attention {#appendix-f-visualization-of-attention .ltx_title .ltx_title_appendix}
+
+::: {#A6.p1 .ltx_para}
+In this section, we show the Gradient-weighted Class Activation Mapping
+(Grad-CAM) \[[55](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib55){.ltx_ref}\]
+of different adversarial examples. Figure [[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A6.F8 "Figure 8 ‣ Appendix F Visualization of Attention ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}
+illustrates that all of SAE, ReColorAdv, cAdv, ColorFool, and ACE have
+difficulty shifting the attention of the model, while our NCF can
+dramatically it, i.e., no longer on the target object.
+:::
+
+<figure id="A6.F8" class="ltx_figure">
+<img src="./ncf_files/x6.png" id="A6.F8.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="225" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 8: </span><span
+id="A6.F8.2.1" class="ltx_text ltx_font_bold">Visualization of
+attention.</span> We use Inc-v3 as the alternative model to generate
+adversarial examples, and then visualize the attention on
+VGG-19.</figcaption>
+</figure>
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+
+::: {#A7 .section .ltx_appendix}
+## [Appendix G ]{.ltx_tag .ltx_tag_appendix}Visualization of Adversarial Examples {#appendix-g-visualization-of-adversarial-examples .ltx_title .ltx_title_appendix}
+
+::: {#A7.p1 .ltx_para}
+In this section, we show some adversarial examples. In
+Figure [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A7.F9 "Figure 9 ‣ Appendix G Visualization of Adversarial Examples ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+we observe that SAE is prone to global color distortion due to the
+unbounded range of variation. ReColorAdv limits the perturbation to a
+small range, thus its adversarial examples are less perceptually
+different from the clean images. However, some areas of color gradients
+(e.g., the "clouds" in the second row of Figure [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A7.F9 "Figure 9 ‣ Appendix G Visualization of Adversarial Examples ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref})
+may produce some perceptual anomalies. cAdv relies on the colorization
+model, and some color anomalies are likely to occur locally in the
+image. ColorFool does not set the perturbation range in non-sensitive
+areas, resulting in non-sensitive areas prone to color distortion. ACE
+is similar to ReColorAdv in that sometimes details are lost. (e.g., the
+"plants" in the third row of Figure [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A7.F9 "Figure 9 ‣ Appendix G Visualization of Adversarial Examples ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref}).
+NCF transforms the color distribution so that the images' details are
+preserved.
+:::
+
+<figure id="A7.F9" class="ltx_figure">
+<img src="./ncf_files/x7.png" id="A7.F9.g1"
+class="ltx_graphics ltx_centering ltx_img_portrait" width="830"
+height="1113" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 9: </span><span
+id="A7.F9.2.1" class="ltx_text ltx_font_bold">Visualization of
+adversarial examples.</span> All adversarial examples are generated on
+Inc-v3.</figcaption>
+</figure>
+:::
+
+::: {#A8 .section .ltx_appendix}
+## [Appendix H ]{.ltx_tag .ltx_tag_appendix}The Influence of Segmentation Models {#appendix-h-the-influence-of-segmentation-models .ltx_title .ltx_title_appendix}
+
+::: {#A8.p1 .ltx_para}
+In this section, we compare the performance of our NCF under different
+semantic segmentation models pre-trained on ADE20K (including
+Swin-T \[[65](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib65){.ltx_ref}\],
+OCRNet \[[72](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib72){.ltx_ref}\]
+and
+Deeplabv3+ \[[73](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib73){.ltx_ref}\]).
+As indicated in Table [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A8.T6 "Table 6 ‣ Appendix H The Influence of Segmentation Models ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+segmentation models have impact on the attack success rates of resulting
+adversarial examples. Among these models, Swin-T is usually the best
+choice for our NCF. Therefore, in our paper, we choose it to segment
+inputs. Note that even if the segmentation model affects our method, the
+lowest black-box attack success rate of NCF is still much higher than
+the existing methods.
+:::
+
+<figure id="A8.T6" class="ltx_table">
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 6: </span>The
+influence of different segmentation models on attack success rates. (“*”
+denotes the white-box attack)</figcaption>
+</figure>
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+
+::: {#A9 .section .ltx_appendix}
+## [Appendix I ]{.ltx_tag .ltx_tag_appendix}The Effect of Ensemble Attack {#appendix-i-the-effect-of-ensemble-attack .ltx_title .ltx_title_appendix}
+
+::: {#A9.p1 .ltx_para}
+As for ensemble model attack (fusing the logits of multiple models
+like \[[21](https://ar5iv.labs.arxiv.org/html/2210.02041#bib.bib21){.ltx_ref}\]),
+here we report the result of NCF. As indicated in Table [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A9.T7 "Table 7 ‣ Appendix I The Effect of Ensemble Attack ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+the attack success rate of NCF can be further improved when crafting via
+an ensemble of models.
+:::
+
+<figure id="A9.T7" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 7:
+</span>Comparison of ensemble attack and single model attack. We report
+attack success rates (%) of NCF and the leftmost model column denotes
+the substitute model, where Ensemble means an ensmeble of Res-18, VGG-19
+and Mobile-v2.</figcaption>
+</figure>
+:::
+
+::: {#A10 .section .ltx_appendix}
+## [Appendix J ]{.ltx_tag .ltx_tag_appendix}Attack by Selecting Random Colors {#appendix-j-attack-by-selecting-random-colors .ltx_title .ltx_title_appendix}
+
+::: {#A10.p1 .ltx_para}
+In this section, we discuss the difference between NCF-IR-NS and random
+color attack. Formally, NCF-IR-NS does not mean selecting random colors
+to attack. Specifically, it first generates a set of adversarial
+examples with different color distributions and then selects the best
+example from them based on the loss of the white-box model to attack.
+Therefore, NCF-IR-NS is close to a white-box attack.
+:::
+
+::: {#A10.p2 .ltx_para}
+To support our claim, we evaluate the performance of random color attack
+(NCF-IR-NS-⁢), i.e., randomly select colors for each semantic class and
+use the resulting adversarial examples to attack. As demonstrated in
+Table [[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.02041#A10.T8 "Table 8 ‣ Appendix J Attack by Selecting Random Colors ‣ Natural Color Fool: Towards Boosting Black-box Unrestricted Attacks"){.ltx_ref},
+the performance of NCF-IR-NS-⁢ is much lower than NCF-IR-NS. For example,
+NCF-IR-NS-⁢ only achieves a 27.3% (degraded from 51.6%) success rate on
+Inc-v3. Thus, directly using random colors to generate adversarial
+examples is ineffective.
+:::
+
+<figure id="A10.T8" class="ltx_table">
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 8: </span>The
+attack success rate of using white-box information and not using it.
+NCF-IR-NS using Inc-v3 as the substitute model. (“*” denotes the
+white-box attack)</figcaption>
+</figure>
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2210.02040){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./ncf_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2210.02041){.ar5iv-text-button
+.ar5iv-severity-ok} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2210.02041){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2210.02041){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2210.02042){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Sun Jul 30 22:39:40 2023 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+
+::: {#simplifyJobsPortals}
+:::
+:::

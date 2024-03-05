@@ -1,0 +1,2727 @@
+::: ltx_page_main
+::: ltx_page_content
+# Distilling Large Vision-Language Model with Out-of-Distribution Generalizability {#distilling-large-vision-language-model-with-out-of-distribution-generalizability .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [ Xuanlin Li[^1^[[^1^[footnotemark: ]{.ltx_note_type}[1]{.ltx_tag
+.ltx_tag_note}]{.ltx_note_content}]{.ltx_note_outer}]{#footnotex1
+.ltx_note .ltx_role_footnotemark}  Yunhao Fang[^1^[[^1^[footnotemark:
+]{.ltx_note_type}[1]{.ltx_tag
+.ltx_tag_note}]{.ltx_note_content}]{.ltx_note_outer}]{#footnotex2
+.ltx_note .ltx_role_footnotemark}  Minghua Liu  Zhan Ling  Zhuowen
+Tu  Hao Su   \
+UC San Diego ]{.ltx_personname}[ Equal contributions; corresponding
+authors: xul012@ucsd.edu,
+yuf026@ucsd.edu]{.ltx_author_notes}]{.ltx_creator .ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Large vision-language models have achieved outstanding performance, but
+their size and computational requirements make their deployment on
+resource-constrained devices and time-sensitive tasks impractical. Model
+distillation, the process of creating smaller, faster models that
+maintain the performance of larger models, is a promising direction
+towards the solution. This paper investigates the distillation of visual
+representations in large teacher vision-language models into lightweight
+student models using a small- or mid-scale dataset. Notably, this study
+focuses on open-vocabulary out-of-distribution (OOD) generalization, a
+challenging problem that has been overlooked in previous model
+distillation literature. We propose two principles from vision and
+language modality perspectives to enhance student's OOD generalization:
+[(1)]{#id1.id1.1 .ltx_text .ltx_font_bold} by better imitating teacher's
+visual representation space, and carefully promoting better coherence in
+vision-language alignment with the teacher; [(2)]{#id1.id1.2 .ltx_text
+.ltx_font_bold} by enriching the teacher's language representations with
+informative and finegrained semantic attributes to effectively
+distinguish between different labels. We propose several metrics and
+conduct extensive experiments to investigate their techniques. The
+results demonstrate significant improvements in zero-shot and few-shot
+student performance on open-vocabulary out-of-distribution
+classification, highlighting the effectiveness of our proposed
+approaches. Our code will be released at [this
+link](https://github.com/xuanlinli17/large_vlm_distillation_ood){.ltx_ref
+.ltx_href target="_blank"}.
+:::
+
+<figure id="S0.F1" class="ltx_figure">
+<img src="./2307.03135_files/x1.png" id="S0.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_square" width="831"
+height="742" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S0.F1.3.1.1"
+class="ltx_text" style="font-size:90%;">Figure 1</span>: </span><span
+id="S0.F1.4.2" class="ltx_text" style="font-size:90%;"> Improvements of
+student’s open-vocabulary classification accuracy on <span
+id="S0.F1.4.2.1" class="ltx_text ltx_font_italic">unseen</span>
+out-of-distribution (OOD) concepts across different datasets. We
+strengthen student’s OOD generalization ability from two key
+perspectives: 1) by better imitating teacher’s visual representation
+space, and carefully promoting better coherence in vision-language
+alignment with the teacher; 2) by enriching teacher’s language
+representations with more informative, finegrained, and meaningful
+attributes to effectively distinguish between different labels. The
+latter can be accomplished using large language models (LLMs) such as
+ChatGPT. </span></figcaption>
+</figure>
+
+<figure id="S0.F2" class="ltx_figure">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell ltx_flex_size_2">
+<span id="S0.F2.1"
+class="ltx_inline-para ltx_minipage ltx_flex_size_2 ltx_align_top"
+style="width:377.6pt;"> <span id="S0.F2.1.p1"
+class="ltx_para ltx_align_center"><img src="./2307.03135_files/x2.png"
+id="S0.F2.1.p1.g1" class="ltx_graphics ltx_img_landscape" width="830"
+height="353" alt="Refer to caption" /> </span></span>
+</div>
+<div class="ltx_flex_cell ltx_flex_size_2">
+<span id="S0.F2.2"
+class="ltx_inline-para ltx_minipage ltx_flex_size_2 ltx_align_top"
+style="width:104.3pt;"> <span id="S0.F2.2.p1"
+class="ltx_para ltx_align_center"><img src="./2307.03135_files/x3.png"
+id="S0.F2.2.p1.g1" class="ltx_graphics ltx_img_portrait" width="831"
+height="1317" alt="Refer to caption" /> </span></span>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S0.F2.6.1.1"
+class="ltx_text" style="font-size:90%;">(a)</span> </span>
+<span class="ltx_tag ltx_tag_figure"><span id="S0.F2.6.1.1"
+class="ltx_text" style="font-size:90%;">(a)</span> </span>
+<span class="ltx_tag ltx_tag_figure"><span id="S0.F2.7.1.1"
+class="ltx_text" style="font-size:90%;">(b)</span> </span>
+<span class="ltx_tag ltx_tag_figure"><span id="S0.F2.10.2.1"
+class="ltx_text" style="font-size:90%;">Figure 2</span>: </span><span
+id="S0.F2.4.1" class="ltx_text ltx_font_bold"
+style="font-size:90%;">(a)<span id="S0.F2.4.1.1"
+class="ltx_text ltx_font_medium"> Illustration of better teacher-student
+visual space alignments, motivated by our finding that achieving precise
+matching between teacher and student’s high-dimensional visual spaces is
+inherently challenging. While the student cheesecake image feature <span
+class="math inline"><em>S</em><sub>c2</sub></span> minimizes its
+distance to the teacher’s cheesecake image feature, it is even closer to
+the teacher’s pizza image feature. This discrepancy results in poor
+coherence in visual space and vision-language alignment with the
+teacher, causing classification mistakes. By replacing the “minimizing
+distance” requirement with the “relative distance” requirement, which
+encourages student visual features to be closer to their corresponding
+teacher visual features than other teacher visual features, we greatly
+enhance visual space and vision-language alignment coherency with the
+teacher, thereby improving OOD generalization. </span>(b)<span
+id="S0.F2.4.1.2" class="ltx_text ltx_font_medium"> UMAP embeddings of
+student visual features and text features before and after language
+representation enrichment with LLMs. Different colors denote different
+OOD classes on tiered-ImageNet. Language representation enrichment
+confers better clusterings of image features around their corresponding
+text features, enhancing OOD generalization.</span></span></figcaption>
+</figure>
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+In recent years, there has been a significant growth and development of
+large vision language models (large VLMs) such as
+CLIP \[[44](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib44){.ltx_ref}\],
+GLIP \[[33](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib33){.ltx_ref}\],
+OFA \[[55](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib55){.ltx_ref}\],
+SimVLM \[[59](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib59){.ltx_ref}\],
+BEiT \[[56](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib56){.ltx_ref}\],
+Florence \[[66](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib66){.ltx_ref}\],
+and
+Flamingo \[[2](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib2){.ltx_ref}\],
+which have been pretrained on massive amounts of internet-scale data.
+These models have demonstrated enormous potential in a wide range of
+downstream applications, including classification/detection,
+image-to-text generation, and vision-language reasoning, especially for
+the out-of-distribution (OOD) samples and open-vocabulary settings.
+Despite their potential, the large model sizes, high computational
+resource requirements, and inefficient inference speed of these models
+restrict their deployment on mobile and IoT edge
+devices \[[26](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib26){.ltx_ref},
+[50](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib50){.ltx_ref}\],
+as well as in scenarios like robotic
+control \[[5](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib5){.ltx_ref}\]
+that require rapid network inference. Thus, it would be ideal if we can
+obtain small and compact models that still possess strong
+generalizability towards diverse open-set concepts encountered in the
+real world.
+:::
+
+::: {#S1.p2 .ltx_para}
+We note that the internet-scale data has endowed foundation models with
+well-aligned vision and language representation spaces across diverse
+domains and datasets. Ideally, if such representation spaces can be
+perfectly distilled into smaller models, the resulting models can
+naturally possess similar open-set OOD generalization ability as their
+larger counterparts. However, it is usually not the case, as
+demonstrated in our later experiments. Therefore, we ask the following
+question: [How to effectively distill representation spaces of large
+vision-language teacher models to benefit OOD generalization of smaller
+student models?]{#S1.p2.1.1 .ltx_text .ltx_font_italic}
+:::
+
+::: {#S1.p3 .ltx_para}
+In this study, we investigate the principles and techniques for
+distilling visual representations from large vision-language models
+using small- to mid-scale datasets, with a specific focus on
+out-of-distribution (OOD) generalization. Although large-scale datasets
+with image-text pairs exist, as a pioneer work in this direction, we
+argue that small- to mid-scale datasets has many practical scenarios for
+vision application researchers (e.g., for robotics), because this is
+more flexible, allowing for faster research and development cycles with
+fewer resource dependencies. Additionally, as we shall see, extensive
+experiments yield a deeper understanding of the representation spaces of
+vision-language models, which can be beneficial for future tasks like
+distilling image-based foundation models for
+detection \[[27](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib27){.ltx_ref},
+[55](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib55){.ltx_ref}\],
+segmentation \[[29](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib29){.ltx_ref},
+[13](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib13){.ltx_ref}\],
+and other data modalities like 3D
+geometries \[[64](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib64){.ltx_ref},
+[41](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib41){.ltx_ref},
+[34](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib34){.ltx_ref}\].
+To keep study focused and fundamental, we also choose the image
+classification task to explore many possible strategies.
+:::
+
+::: {#S1.p4 .ltx_para}
+Based on extensive experimental results, we propose to preserve the
+internal structure of the representation spaces. Specifically, we
+propose techniques to maintain the relationship between the visual and
+language representation spaces of the teacher models and a novel
+strategy to enhance the text representation used during distillation.
+Across our study, we make the following contributions:\
+[1)]{#S1.p4.1.1 .ltx_text .ltx_font_bold} We motivate the ability for
+students to generalize towards out-of-distribution (OOD) concepts by
+designing several metrics that measure the visual representation space
+consistency and the vision-language alignment consistency between the
+student and the teacher vision-language model.\
+[2)]{#S1.p4.1.2 .ltx_text .ltx_font_bold} We find that by better
+imitating teacher's visual representation space, and carefully promoting
+better coherence in vision-language alignment with the teacher, we
+substantially strengthen student's OOD generalization ability.\
+[3)]{#S1.p4.1.3 .ltx_text .ltx_font_bold} We further improve student's
+OOD generalization ability by enriching teacher's language
+representations with more informative, finegrained, and meaningful
+semantic attributes to effectively distinguish between different
+labels.\
+[4)]{#S1.p4.1.4 .ltx_text .ltx_font_bold} We conduct a thorough
+experimental analysis to understand the efficacy and impact of our
+techniques on students' OOD generalization ability.
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Related Work {#related-work .ltx_title .ltx_title_section}
+
+::: {#S2.p1 .ltx_para .ltx_noindent}
+[Vision-Language Models (VLMs)]{#S2.p1.1.1 .ltx_text .ltx_font_bold}.
+Recent years have witnessed tremendous progress on vision language
+models \[[44](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib44){.ltx_ref},
+[33](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib33){.ltx_ref},
+[55](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib55){.ltx_ref},
+[59](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib59){.ltx_ref},
+[56](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib56){.ltx_ref},
+[66](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib66){.ltx_ref},
+[2](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib2){.ltx_ref}\].
+Various lines of approaches have been proposed to improve the downstream
+task performance of VLMs, such as prompt
+learning \[[72](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib72){.ltx_ref},
+[65](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib65){.ltx_ref},
+[67](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib67){.ltx_ref},
+[73](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib73){.ltx_ref}\],
+prompt
+engineering \[[43](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib43){.ltx_ref},
+[24](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib24){.ltx_ref},
+[35](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib35){.ltx_ref}\],
+and finetuning via vision-language
+fusion \[[48](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib48){.ltx_ref},
+[57](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib57){.ltx_ref},
+[30](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib30){.ltx_ref}\].
+Different from these works that utilize existing VLMs on downstream
+tasks, our work studies distilling large VLM's feature space structures
+towards smaller student networks. Specifically, we investigate
+principles that effectively leverage the visual representation spaces
+and vision-language alignments in large VLMs to enhance the OOD
+generalization ability of students.
+:::
+
+::: {#S2.p2 .ltx_para .ltx_noindent}
+[Network Distillation on VLMs]{#S2.p2.1.1 .ltx_text .ltx_font_bold}. The
+teacher-student distillation
+framework \[[25](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib25){.ltx_ref}\]
+aims to distill teacher model knowledge into student models, thereby
+improving their downstream task performance. A classic setting considers
+teachers and students to be vision-only. In particular, distilling image
+representations from teacher visual backbones, such as
+CNNs \[[22](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib22){.ltx_ref}\]
+and Vision
+Transformers \[[15](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib15){.ltx_ref}\],
+have been
+well-studied \[[53](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib53){.ltx_ref},
+[39](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib39){.ltx_ref},
+[36](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib36){.ltx_ref},
+[8](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib8){.ltx_ref},
+[52](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib52){.ltx_ref},
+[42](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib42){.ltx_ref},
+[17](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib17){.ltx_ref},
+[62](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib62){.ltx_ref}\].
+With the success of large-scale VLMs, recent works start to distill
+their powerful multimodal visual and language representations towards
+various downstream tasks, such as object
+detection \[[20](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib20){.ltx_ref},
+[37](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib37){.ltx_ref}\],
+visual-language
+reasoning \[[58](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib58){.ltx_ref},
+[11](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib11){.ltx_ref},
+[16](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib16){.ltx_ref}\],
+scene
+understanding \[[41](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib41){.ltx_ref}\],
+or adopt distillation during vision language model pretraining to
+further enhance their performance
+ \[[31](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib31){.ltx_ref},
+[32](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib32){.ltx_ref},
+[14](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib14){.ltx_ref},
+[70](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib70){.ltx_ref},
+[51](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib51){.ltx_ref}\].
+:::
+
+::: {#S2.p3 .ltx_para}
+As the real world is full of concepts unseen during model training, it
+is essential for student models to attain strong OOD generalization
+capabilities. However, prior works have rarely [carefully]{#S2.p3.1.1
+.ltx_text .ltx_font_italic} studied how to design distillation
+approaches to enhance such ability. In this work, we propose principles
+and approaches to improve student's OOD generalization ability, and we
+carefully analyze their efficacies through various metrics and extensive
+experiments.
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Overview {#overview .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para .ltx_noindent}
+[Problem Setup]{#S3.p1.2.1 .ltx_text .ltx_font_bold}. We distill a large
+vision-language teacher model $T$ (e.g., CLIP ViT-L/14) to a small
+student image model $S$ (e.g., ResNet18) by focusing on
+out-of-distribution (OOD) generalization for open-vocabulary object
+classification. We choose small- or mid-scale datasets to achieve the
+distillation so that the distillation process is flexible for fast
+research cycle and has less resource dependency.
+:::
+
+::: {#S3.p2 .ltx_para}
+The teacher consists of an image encoder
+$T_{\text{img}}\operatorname{}{( \cdot )}$ and a text encoder
+$T_{\text{txt}}\operatorname{}{( \cdot )}$. During distillation, we keep
+the flexibility of the existing teacher text encoder for the open-set
+setting, and we let the student model $S$ be vision-only, i.e.,
+$S = S_{\text{img}}$. Through this process, we hope that $S$ not only
+achieves high prediction accuracy on seen labels $\mathcal{Y}_{id}$, but
+also attains strong generalization ability on out-of-distribution labels
+$\mathcal{Y}_{ood}$. In addition, we train students from scratch to
+avoid label contamination, allowing us to more carefully assess and
+understand their OOD generalization ability.
+:::
+
+::: {#S3.p3 .ltx_para .ltx_noindent}
+[Experiment Setup]{#S3.p3.15.1 .ltx_text .ltx_font_bold}. We are given a
+training (distillation) dataset $\mathcal{X}_{\text{train}}$, an
+in-distribution evaluation dataset $\mathcal{X}_{\text{id}}$, and an
+out-of-distribution evaluation dataset $\mathcal{X}_{\text{ood}}$. Each
+dataset consists of image-label pairs $\{{(\mathbf{x},y)}\}$. For
+${(\mathbf{x},y)} \in {\mathcal{X}_{\text{train}} \cup \mathcal{X}_{\text{id}}}$,
+we have $y \in \mathcal{Y}_{id}$, and for
+${(\mathbf{x},y)} \in \mathcal{X}_{\text{ood}}$, we have
+$y \in \mathcal{Y}_{ood}$, where $\mathcal{Y}_{id},\mathcal{Y}_{ood}$
+denote in-distribution and out-of-distribution label sets, and
+${\mathcal{Y}_{id} \cap \mathcal{Y}_{ood}} = \varnothing$. We evaluate
+the student on $\mathcal{X}_{\text{id}}$, along with zero-shot and
+few-shot generalization on $\mathcal{X}_{\text{ood}}$. For few-shot
+learning, we finetune our student models (we will show later in our
+ablation study that finetuning achieves much higher performance on
+$\mathcal{X}_{\text{ood}}$ than training-free retrieval). We also adopt
+balanced training batches where at most half of samples come from
+few-shot data and the rest from $\mathcal{X}_{\text{train}}$. This
+strategy leads to similar performance on $\mathcal{X}_{\text{id}}$
+before and after finetuning. More implementation details are presented
+in Appendix [[B]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S2a "B Training Details and Hyperparameters for Main Experiments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+:::
+
+::: {#S3.p4 .ltx_para}
+We adopt a diverse collection of recognition tasks using small to
+medium-scale datasets, including
+CaltechBirds \[[61](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib61){.ltx_ref}\],
+StanfordCars \[[28](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib28){.ltx_ref}\],
+Flower102 \[[40](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib40){.ltx_ref}\],
+Food101 \[[4](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib4){.ltx_ref}\],
+SUN397 \[[63](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib63){.ltx_ref}\],
+and
+tiered-ImageNet \[[45](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib45){.ltx_ref},
+[12](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib12){.ltx_ref}\].
+We split the dataset labels such that
+${|\mathcal{Y}_{id}|} = {|\mathcal{Y}_{ood}|}$, except tiered-ImageNet,
+which comes with an existing split. Detailed dataset statistics are
+listed in Appendix [[A]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S1a "A Dataset Statistics ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+:::
+
+::: {#S3.p5 .ltx_para .ltx_noindent}
+[Organization of Exposition]{#S3.p5.1.1 .ltx_text .ltx_font_bold}. Like
+other papers on understanding neural network
+behaviors \[[21](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib21){.ltx_ref},
+[3](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib3){.ltx_ref},
+[23](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib23){.ltx_ref},
+[54](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib54){.ltx_ref}\],
+we will propose techniques and invent metrics to help understand the
+effectiveness of each technique. Following the organization of a
+representative work of this
+kind \[[68](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib68){.ltx_ref}\],
+we present different techniques in a waterfall style and organize the
+presentation of each technique by grouping the approach, metric, and
+results together.
+:::
+
+::: {#S3.p6 .ltx_para .ltx_noindent}
+[Approach Overview]{#S3.p6.1.1 .ltx_text .ltx_font_bold}. Our approach
+aims to preserve the structure of the visual representation space and
+its relationship with the text representation space inherited from the
+teacher model to enhance the student's OOD generalization ability.
+Specificially, [(1)]{#S3.p6.1.2 .ltx_text .ltx_font_bold} In
+Sec. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4 "4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we show that by better imitating teacher's visual representation space,
+and carefully promoting better coherence in vision-language alignment
+with the teacher, students achieve substantially better OOD
+generalization. [(2)]{#S3.p6.1.3 .ltx_text .ltx_font_bold} In
+Sec. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5 "5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we show that by enriching teacher's language representations, there are
+more meaningful attributes to effectively distinguish between different
+labels, thereby further enhancing student's OOD generalization ability.
+A summary of our main experimental findings is illustrated in
+Fig. [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S0.F1 "Figure 1 ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}
+and Fig. [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S0.F2 "Figure 2 ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Teacher-Student Visual Space and Vision-Language Alignments {#teacher-student-visual-space-and-vision-language-alignments .ltx_title .ltx_title_section}
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Better Imitating Teacher's Visual Representation Space {#better-imitating-teachers-visual-representation-space .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para .ltx_noindent}
+[Naive baseline without visual space alignment between teacher and
+student]{#S4.SS1.p1.12.1 .ltx_text .ltx_font_bold}. A straightforward
+approach to training a student model is to directly align its visual
+representation with teacher's language representation through
+[only]{#S4.SS1.p1.12.2 .ltx_text .ltx_font_italic} the following
+contrastive loss:
+
+  -- ---------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+     $\mathcal{L}_{\text{cls}}\operatorname{}{(\mathbf{x},y)}$        $= {\sum\limits_{y^{\prime}} - {\mathbf{1}_{y^{\prime} = y}\operatorname{}{\log P_{S}}\operatorname{}{(\left. y^{\prime} \middle| \mathbf{x} \right.)}}}$                                                                                                                                              [(1)]{.ltx_tag .ltx_tag_equationgroup .ltx_align_right}
+     $P_{S}\operatorname{}{(\left. y \middle| \mathbf{x} \right.)}$   $= \frac{\exp{({{\cos{({S\operatorname{}{(\mathbf{x})}},{T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y)}})}})}}/\tau})}}{\sum_{y^{\prime} \in \mathcal{Y}}{\exp{({{\cos{({S\operatorname{}{(\mathbf{x})}},{T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y^{\prime})}})}})}}/\tau})}}}$      
+  -- ---------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+
+Here $\tau$ is the temperature parameter.
+$S\operatorname{}{(\mathbf{x})}$ denotes the feature of $\mathbf{x}$
+extracted by a student image model $S$.
+${l\operatorname{}{(y)}} = {\text{prompt} + {\text{description}\operatorname{}{(y)}}}$
+is a language generation function that maps the label $y$ to its natural
+language representation, which consists of a prompt and a description of
+$y$. For this baseline, we use the suggested prompt "A photo of a" from
+the CLIP paper, and let description($y$) to be simply the class label
+name (e.g., "lotus"). From here on, we assume that all teacher and
+student representations are normalized, i.e.,
+${S\operatorname{}{(\mathbf{x})}}\leftarrow\frac{S\operatorname{}{(\mathbf{x})}}{\left\| {S\operatorname{}{(\mathbf{x})}} \right\|_{2}}$,
+${T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y)}})}}\leftarrow\frac{T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y)}})}}{\left\| {T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y)}})}} \right\|_{2}}$.
+In this case,
+${\cos{({S\operatorname{}{(\mathbf{x})}},{T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y)}})}})}} = {1 - \frac{\left\| {{S\operatorname{}{(\mathbf{x})}} - {T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y)}})}}} \right\|_{2}^{2}}{2}}$.
+:::
+
+::: {#S4.SS1.p2 .ltx_para}
+Training student models solely using $\mathcal{L}_{\text{cls}}$ does not
+enforce similarity between teacher and student visual representation
+space structures. Consequently, student visual space structures tend to
+overfit to training labels, hindering their OOD generalizability. This
+motivates us to introduce auxiliary losses to align teacher and student
+visual representation spaces, which we will describe next.
+:::
+
+<figure id="S4.T2" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 2: </span>Average
+MSE / degree difference between student visual features and teacher
+visual features for students trained with different strategies. We adopt
+ResNet18 as student and CLIP ViT-L/14 as teacher, except “<span
+class="math inline">ℒ<sub>mse</sub></span> (RN50)”, where the student is
+ResNet50, and the teacher is CLIP ResNet50. We observe that it is very
+challenging for students to <span id="S4.T2.18.1"
+class="ltx_text ltx_font_italic">precisely</span> match teacher’s visual
+features through <span class="math inline">ℒ<sub>mse</sub></span>.
+Moreover, in conjunction with Tab. <a
+href="https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T1"
+class="ltx_ref"
+title="Table 1 ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"><span
+class="ltx_text ltx_ref_tag">1</span></a>, we observe that a lower
+visual feature MSE is not necessary for better student OOD
+generalization.</figcaption>
+</figure>
+
+::: {#S4.SS1.p3 .ltx_para .ltx_noindent}
+[Directly fitting teacher visual features]{#S4.SS1.p3.1.1 .ltx_text
+.ltx_font_bold}. We note that teacher's visual representation space is
+well-aligned with language across diverse datasets, and such alignment
+demonstrates strong generalization across many domains. By imitating
+teacher's visual space structure, we hope to enhance the ability for
+student's visual space to generalize and extrapolate towards unseen
+concepts, thereby implicitly enhancing the generalizability of student's
+vision-language alignment and improving its OOD generalization.
+:::
+
+::: {#S4.SS1.p4 .ltx_para}
+A direct approach to achieve this is to align the teacher and student
+visual representations through the Mean Squared-Error (MSE) loss:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathcal{L}_{\text{mse}}\operatorname{}{(\mathbf{x})}} = {\|{{S\operatorname{}{(\mathbf{x})}} - {T_{\text{img}}\operatorname{}{(\mathbf{x})}}}\|}_{2}^{2}$$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+In Tab. [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T1 "Table 1 ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we show that adding $\mathcal{L}_{\text{mse}}$ on top of
+$\mathcal{L}_{\text{cls}}$ improves student OOD generalization. However,
+upon further examination, we find that [students face significant
+challenges in precisely reproducing teacher's visual
+representations]{#S4.SS1.p4.2.1 .ltx_text .ltx_font_italic}, as
+evidenced by the substantial errors shown in Tab. [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T2 "Table 2 ‣ 4.1 Better Imitating Teacher’s Visual Representation Space ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+Such errors persist even when the student and teacher networks possess
+the same representation power (e.g., both ResNet50 networks). This
+phenomenon highlights that achieving precise matching between teacher
+and student's high-dimensional visual feature spaces is inherently
+challenging, which can be attributed to differences in weight
+initialization, training data, and the presence of local minima in the
+loss landscape. Moreover, we later find that when students struggle to
+precisely match teacher's visual features, they also struggle to
+preserve teacher's [local visual space structure]{#S4.SS1.p4.2.2
+.ltx_text .ltx_font_italic} and [relative visual feature
+relationship]{#S4.SS1.p4.2.3 .ltx_text .ltx_font_italic} between
+different images, hindering their OOD generalization ability.
+:::
+
+::: {#S4.SS1.p5 .ltx_para .ltx_noindent}
+[Better imitating teacher visual representation space]{#S4.SS1.p5.3.1
+.ltx_text .ltx_font_bold}. Since precisely matching teacher's visual
+features is inherently challenging, we propose to augment the training
+objective with the following contrastive loss, which "softly" matches
+teacher's visual features:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathcal{L}_{\text{im-cst}}\operatorname{}{(\mathbf{x})}} = \frac{\exp{({- {{\|{{S\operatorname{}{(\mathbf{x})}} - {T_{\text{img}}\operatorname{}{(\mathbf{x})}}}\|}_{2}^{2}/\tau}})}}{\sum_{\mathbf{x}^{\prime}}{\exp{({- {{\|{{S\operatorname{}{(\mathbf{x})}} - {T_{\text{img}}\operatorname{}{(\mathbf{x}^{\prime})}}}\|}_{2}^{2}/\tau}})}}}$$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+By combining $\mathcal{L}_{\text{im-cst}}$ with
+$\mathcal{L}_{\text{cls}}$, we observe in Tab. [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T1 "Table 1 ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}
+that the student exhibits significantly better zero-shot and few-shot
+OOD generalization ability across different datasets. Interestingly,
+such improvement is accompanied by a larger distance between student and
+teacher visual features, as shown in Tab. [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T2 "Table 2 ‣ 4.1 Better Imitating Teacher’s Visual Representation Space ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+This finding suggests that a lower MSE visual feature matching loss,
+which only captures the absolute distance to teacher's visual features,
+does [not]{#S4.SS1.p5.2.1 .ltx_text .ltx_font_italic} necessarily imply
+better visual space consistency. This is because [MSE does not consider
+the coherence of relative visual feature relationships or local visual
+space structures between teacher and student]{#S4.SS1.p5.2.2 .ltx_text
+.ltx_font_italic}.
+:::
+
+::: {#S4.SS1.p6 .ltx_para}
+In the following paragraphs, we will develop several metrics to better
+assess the teacher-student visual space consistency. These metrics
+provide us with valuable insights into how $\mathcal{L}_{\text{im-cst}}$
+facilitates students to achieve closer visual space proximity to the
+teacher while yielding a deeper understanding of the teacher's visual
+representation space.
+:::
+
+<figure id="S4.F3" class="ltx_figure">
+<img src="./2307.03135_files/x4.png" id="S4.F3.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="406" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S4.F3.8.4.1"
+class="ltx_text" style="font-size:90%;">Figure 3</span>: </span><span
+id="S4.F3.6.3" class="ltx_text" style="font-size:90%;">Illustrations of
+<span class="math inline">ℳ<sub>rel</sub></span> and <span
+class="math inline">ℳ<sub>neigh</sub></span> that measure the coherence
+of relative visual feature relationship and local visual space structure
+between the student and teacher. Each color corresponds to a single
+image. In (a), arrows indicate the nearest neighbors from student’s
+visual space to teacher’s visual space. Solid lines represent correct
+matching, while dashed lines indicate incorrect matching. In (b), the
+green circle represents a query image, and the red dashed regions
+represent the <span class="math inline"><em>k</em></span>-nearest
+neighbors (kNN) in both spaces. We measure the intersection between the
+two kNN sets.</span></figcaption>
+</figure>
+
+::: {#S4.SS1.p7 .ltx_para .ltx_noindent}
+[Quantifying teacher-student visual space alignment]{#S4.SS1.p7.11.1
+.ltx_text .ltx_font_bold}. To quantify how student models preserve
+teacher's visual representation space structures, we propose two
+metrics. For the first metric, we are motivated by the fact that if the
+relative relationships among teacher's visual representations are
+preserved, then for an image $\mathbf{x}$,
+$S\operatorname{}{(\mathbf{x})}$ tends to be the closest to
+$T_{\text{img}}\operatorname{}{(\mathbf{x})}$ rather than
+$T_{\text{img}}\operatorname{}{(\mathbf{x}^{\prime})}$ of some other
+image $\mathbf{x}^{\prime} \neq \mathbf{x}$. The latter scenario tends
+to break the relative feature relationship between $\mathbf{x}$ and
+$\mathbf{x}^{\prime}$ that is originally present in the teacher, thereby
+causing the student to have distinct visual feature manifold structure
+from the teacher, as illustrated in Fig. [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.F3 "Figure 3 ‣ 4.1 Better Imitating Teacher’s Visual Representation Space ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}(a).
+Furthermore, if $S\operatorname{}{(\mathbf{x})}$ is closer to
+$T_{\text{img}}\operatorname{}{(\mathbf{x}^{\prime})}$, then the
+language feature closest to $S\operatorname{}{(\mathbf{x})}$ often
+differs from the language feature closest to
+$T_{\text{img}}\operatorname{}{(\mathbf{x})}$, and the latter is
+typically the ground truth language label. Thus, such discrepancy often
+results in erroneous label predictions. We can then formally define the
+first metric as follows:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathcal{M}_{\text{rel}}\operatorname{}{(\mathcal{X})}} = \frac{\sum_{i = 1}^{|\mathcal{X}|}{\mathbf{1}\operatorname{}{\lbrack{i = {\text{argmin}_{j}\operatorname{}{\|{{T_{\text{img}}\operatorname{}{(\mathbf{x}_{j})}} - {S\operatorname{}{(\mathbf{x}_{i})}}}\|}_{2}^{2}}}\rbrack}}}{|\mathcal{X}|}$$      [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+The second metric measures the proximity between local neighborhoods of
+student visual features and teacher visual features. That is, for each
+image, how much the $k$ images whose features have the closest proximity
+to it (excluding itself) overlap between the student and the teacher
+(see Fig. [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.F3 "Figure 3 ‣ 4.1 Better Imitating Teacher’s Visual Representation Space ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}b
+for illustration). We can define this metric as follows:
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathcal{M}_{\text{neigh}}\operatorname{}{(\mathcal{X},k)}} = \frac{\sum_{i = 1}^{|\mathcal{X}|}{|{{\text{KNN}\operatorname{}{(S,\mathbf{x}_{i},k)}} \cap {\text{KNN}\operatorname{}{(T_{\text{img}},\mathbf{x}_{i},k)}}}|}}{k\operatorname{}{|\mathcal{X}|}}$$      [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+Here
+${\text{KNN}\operatorname{}{(S,\mathbf{x}_{i},k)}} = \left. \{\text{argbottomk}_{j} \middle| {{|{{S\operatorname{}{(\mathbf{x}_{j})}} - {S\operatorname{}{(\mathbf{x}_{i})}}}|}|}_{2}\} \right.$
+outputs the $k$ nearest-neighbor image-ids of
+$S\operatorname{}{(\mathbf{x}_{i})}$, and
+$\text{KNN}\operatorname{}{(T_{\text{img}},\mathbf{x}_{i},k)}$ is
+defined similarly. This metric is complementary to
+$\mathcal{M}_{\text{rel}}$ as it only requires the set of neighbor image
+ids to be identical between the student and the teacher, and does not
+enforce these neighbor images to have the same relative feature
+relationships.
+:::
+
+<figure id="S4.T3" class="ltx_table ltx_align_center">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T3.18.7.1"
+class="ltx_text" style="font-size:129%;">Table 3</span>: </span><span
+id="S4.T3.20.6" class="ltx_text" style="font-size:129%;">We evaluate
+<span class="math inline">ℳ<sub>rel</sub></span> (middle 2 columns) and
+<span class="math inline">ℳ<sub>neigh</sub></span> (right 3 columns) on
+different students to measure their coherence with teacher’s relative
+visual feature relationships and local visual feature structures (higher
+the better). For <span class="math inline">ℳ<sub>neigh</sub></span>,
+<span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub></span>
+in each entry denote <span
+class="math inline">ℳ<sub>neigh</sub> (𝒳<sub>train</sub>)</span> and
+<span class="math inline">ℳ<sub>neigh</sub> (𝒳<sub>ood</sub>)</span>,
+respectively. Metrics are evaluated on Flower102. More results in
+Appendix.</span></figcaption>
+</figure>
+
+::: {#S4.SS1.p8 .ltx_para .ltx_noindent}
+$\mathcal{L}_{\textbf{im-cst}}$[ improves teacher-student visual space
+alignments through better relative and local visual space
+coherence]{#S4.SS1.p8.13.1 .ltx_text .ltx_font_bold}. We assess
+$\mathcal{M}_{\text{rel}}$ and $\mathcal{M}_{\text{neigh}}$ on different
+students and present the results in Tab. [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T3 "Table 3 ‣ 4.1 Better Imitating Teacher’s Visual Representation Space ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We find that students trained solely with $\mathcal{L}_{\text{mse}}$ and
+without $\mathcal{L}_{\text{im-cst}}$ exhibit poor values for both
+$\mathcal{M}_{\text{rel}}$ and $\mathcal{M}_{\text{neigh}}$. Notably,
+$\mathcal{M}_{\text{rel}}\operatorname{}{(\mathcal{X}_{\text{train}})}$
+is only 0.03, indicating a large discrepancy between student and teacher
+visual spaces, even on the training set. On the other hand, after
+incorporating $\mathcal{L}_{\text{im-cst}}$, we observe significant
+improvements of $\mathcal{M}_{\text{rel}}$ and
+$\mathcal{M}_{\text{neigh}}$ on both $\mathcal{X}_{\text{train}}$ and
+$\mathcal{X}_{\text{ood}}$. This demonstrates that the student exhibits
+much better consistency in relative and local visual structures with the
+teacher, both for seen and unseen concepts, thereby enhancing the
+generalization and extrapolation ability of the student's visual space.
+A better-aligned visual space also implicitly enables better
+generalization and extrapolation in vision-language alignments (which we
+show later), contributing to improved OOD performance. Furthermore, our
+findings suggest a broader principle: when students face challenges in
+precisely matching the teacher's visual space, the proximity of local
+visual feature structures and relative visual feature relationships have
+a greater impact on OOD generalization than the absolute distance to the
+teacher's features.
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Better Coherence with Teacher's Vision-Language Alignment Structure {#better-coherence-with-teachers-vision-language-alignment-structure .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.p1 .ltx_para .ltx_noindent}
+[Motivation.]{#S4.SS2.p1.9.1 .ltx_text .ltx_font_bold} In
+Section [[4.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.SS1 "4.1 Better Imitating Teacher’s Visual Representation Space ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we focused on improving the student's OOD generalization ability by
+better aligning student-teacher visual spaces. Since teacher's visual
+space is well-aligned with language across diverse concepts and domains,
+a better student coherence with teacher's visual space
+[implicitly]{#S4.SS2.p1.9.2 .ltx_text .ltx_font_italic} leads to better
+vision-language (V-L) alignments. Naturally, an alternative perspective
+to improve student's OOD generalization becomes to enhance its
+[explicit]{#S4.SS2.p1.9.3 .ltx_text .ltx_font_italic} V-L alignments and
+improve their coherence with the teacher's, where we previously only
+used a simple contrastive V-L matching loss $\mathcal{L}_{\text{cls}}$.
+Another motivation to focus on [explicit]{#S4.SS2.p1.9.4 .ltx_text
+.ltx_font_italic} V-L alignments arises from our finding that they play
+an essential role to ensure precise and accurate V-L alignments,
+especially when training on seen concepts or performing few-shot
+learning on novel concepts. [Relying solely on implicit V-L alignments
+is inadequate in these scenarios]{#S4.SS2.p1.9.5 .ltx_text
+.ltx_font_italic}. This is evident in Tab. [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T1 "Table 1 ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+where [solely]{#S4.SS2.p1.9.6 .ltx_text .ltx_font_italic} utilizing the
+visual space alignment loss $\mathcal{L}_{\text{im-cst}}$ yields better
+performance on 0-shot $\mathcal{X}_{\text{ood}}$ (where classes are
+unseen) but worse performance on $\mathcal{X}_{\text{id}}$ and 5-shot
+$\mathcal{X}_{\text{ood}}$ (where classes are seen). On the other hand,
+by combining both implicit and explicit V-L alignment losses
+($\mathcal{L}_{\text{im-cst}} + \mathcal{L}_{\text{cls}}$), students
+excel in all of $\mathcal{X}_{\text{id}}$, 0-shot
+$\mathcal{X}_{\text{ood}}$, and 5-shot $\mathcal{X}_{\text{ood}}$
+scenarios. Therefore, by improving explicit V-L alignments, we not only
+hope to further enhance student's 0-shot OOD generalization ability, but
+also improve their performance on familiar concepts and their ability to
+few-shot adapt to novel concepts.
+:::
+
+::: {#S4.SS2.p2 .ltx_para .ltx_noindent}
+[Explicitly enhancing teacher-student vision-language alignment
+coherency.]{#S4.SS2.p2.1.1 .ltx_text .ltx_font_bold} We note that while
+$\mathcal{L}_{\text{cls}}$ performs explicit V-L alignments, it has the
+limitation of indiscriminately pushing an image away from all non
+ground-truth language features, therefore disregarding teacher's
+relative alignment relationship between the same image and different
+language features. Furthermore, we find that even though preserving
+teacher's relative V-L alignment structure is desirable, it may not
+always be perfect due to potential misalignments between teacher image
+features and their corresponding language labels. These misalignments
+can introduce inconsistent noise during distillation, ultimately harming
+student performance.
+:::
+
+::: {#S4.SS2.p3 .ltx_para}
+Motivated by these observations, we propose to augment our training
+objective with $\mathcal{L}_{\text{vlprox}}$, which effectively and
+carefully preserves the teacher's vision-language alignment structure
+while accounting for potential misalignments:
+
+  -- --------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+     $\mathcal{L}_{\text{vlprox}}\operatorname{}{(\mathbf{x},k)}$                      $= I{(\mathbf{x})} \cdot \mathcal{D}_{\text{KL}}{(P_{T,\text{topk}}{( \cdot |\mathbf{x})}||P_{S,\text{topk}}{( \cdot |\mathbf{x})})}$                                                                                                                                                                                                                   [(6)]{.ltx_tag .ltx_tag_equationgroup .ltx_align_right}
+     $I\operatorname{}{(\mathbf{x})}$                                                  $= {\mathbf{1}\operatorname{}{\lbrack{{\text{argmax}_{y}\operatorname{}P_{T}\operatorname{}{(\left. y \middle| \mathbf{x} \right.)}} = {\text{label}\operatorname{}{(\mathbf{x})}}}\rbrack}}$                                                                                                                                                           
+     $P_{\cdot ,\text{topk}}\operatorname{}{(\left. y \middle| \mathbf{x} \right.)}$   ${= \frac{\mathbf{1}_{y \in Y_{\text{topk}}}\operatorname{}P_{\cdot}\operatorname{}{(\left. y \middle| \mathbf{x} \right.)}}{\sum_{y \in Y_{\text{topk}}}{P_{\cdot}\operatorname{}{(\left. y \middle| \mathbf{x} \right.)}}}};{Y_{\text{topk}} = {\text{argtopk}_{y}\operatorname{}P_{T}\operatorname{}{(\left. y \middle| \mathbf{x} \right.)}}}$      
+  -- --------------------------------------------------------------------------------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+
+Here $P_{T}$ and $P_{S}$ denote teacher and student label probabilities;
+$I\operatorname{}{( \cdot )}$ filters out images misaligned with
+language labels; and $k$ controls the number of most-similar language
+features for each image. In our implementations, we find a larger $k$
+beneficial for OOD generalization, and we choose $k = 256$.
+:::
+
+::: {#S4.SS2.p4 .ltx_para}
+We demonstrate the effectiveness of $\mathcal{L}_{\text{vlprox}}$ in
+Tab. [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T1 "Table 1 ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We find that by combining $\mathcal{L}_{\text{vlprox}}$ with
+$\mathcal{L}_{\text{cls}}$ and $\mathcal{L}_{\text{im-cst}}$, we further
+improve student's ability to generalize towards OOD concepts.
+Interestingly, we also observe that while $\mathcal{L}_{\text{cls}}$ and
+$\mathcal{L}_{\text{vlprox}}$ both explicitly perform V-L alignments,
+adding them together yields significantly better student performance on
+$\mathcal{X}_{\text{id}}$ and 5-shot $\mathcal{X}_{\text{ood}}$ than
+solely keeping $\mathcal{L}_{\text{vlprox}}$. This observation is
+distinct from those in the traditional model distillation
+literature \[[25](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib25){.ltx_ref}\],
+where distilling teacher logits alone from vision-only models typically
+produces good student performance.
+:::
+
+::: {#S4.SS2.p5 .ltx_para .ltx_noindent}
+[Quantifying teacher-student vision-language alignment
+coherency.]{#S4.SS2.p5.1.1 .ltx_text .ltx_font_bold} To better
+understand the vision-language alignment proximity between teacher and
+student, we propose a metric $\mathcal{M}_{\text{vlalign}}$ to quantify
+such proximity:
+
+  -- ---------------------------------------------------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+     $\mathcal{M}_{\text{vlalign}}\operatorname{}{(\mathcal{X},k)}$   $= \frac{\sum_{i = 1}^{|\mathcal{X}|}{\text{\#reverse\_pairs}\operatorname{}{({\text{arrS}\operatorname{}{(i,k)}})}}}{|\mathcal{X}|}$                                                  [(7)]{.ltx_tag .ltx_tag_equationgroup .ltx_align_right}
+     $\text{arrS}\operatorname{}{(i,k)}$                              $= {\lbrack{\|{{S\operatorname{}{(\mathbf{x}_{i})}} - {T_{\text{txt}}\operatorname{}{({l\operatorname{}{(y_{j})}})}}}\|}_{2}\rbrack}_{j \in {\mathcal{I}\operatorname{}{(i,k)}}}$      
+     $\mathcal{I}\operatorname{}{(i,k)}$                              $= \text{argtopk}{({\lbrack - ||T_{\text{im}}{(\mathbf{x}_{i})} - T_{\text{txt}}{(l{(y_{j})})}||_{2})}\rbrack}_{j = 1}^{|\mathcal{Y}|})$                                               
+  -- ---------------------------------------------------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+
+Here $\text{\#reverse\_pairs}\operatorname{}{( \cdot )}$ measures the
+number of reverse pairs $\{{(i,j)}:{a_{i} > a_{j}}\}$ in an array.
+Overall, $\mathcal{M}_{\text{vlalign}}$ measures the extent to which the
+distance ordering of the $k$ nearest language features to the teacher
+image feature differs from the distance ordering of the same $k$
+language features with respect to the student image feature. In other
+words, a lower value of $\mathcal{M}_{\text{vlalign}}$ indicates a
+higher degree of proximity to the teacher's vision-language alignment,
+as teacher's relative language orderings with respect to each image
+becomes better preserved.
+:::
+
+::: {#S4.SS2.p6 .ltx_para}
+We assess $\mathcal{M}_{\text{vlalign}}$ on different students and
+present the results in Tab. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4.T4 "Table 4 ‣ 4.2 Better Coherence with Teacher’s Vision-Language Alignment Structure ‣ 4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We find that $\mathcal{L}_{\text{im-cst}}$ not only fosters strong
+student-teacher visual space alignments, but also
+[implicitly]{#S4.SS2.p6.5.1 .ltx_text .ltx_font_italic} facilitates
+effective V-L alignments along this process. This observation
+illustrates that a better relative and local visual space coherence with
+the teacher (indicated by better $\mathcal{M}_{\text{rel}}$ and
+$\mathcal{M}_{\text{neigh}}$) can lead to enhanced alignment coherence
+in the V-L space. Additionally, the inclusion of
+$\mathcal{L}_{\text{vlprox}}$ further strengthens teacher-student V-L
+alignments. Such improved alignments are then effectively transferred to
+unseen concepts, demonstrating that the student has acquired better V-L
+alignment structures that generalize well to OOD scenarios.
+:::
+
+<figure id="S4.T4" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T4.23.5.1"
+class="ltx_text" style="font-size:129%;">Table 4</span>: </span><span
+id="S4.T4.15.4" class="ltx_text" style="font-size:129%;">We evaluate
+<span class="math inline">ℳ<sub>vlalign</sub></span> (lower the better)
+on different students to measure their proximity with the teacher
+vision-language alignment structure. <span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub></span>
+in each entry denote <span
+class="math inline">ℳ<sub>vlalign</sub> (𝒳<sub>train</sub>)</span> and
+<span class="math inline">ℳ<sub>vlalign</sub> (𝒳<sub>ood</sub>)</span>,
+respectively. Metrics are evaluated on Flower102. More results are in
+Appendix.</span></figcaption>
+</figure>
+:::
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Language Representation Enrichment {#language-representation-enrichment .ltx_title .ltx_title_section}
+
+<figure id="S5.T5" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S5.T5.17.5.1"
+class="ltx_text" style="font-size:129%;">Table 5</span>: </span><span
+id="S5.T5.9.4" class="ltx_text" style="font-size:129%;">Comparison
+between different language representation enrichment strategies. The
+three numbers <span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub>/<em>x</em><sub>3</sub></span>
+in each entry denote the evaluation performance on <span
+class="math inline">𝒳<sub>id</sub></span>, zero-shot performance on
+<span class="math inline">𝒳<sub>ood</sub></span>, and 5-shot performance
+on <span class="math inline">𝒳<sub>ood</sub></span>,
+respectively.</span></figcaption>
+</figure>
+
+::: {#S5.p1 .ltx_para}
+In Sec. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4 "4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we focused on improving the imitation of teacher's visual space and
+promoting better coherence with teacher's vision-language alignment.
+Throughout this process, we kept the language representations fixed.
+However, the quality of language representations also plays a pivotal
+role in student learning and inference. Ideally, language
+representations should be capture precise, finegrained, and meaningful
+semantic attributes, such that the student can effectively distinguish
+between different labels. We therefore ask the following question: can
+we leverage better and richer teacher language representations to
+further enhance student's OOD generalization ability? We propose the
+following candidate strategies:
+:::
+
+::: {#S5.p2 .ltx_para .ltx_noindent}
+[Enriching semantic details of label descriptions by prompting
+LLMs]{#S5.p2.5.1 .ltx_text .ltx_font_bold}. Previously, when we generate
+language representations
+${l\operatorname{}{(y)}} = {\text{prompt} + {\text{description}\operatorname{}{(y)}}}$
+for student training, we adopted a simple strategy. In particular, for
+the description of a label $y$, we merely used its label name, e.g.,
+"lotus". However, these simplistic descriptions overlook many
+finegrained properties of semantic categories, such as the shape, color,
+and texture of flowers, along with the description of their petals,
+leaves, and stems. In addition, we hope to automatically and efficiently
+generate enriched language descriptions for a wide range of labels,
+ensuring scalability for an arbitrary number of labels. Motivated by the
+recent progress on instruction-finetuned large language models
+(LLMs) \[[38](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib38){.ltx_ref},
+[9](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib9){.ltx_ref},
+[46](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib46){.ltx_ref},
+[60](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib60){.ltx_ref}\],
+which have demonstrated impressive sequence generation abilities given
+user prompts, we find these models well-suited for our goal. Therefore,
+we propose to use
+ChatGPT \[[6](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib6){.ltx_ref},
+[38](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib38){.ltx_ref}\]
+to generate category descriptions. We prompt ChatGPT with the following
+instruction: [Use a single sentence to describe the appearance and shape
+of {cls}. Only describe the shape and appearance]{#S5.p2.5.2 .ltx_text
+.ltx_font_typewriter}. This allows ChatGPT to generate informative,
+finegrained, and meaningful descriptions for target classes (e.g.,
+[large, round, flat leaves; tall, slender stems; delicate petals in
+shades of pink, white, or yellow]{#S5.p2.5.3 .ltx_text
+.ltx_font_typewriter}), while keeping sequence lengths within the 77
+token limit of the CLIP text encoder. We then set
+$\text{description}\operatorname{}{(y)}$ by concatenating "a photo of
+{cls}" with ChatGPT-generated class descriptions. Note that we still
+keep the same vision-language alignment losses
+($\mathcal{L}_{\text{cls}}$ and $\mathcal{L}_{\text{vlprox}}$) as
+before.
+:::
+
+::: {#S5.p3 .ltx_para .ltx_noindent}
+[Augmenting text through auxiliary captions]{#S5.p3.5.1 .ltx_text
+.ltx_font_bold}. Currently, during student training, there is only one
+language description per category, i.e.,
+${|{\{{l\operatorname{}{(y)}}:{{(\mathbf{x},y)} \in \mathcal{X}_{train}}\}}|} = {|\mathcal{Y}_{\text{id}}|}$.
+On the other hand, the number of training images significantly exceeds
+the number of labels, i.e.,
+${|\mathcal{X}_{\text{train}}|} \gg {|\mathcal{Y}_{\text{id}}|}$. We
+therefore wish to generate language descriptions for each individual
+image, such that we can substantially enrich the number of language
+features during student training, which potentially benefits student
+performance. To achieve this, we propose using
+OFA \[[55](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib55){.ltx_ref}\]
+to generate captions for each image, resulting in a new dataset
+$\{{(\mathbf{x},{\text{cap}\operatorname{}{(\mathbf{x})}},y)}:{{(\mathbf{x},y)} \in \mathcal{X}_{\text{train}}}\}$
+augmented with captions. During student training, besides using the same
+vision-language alignment losses $\mathcal{L}_{\text{cls}}$ and
+$\mathcal{L}_{\text{vlprox}}$ as before, we also adopt the following
+auxiliary loss:
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathcal{L}_{\text{cap}}\operatorname{}{(\mathbf{x})}} = \frac{\exp{({{\cos{({S\operatorname{}{(\mathbf{x})}},{T_{\text{txt}}\operatorname{}{({\text{cap}\operatorname{}{(\mathbf{x})}})}})}}/\tau})}}{\sum_{{(\mathbf{x}^{\prime},y^{\prime})}:{y^{\prime} \neq y}}\exp{(\cos{(S{(\mathbf{x})},T_{\text{txt}}{(\text{cap}{(\mathbf{x}^{\prime})})}/\tau)}}}$$      [(8)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+The loss pushes $\mathbf{x}$ and its corresponding caption
+$\text{cap}\operatorname{}{(\mathbf{x})}$ together while pulling away
+from captions belonging to different categories. Our preliminary
+experiments show that distinguishing captions belonging to the same
+category could degrade student performance as they are usually similar.
+[Note that we only incorporate captions for the auxiliary loss during
+student training. For student inference and label predictions, we
+continue to use the same $l\operatorname{}{(y)}$ as before.]{#S5.p3.8.1
+.ltx_text .ltx_font_italic}
+:::
+
+::: {#S5.p4 .ltx_para .ltx_noindent}
+[Learning prompts to modify language representations]{#S5.p4.3.1
+.ltx_text .ltx_font_bold}. In previous experiments, we adopted a simple
+prompt "a photo of" to generate $l\operatorname{}{(y)}$ for student
+learning. By modifying prompts, we can alter the teacher's language
+representation space and thereby influence vision-language alignment.
+Furthermore, in real-world scenarios, student networks often need to
+continuously learn new concepts and semantics, leading to ongoing
+updates in their backbones. We therefore explore the potential of
+performing prompt learning during student training on
+$\mathcal{Y}_{\text{id}}$ and few-shot learning on
+$\mathcal{Y}_{\text{ood}}$. Note that our setting is different from many
+prior settings on prompt
+tuning \[[72](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib72){.ltx_ref},
+[71](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib71){.ltx_ref},
+[49](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib49){.ltx_ref},
+[18](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib18){.ltx_ref}\],
+where there are no OOD concepts, and vision backbones are kept fixed. We
+adopt
+CoOp \[[72](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib72){.ltx_ref}\]
+and optimize 8 tokens as our prompt.
+:::
+
+::: {#S5.SS1 .section .ltx_subsection}
+### [5.1 ]{.ltx_tag .ltx_tag_subsection}Analyzing the Efficacy of Different Strategies {#analyzing-the-efficacy-of-different-strategies .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS1.p1 .ltx_para}
+We adopt the aforementioned language-enriching strategies for student
+learning, and we present the results in Tab. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5.T5 "Table 5 ‣ 5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We find that combining LLM-enriched label descriptions with auxiliary
+captions yields the best OOD generalization. However, upon analyzing
+their individual effectiveness, we find that [LLM-enriched label
+descriptions provide significantly better zero-shot OOD benefit than
+auxiliary captions, and solely relying on auxiliary captions only
+marginally improves zero-shot OOD generalizability]{#S5.SS1.p1.1.1
+.ltx_text .ltx_font_italic}. Upon further analysis, we find that many
+generated captions only broadly describe objects and are much less
+informative than ChatGPT-generated descriptions for distinguishing
+fine-grained categories. For instance, in the StanfordCars dataset, a
+generated caption for an [Acura Integra Type R 2001]{#S5.SS1.p1.1.2
+.ltx_text .ltx_font_typewriter} image is [a white car is parked in a
+field]{#S5.SS1.p1.1.3 .ltx_text .ltx_font_typewriter}, and solely
+relying on the white color provides little information to distinguish
+different car categories. Consequently, captions have limited impact on
+enhancing the generalizability of student's vision-language alignment
+structures.
+:::
+
+::: {#S5.SS1.p2 .ltx_para}
+We also observe that learning prompts during student training harms its
+zero-shot OOD generalization performance, suggesting that this approach
+leads to the overfitting of vision-language alignments on the training
+categories. However, when provided with a small number of samples from
+OOD categories, the prompts can quickly adapt to these novel concepts,
+enabling students to achieve the best few-shot OOD performance overall.
+:::
+:::
+
+::: {#S5.SS2 .section .ltx_subsection}
+### [5.2 ]{.ltx_tag .ltx_tag_subsection}Comparing Language Representation Spaces Before and After Enrichment {#comparing-language-representation-spaces-before-and-after-enrichment .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS2.p1 .ltx_para}
+To gain further insights into the efficacy of our language enrichment
+strategies, in this section, we analyze the changes in language space
+structures before and after adopting such strategies. On the
+out-of-distribution evaluation dataset of Flower102, we obtain text
+features
+${\{{T_{\text{txt}}\operatorname{}{({l_{\text{new}}\operatorname{}{(y)}})}}\}}_{y = 1}^{|\mathcal{Y}_{\text{ood}}|}$
+and
+${\{{T_{\text{txt}}\operatorname{}{({l_{\text{old}}\operatorname{}{(y)}})}}\}}_{y = 1}^{|\mathcal{Y}_{\text{ood}}|}$,
+where $l_{\text{new}}$ denotes the language generation function with LLM
+enrichment, and $l_{\text{old}}$ uses simple label names as label
+descriptions. We also obtain the average caption features for each
+class, namely
+${\{{\text{mean}\operatorname{}{\lbrack{\{{T_{\text{txt}}\operatorname{}{({\text{cap}\operatorname{}{(\mathbf{x})}})}}:{{\text{label}\operatorname{}{(\mathbf{x})}} = y}\}}\rbrack}}\}}_{y = 1}^{|\mathcal{Y}_{\text{ood}}|}$.
+We then mean-center these 3 sets of text features, perform
+Singular-Value Decomposition, and plot the resulting eigenvalues in
+Fig. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5.F4 "Figure 4 ‣ 5.2 Comparing Language Representation Spaces Before and After Enrichment ‣ 5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We observe that language features of $l_{\text{new}}$ contain many more
+large eigenvalues than $l_{\text{old}}$, demonstrating that the text
+space generated by $l_{\text{new}}$ confers more independent and
+meaningful attributes to effectively distinguish between different
+classes. On the other hand, the language space of auxiliary captions
+only contains a small number of meaningful attributes, indicating that
+auxiliary captions are not very helpful for distinguishing between
+different labels. Additionally, in conjunction with Tab. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5.T5 "Table 5 ‣ 5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we find that the advantages of richer attributes are concealed when
+evaluating students on the in-distribution classes, since students tend
+to overfit the existing attributes of these labels during training.
+However, for OOD scenarios, the presence of more finegrained attributes
+allows OOD text features to be more precisely aligned with image
+features, especially when no vision-language alignment training is done
+on these OOD samples (see Fig. [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S0.F2 "Figure 2 ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}
+for an illustration). As a result, students exhibit better OOD
+generalization ability.
+:::
+
+::: {#S5.SS2.p2 .ltx_para}
+Furthermore, we analyze the average cosine similarity between all pairs
+of text features within each of the three sets we introduced earlier. We
+present the results in Tab. [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5.T6 "Table 6 ‣ 5.2 Comparing Language Representation Spaces Before and After Enrichment ‣ 5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We observe that LLM-enriched semantic details allow text features to
+naturally separate further apart from each other, making it easier to
+distinguish between different classes. In contrast, auxiliary captions
+show limited effectiveness in achieving such separation between classes.
+:::
+
+
+::: {#S6 .section .ltx_section}
+## [6 ]{.ltx_tag .ltx_tag_section}Ablations {#ablations .ltx_title .ltx_title_section}
+
+::: {#S6.p1 .ltx_para}
+In this section, we present further ablation studies to complement our
+findings in Sec. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4 "4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}
+and Sec. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5 "5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+:::
+
+::: {#S6.p2 .ltx_para .ltx_noindent}
+[Control semantic details by prompting LLMs]{#S6.p2.1.1 .ltx_text
+.ltx_font_bold}. In Sec. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5 "5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we found that descriptive semantic details in $l\operatorname{}{(y)}$
+are particularly helpful for student generalization on
+out-of-distribution concepts. We thus ask the following question: how
+specific should semantic details be, and which semantic details are
+helpful? We construct the following prompts to [control how ChatGPT
+generates semantic details]{#S6.p2.1.2 .ltx_text .ltx_font_italic}
+(example generations in Appendix): [More Succinct]{#S6.p2.1.3 .ltx_text
+.ltx_font_bold}: "Use a single sentence to broadly describe the
+appearance and shape of {cls}. Don't give too much details. Only
+describe the shape and appearance." [More Detailed]{#S6.p2.1.4 .ltx_text
+.ltx_font_bold}: "Use a single sentence and short, simple, descriptive
+phrases to describe the detailed appearance and detailed shape of
+{cls}." [More Distinct]{#S6.p2.1.5 .ltx_text .ltx_font_bold}: "Use a
+single sentence to describe the unique, distinctive appearance and shape
+of {cls}. Only describe the unique, distinctive shape and appearance."
+:::
+
+::: {#S6.p3 .ltx_para}
+We compare these prompts in Tab. [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6.T7 "Table 7 ‣ 6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+Interestingly, we observe that generating more detailed semantic
+descriptions on labels does not always perform better. We conjecture
+that this is because (1) LLM-generated details are not grounded in
+specific images, causing some attributes to be invisible and confusing
+the students; (2) the teacher CLIP is trained on
+LAION \[[47](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib47){.ltx_ref}\],
+where most language descriptions do not contain many finegrained
+appearance details, so CLIP's text embeddings are not very sensitive to
+some of these details. Additionally, we find that explicitly prompting
+ChatGPT to generate more concise text descriptions could be still
+helpful. Upon further analysis, we find that the resulting generations
+remain highly descriptive, albeit with slightly fewer details (e.g.,
+when describing a [trumbone]{#S6.p3.1.1 .ltx_text .ltx_font_typewriter},
+the more concise description becomes [a brass instrument with a long
+cylindrical tube curved into an elongated S shape with a flared bell at
+the end]{#S6.p3.1.2 .ltx_text .ltx_font_typewriter}, whereas under our
+original prompt, additional details like [a sliding U-shaped section
+called the slide]{#S6.p3.1.3 .ltx_text .ltx_font_typewriter} are
+included).
+:::
+
+<figure id="S6.T7" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T7.5.1.1"
+class="ltx_text" style="font-size:129%;">Table 7</span>: </span><span
+id="S6.T7.6.2" class="ltx_text" style="font-size:129%;">Results on
+leveraging different prompts to control semantic details of label
+descriptions generated by ChatGPT.</span></figcaption>
+</figure>
+
+<figure id="S6.T8" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T8.29.5.1"
+class="ltx_text" style="font-size:129%;">Table 8</span>: </span><span
+id="S6.T8.21.4" class="ltx_text" style="font-size:129%;">Distilling CLIP
+ViT-L/14 into a student ViT-B/32 network. In each entry, <span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub>/<em>x</em><sub>3</sub></span>
+denote <span class="math inline">𝒳<sub>id</sub></span> / zero-shot <span
+class="math inline">𝒳<sub>ood</sub></span> / 5-shot <span
+class="math inline">𝒳<sub>ood</sub></span>
+performance.</span></figcaption>
+</figure>
+
+<figure id="S6.T9" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T9.16.3.1"
+class="ltx_text" style="font-size:129%;">Table 9</span>: </span><span
+id="S6.T9.10.2" class="ltx_text" style="font-size:129%;">Ablation
+studies on (1) different designs of <span
+class="math inline">ℒ<sub>vlprox</sub></span>, and (2) whether to
+imitate the entirety of the teacher’s visual space in <span
+class="math inline">ℒ<sub>im-cst</sub></span>.</span></figcaption>
+</figure>
+
+::: {#S6.p4 .ltx_para .ltx_noindent}
+[Different designs on visual space and vision-language
+alignments]{#S6.p4.2.1 .ltx_text .ltx_font_bold}. We ablate on our
+designs of visual space and vision-language alignments and present the
+results in Tab. [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6.T9 "Table 9 ‣ 6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We first explore various designs of $\mathcal{L}_{\text{vlprox}}$, which
+aims to improve the [vision-language]{#S6.p4.2.2 .ltx_text
+.ltx_font_italic} alignment coherency with the teacher. We find that
+enhancing coherency with a greater number of most-similar language
+features by increasing $k$ improves student OOD generalization.
+Additionally, it is also beneficial to filter out teacher's image
+features that are misaligned with their corresponding language labels.
+Interestingly, we observe a different pattern when considering the
+teacher-student [visual space]{#S6.p4.2.3 .ltx_text .ltx_font_italic}
+alignments. In this case, we did not find filtering out misaligned image
+features helpful, and imitating the entirety of teacher's visual space
+yields better student OOD generalization.
+:::
+
+::: {#S6.p5 .ltx_para .ltx_noindent}
+[Different student visual backbones]{#S6.p5.3.1 .ltx_text
+.ltx_font_bold}. In our prior experiments, we adopted ResNet as our
+student visual backbone. In this section, we further investigate whether
+our findings are consistent across different student network
+architectures. We adopt
+ViT-B/32 \[[15](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib15){.ltx_ref}\]
+as our student, while keeping CLIP ViT-L/14 as our VLM teacher. Results
+are shown in Tab. [[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6.T8 "Table 8 ‣ 6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We observe that even though we apply strong data augmentations
+(RandAugment) when training the student ViT-B/32, it still suffers from
+severe overfitting (the training accuracy on
+$\mathcal{X}_{\text{train}}$ is $> {90\%}$, which is significantly
+higher than the accuracy on $\mathcal{X}_{\text{id}}$ in
+Tab. [[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6.T8 "Table 8 ‣ 6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}).
+The in-distribution and OOD generalization performance of the ViT-B/32
+student are also worse than the ResNet student. Nevertheless, we still
+observe that better teacher-student visual space alignment, improved
+coherence in vision-language alignment, and language representation
+enrichment all enhance student's OOD generalization ability, aligning
+with our previous findings.
+:::
+
+<figcaption><span class="ltx_tag ltx_tag_table">Table 10:
+</span>Comparison between finetuning student visual backbone vs.
+training-free retrieval on <span
+class="math inline">𝒳<sub>ood</sub></span>. Finetuning student backbones
+significantly outperforms training-free retrieval.</figcaption>
+</figure>
+
+<figure id="S6.T11" class="ltx_table">
+<table id="S6.T11.3"
+class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S6.T11.2.2" class="header ltx_tr">
+<th id="S6.T11.2.2.3"
+class="ltx_td ltx_th ltx_th_column ltx_th_row ltx_border_r ltx_border_tt"></th>
+<th id="S6.T11.1.1.1"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+class="math inline">𝒳<sub>ood1</sub></span></th>
+<th id="S6.T11.2.2.2"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"><span
+class="math inline">𝒳<sub>ood2</sub></span></th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S6.T11.3.4.1" class="odd ltx_tr">
+<th id="S6.T11.3.4.1.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r ltx_border_t"><span
+id="S6.T11.3.4.1.1.1" class="ltx_text"
+style="font-size:90%;">0-shot</span></th>
+<td id="S6.T11.3.4.1.2"
+class="ltx_td ltx_align_center ltx_border_t"><span id="S6.T11.3.4.1.2.1"
+class="ltx_text" style="font-size:90%;">25.11</span></td>
+<td id="S6.T11.3.4.1.3"
+class="ltx_td ltx_align_center ltx_border_t"><span id="S6.T11.3.4.1.3.1"
+class="ltx_text" style="font-size:90%;">18.01</span></td>
+</tr>
+<tr id="S6.T11.3.3" class="even ltx_tr">
+<th id="S6.T11.3.3.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb ltx_border_r"><span
+id="S6.T11.3.3.1.1" class="ltx_text" style="font-size:90%;">5-shot on
+</span><span class="math inline">𝒳<sub>ood1</sub></span></th>
+<td id="S6.T11.3.3.2"
+class="ltx_td ltx_align_center ltx_border_bb"><span id="S6.T11.3.3.2.1"
+class="ltx_text ltx_font_bold" style="font-size:90%;">62.79</span></td>
+<td id="S6.T11.3.3.3"
+class="ltx_td ltx_align_center ltx_border_bb"><span id="S6.T11.3.3.3.1"
+class="ltx_text ltx_font_bold" style="font-size:90%;">18.24</span></td>
+</tr>
+</tbody>
+</table>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 11:
+</span>Comparison between the student model’s zero-shot generalization
+performance on <span class="math inline">𝒳<sub>ood2</sub></span> before
+and after few-shot finetuning on <span
+class="math inline">𝒳<sub>ood1</sub></span>.</figcaption>
+</figure>
+
+::: {#S6.p6 .ltx_para .ltx_noindent}
+[Few-shot learning strategies on $\mathcal{X}_{\text{𝐨𝐨𝐝}}$]{#S6.p6.1.1
+.ltx_text .ltx_font_bold}. Previously, we finetune the student visual
+networks during few shot learning on $\mathcal{X}_{\text{ood}}$.
+Alternatively, we could adopt a finetune-free retrieval-based strategy
+like
+\[[69](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib69){.ltx_ref}\],
+which has been shown effective on large VLMs. We compare these two
+strategies in Tab. [[10]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6.T10 "Table 10 ‣ 6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+Further implementation details are presented in Appendix. Interestingly,
+we observe that the retrieval-based strategy significantly underperforms
+finetuning student visual backbones. We hypothesize that this phenomenon
+arises because our student networks are trained on small to medium-scale
+datasets, and have been exposed to far fewer concepts than their teacher
+VLMs. Consequently, student's image feature structure and
+vision-language alignment structure are less generalizable on OOD
+concepts, making them less suitable for retrieval-based approaches.
+:::
+
+::: {#S6.p7 .ltx_para .ltx_noindent}
+[Zero-shot OOD generalization ability after few-shot
+learning]{#S6.p7.7.1 .ltx_text .ltx_font_bold}. In the real world, it is
+essential for student networks to continuously adapt to new concepts,
+and we aim to find a student learning strategy that accomplishes such
+goal. Since we finetune student visual backbones during few-shot
+learning on $\mathcal{X}_{\text{ood}}$, we would like to know whether
+finetuned student backbones overfit seen concepts and exhibit weaker
+zero-shot generalization ability when encountering novel unseen concepts
+again. We conduct an experiment on Flower102, where we split
+$\mathcal{Y}_{\text{ood}}$ into two equal sets, and then split
+$\mathcal{X}_{\text{ood}}$ into $\mathcal{X}_{\text{ood1}}$ and
+$\mathcal{X}_{\text{ood2}}$ accordingly. We then select the best student
+model and evaluate it on $\mathcal{X}_{\text{ood2}}$ both before and
+after few-shot finetuning it on $\mathcal{X}_{\text{ood1}}$. Results are
+presented in Tab. [[11]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6.T11 "Table 11 ‣ 6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We observe that the student's zero-shot OOD generalization ability
+slightly improves after few-shot learning, demonstrating that students
+can continuously adapt to novel concepts.
+:::
+:::
+
+::: {#S7 .section .ltx_section}
+## [7 ]{.ltx_tag .ltx_tag_section}Application {#application .ltx_title .ltx_title_section}
+
+<figcaption><span class="ltx_tag ltx_tag_table">Table 12: </span>Results
+on grasp feasibility prediction in the PickClutter task. In each entry,
+<span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub></span>
+denote zero-shot and few-shot evaluation results, respectively. (<span
+class="math inline">ℒ<sub>vlprox</sub></span> is not available for this
+experiment since multiple objects exists in an observation)</figcaption>
+</figure>
+
+::: {#S7.p1 .ltx_para}
+In this section, we demonstrate that we can adopt our previous findings
+for improving student's OOD generalization ability towards novel tasks
+and domains. We augment the PickClutter task from a robot object
+manipulation skill benchmark
+ManiSkill2 \[[19](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib19){.ltx_ref}\]
+with language, where given the name of a YCB
+object \[[7](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib7){.ltx_ref}\],
+a robot needs to detect whether it exists among a pile of objects given
+the current visual observation captured from a hand camera, and if
+exists, picks up this object. The task is illustrated in
+Fig. [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S7.F5 "Figure 5 ‣ 7 Application ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+We randomly sample different configurations of objects, and given
+observations in each configuration, the student network outputs whether
+it is feasible to grasp each YCB object. This setup resembles
+observation-based affordance prediction in works such as
+SayCan \[[1](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib1){.ltx_ref}\].
+We select 26 visually-distinctive YCB objects and split them equally
+into $\mathcal{Y}_{\text{id}}$ and $\mathcal{Y}_{\text{ood}}$. We then
+construct the datasets such that $\mathcal{X}_{\text{train}}$ and
+$\mathcal{X}_{\text{id}}$ only contain objects in
+$\mathcal{Y}_{\text{id}}$, while $\mathcal{X}_{\text{ood}}$ contains
+objects in both $\mathcal{Y}_{\text{id}}$ and
+$\mathcal{Y}_{\text{ood}}$. We use 3000 scenes for training and 50
+scenes for few shot learning. We adopt
+EfficientNet \[[50](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib50){.ltx_ref}\]
+as the student network and CLIP ViT-L-14 as the teacher. As we are in a
+multi-label classification setting, our preliminary experiments show
+that having positive and negative prompts like
+\[[49](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib49){.ltx_ref}\]
+and learning these prompts during student training can significantly
+improve student performance, so we adopt these techniques in our
+experiments. We calculate two metrics: (1) overall accuracy across all
+YCB objects in the label set (i.e., $\mathcal{Y}_{\text{id}}$ for
+$\mathcal{X}_{\text{id}}$, and
+$\mathcal{Y}_{\text{id}} \cup \mathcal{Y}_{\text{ood}}$ for
+$\mathcal{X}_{\text{ood}}$); (2) F1-measure calculated over the objects
+present in an observation, averaged over all observations. Further
+details are presented in Appendix.
+:::
+
+<figure id="S7.F5" class="ltx_figure ltx_align_floatright">
+<img src="./2307.03135_files/x6.png" id="S7.F5.g1"
+class="ltx_graphics ltx_centering ltx_img_square" width="219"
+height="200" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S7.F5.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 5</span>: </span><span
+id="S7.F5.3.2" class="ltx_text" style="font-size:90%;">Illustration of
+the PickClutter task. Given the name of a target object, the robot agent
+needs to decide whether the corresponding object is graspable based on
+the current visual observation.</span></figcaption>
+</figure>
+
+::: {#S7.p2 .ltx_para}
+We present the results in Tab. [[12]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S7.T12 "Table 12 ‣ 7 Application ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+Consistent with our previous findings, we find that improving
+teacher-student visual space alignments through
+$\mathcal{L}_{\text{im-cst}}$ significantly enhances the student's
+generalization ability on OOD objects. Additionally, leveraging language
+models to enrich the semantic details of object descriptions benefits
+few-shot OOD generalization. Interestingly, for zero-shot OOD
+generalization, while this enrichment improves the overall prediction
+accuracy for novel objects, it adversely affects the recall (and thus
+the F1-measure) on these objects. Further analysis reveals that students
+tend to ignore objects unseen during training, resulting in lower
+recall. However, with just a few examples of novel objects, students
+achieve significantly better recall on these objects.
+:::
+:::
+
+::: {#S8 .section .ltx_section}
+## [8 ]{.ltx_tag .ltx_tag_section}Conclusion {#conclusion .ltx_title .ltx_title_section}
+
+::: {#S8.p1 .ltx_para}
+In this work, we studied distillation of large teacher vision-language
+models into lightweight student models by focusing on open-vocabulary
+out-of-distribution (OOD) generalization for object classification using
+small to medium-scale datasets. We investigated strengthening students'
+OOD generalization ability from two key perspectives: first, by better
+imitating teacher's visual representation space and carefully promoting
+better teacher-student vision-language alignment coherence; and second,
+by enhancing the teacher's language representations with informative and
+meaningful semantic attributes to effectively differentiate between
+different labels. We analyzed the efficacy and impact of our techniques
+by introducing metrics and conducting a comprehensive experimental
+analysis. Along this process, we significantly improve student's
+zero-shot and few-shot generalization performance on open-vocabulary OOD
+classification tasks.
+:::
+:::
+
+::: {#Sx1 .section .ltx_section}
+## Acknowledgements {#acknowledgements .ltx_title .ltx_title_section}
+
+::: {#Sx1.p1 .ltx_para}
+We sincerely thank Jiayuan Gu from UC San Diego for their valuable
+discussions and feedback. This work is in part supported by Qualcomm AI
+and AI Institute for Learning-Enabled Optimization at Scale (TI-LOS).
+:::
+:::
+
+::: {#bib .section .ltx_bibliography}
+## References {#references .ltx_title .ltx_title_bibliography style="font-size:90%;"}
+
+-   [[\[1\]]{.ltx_tag .ltx_tag_bibitem} [[ Michael Ahn, Anthony Brohan,
+    Noah Brown, Yevgen Chebotar, Omar Cortes, Byron David, Chelsea Finn,
+    Keerthana Gopalakrishnan, Karol Hausman, Alex Herzog, et al.
+    ]{#bib.bib1.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Do as i can, not as i say: Grounding language in robotic
+    affordances. ]{#bib.bib1.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2204.01691]{#bib.bib1.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib1.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib1}
+-   [[\[2\]]{.ltx_tag .ltx_tag_bibitem} [[ Jean-Baptiste Alayrac, Jeff
+    Donahue, Pauline Luc, Antoine Miech, Iain Barr, Yana Hasson, Karel
+    Lenc, Arthur Mensch, Katie Millican, Malcolm Reynolds, et al.
+    ]{#bib.bib2.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Flamingo: a visual language model for few-shot learning.
+    ]{#bib.bib2.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2204.14198]{#bib.bib2.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib2.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib2}
+-   [[\[3\]]{.ltx_tag .ltx_tag_bibitem} [[ Devansh Arpit, Stanislaw
+    Jastrzebski, Nicolas Ballas, David Krueger, Emmanuel Bengio,
+    Maxinder S. Kanwal, Tegan Maharaj, Asja Fischer, Aaron Courville,
+    Yoshua Bengio, and Simon Lacoste-Julien. ]{#bib.bib3.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[A closer look at
+    memorization in deep networks. ]{#bib.bib3.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In Doina Precup and
+    Yee Whye Teh, editors, ]{#bib.bib3.3.1 .ltx_text
+    style="font-size:90%;"}[Proceedings of the 34th International
+    Conference on Machine Learning]{#bib.bib3.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, volume 70 of
+    ]{#bib.bib3.5.3 .ltx_text style="font-size:90%;"}[Proceedings of
+    Machine Learning Research]{#bib.bib3.6.4 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 233--242. PMLR, 06--11 Aug 2017.
+    ]{#bib.bib3.7.5 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib3}
+-   [[\[4\]]{.ltx_tag .ltx_tag_bibitem} [[ Lukas Bossard, Matthieu
+    Guillaumin, and Luc Van Gool. ]{#bib.bib4.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Food-101 - mining
+    discriminative components with random forests. ]{#bib.bib4.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib4.3.1 .ltx_text style="font-size:90%;"}[European
+    Conference on Computer Vision]{#bib.bib4.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2014. ]{#bib.bib4.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib4}
+-   [[\[5\]]{.ltx_tag .ltx_tag_bibitem} [[ Anthony Brohan, Noah Brown,
+    Justice Carbajal, Yevgen Chebotar, Joseph Dabis, Chelsea Finn,
+    Keerthana Gopalakrishnan, Karol Hausman, Alex Herzog, Jasmine Hsu,
+    et al. ]{#bib.bib5.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Rt-1: Robotics transformer for real-world control
+    at scale. ]{#bib.bib5.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2212.06817]{#bib.bib5.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib5.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib5}
+-   [[\[6\]]{.ltx_tag .ltx_tag_bibitem} [[ Tom Brown, Benjamin Mann,
+    Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhariwal,
+    Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell,
+    et al. ]{#bib.bib6.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Language models are few-shot learners.
+    ]{#bib.bib6.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Advances in neural information processing systems]{#bib.bib6.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[,
+    33:1877--1901, 2020. ]{#bib.bib6.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib6}
+-   [[\[7\]]{.ltx_tag .ltx_tag_bibitem} [[ Berk Calli, Aaron Walsman,
+    Arjun Singh, Siddhartha Srinivasa, Pieter Abbeel, and Aaron M
+    Dollar. ]{#bib.bib7.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Benchmarking in manipulation research: The ycb
+    object and model set and benchmarking protocols. ]{#bib.bib7.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:1502.03143]{#bib.bib7.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2015. ]{#bib.bib7.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib7}
+-   [[\[8\]]{.ltx_tag .ltx_tag_bibitem} [[ Pengguang Chen, Shu Liu,
+    Hengshuang Zhao, and Jiaya Jia. ]{#bib.bib8.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Distilling knowledge via
+    knowledge review. ]{#bib.bib8.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib8.3.1 .ltx_text
+    style="font-size:90%;"}[Proceedings of the IEEE/CVF Conference on
+    Computer Vision and Pattern Recognition]{#bib.bib8.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 5008--5017, 2021.
+    ]{#bib.bib8.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib8}
+-   [[\[9\]]{.ltx_tag .ltx_tag_bibitem} [[ Hyung Won Chung, Le Hou,
+    Shayne Longpre, Barret Zoph, Yi Tay, William Fedus, Eric Li, Xuezhi
+    Wang, Mostafa Dehghani, Siddhartha Brahma, et al. ]{#bib.bib9.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Scaling
+    instruction-finetuned language models. ]{#bib.bib9.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2210.11416]{#bib.bib9.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib9.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib9}
+-   [[\[10\]]{.ltx_tag .ltx_tag_bibitem} [[ Ekin D Cubuk, Barret Zoph,
+    Jonathon Shlens, and Quoc V Le. ]{#bib.bib10.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Randaugment: Practical
+    automated data augmentation with a reduced search space.
+    ]{#bib.bib10.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib10.3.1 .ltx_text style="font-size:90%;"}[Proceedings
+    of the IEEE/CVF conference on computer vision and pattern
+    recognition workshops]{#bib.bib10.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 702--703, 2020. ]{#bib.bib10.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib10}
+-   [[\[11\]]{.ltx_tag .ltx_tag_bibitem} [[ Wenliang Dai, Lu Hou, Lifeng
+    Shang, Xin Jiang, Qun Liu, and Pascale Fung. ]{#bib.bib11.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Enabling
+    multimodal generation on clip via vision-language knowledge
+    distillation. ]{#bib.bib11.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2203.06386]{#bib.bib11.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib11.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib11}
+-   [[\[12\]]{.ltx_tag .ltx_tag_bibitem} [[ Jia Deng, Wei Dong, Richard
+    Socher, Li-Jia Li, Kai Li, and Li Fei-Fei. ]{#bib.bib12.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Imagenet: A
+    large-scale hierarchical image database. ]{#bib.bib12.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib12.3.1
+    .ltx_text style="font-size:90%;"}[2009 IEEE Conference on Computer
+    Vision and Pattern Recognition]{#bib.bib12.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 248--255, 2009.
+    ]{#bib.bib12.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib12}
+-   [[\[13\]]{.ltx_tag .ltx_tag_bibitem} [[ Zheng Ding, Jieke Wang, and
+    Zhuowen Tu. ]{#bib.bib13.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Open-vocabulary panoptic segmentation with
+    maskclip. ]{#bib.bib13.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2208.08984]{#bib.bib13.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib13.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib13}
+-   [[\[14\]]{.ltx_tag .ltx_tag_bibitem} [[ Xiaoyi Dong, Yinglin Zheng,
+    Jianmin Bao, Ting Zhang, Dongdong Chen, Hao Yang, Ming Zeng, Weiming
+    Zhang, Lu Yuan, Dong Chen, et al. ]{#bib.bib14.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Maskclip: Masked
+    self-distillation advances contrastive language-image pretraining.
+    ]{#bib.bib14.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2208.12262]{#bib.bib14.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib14.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib14}
+-   [[\[15\]]{.ltx_tag .ltx_tag_bibitem} [[ Alexey Dosovitskiy, Lucas
+    Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas
+    Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold,
+    Sylvain Gelly, et al. ]{#bib.bib15.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[An image is worth 16x16
+    words: Transformers for image recognition at scale. ]{#bib.bib15.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[International
+    Conference on Learning Representations]{#bib.bib15.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib15.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib15}
+-   [[\[16\]]{.ltx_tag .ltx_tag_bibitem} [[ Zhiyuan Fang, Jianfeng Wang,
+    Xiaowei Hu, Lijuan Wang, Yezhou Yang, and Zicheng Liu.
+    ]{#bib.bib16.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Compressing visual-linguistic model via knowledge distillation.
+    ]{#bib.bib16.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib16.3.1 .ltx_text style="font-size:90%;"}[Proceedings
+    of the IEEE/CVF International Conference on Computer
+    Vision]{#bib.bib16.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 1428--1438, 2021. ]{#bib.bib16.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib16}
+-   [[\[17\]]{.ltx_tag .ltx_tag_bibitem} [[ Zhiyuan Fang, Jianfeng Wang,
+    Lijuan Wang, Lei Zhang, Yezhou Yang, and Zicheng Liu.
+    ]{#bib.bib17.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Seed: Self-supervised distillation for visual representation.
+    ]{#bib.bib17.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[International Conference on Learning
+    Representations]{#bib.bib17.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib17.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib17}
+-   [[\[18\]]{.ltx_tag .ltx_tag_bibitem} [[ Peng Gao, Shijie Geng,
+    Renrui Zhang, Teli Ma, Rongyao Fang, Yongfeng Zhang, Hongsheng Li,
+    and Yu Qiao. ]{#bib.bib18.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Clip-adapter: Better vision-language models with
+    feature adapters. ]{#bib.bib18.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2110.04544]{#bib.bib18.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2021.
+    ]{#bib.bib18.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib18}
+-   [[\[19\]]{.ltx_tag .ltx_tag_bibitem} [[ Jiayuan Gu, Fanbo Xiang,
+    Xuanlin Li, Zhan Ling, Xiqiang Liu, Tongzhou Mu, Yihe Tang, Stone
+    Tao, Xinyue Wei, Yunchao Yao, Xiaodi Yuan, Pengwei Xie, Zhiao Huang,
+    Rui Chen, and Hao Su. ]{#bib.bib19.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Maniskill2: A unified
+    benchmark for generalizable manipulation skills. ]{#bib.bib19.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib19.3.1 .ltx_text style="font-size:90%;"}[International
+    Conference on Learning Representations]{#bib.bib19.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2023. ]{#bib.bib19.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib19}
+-   [[\[20\]]{.ltx_tag .ltx_tag_bibitem} [[ Xiuye Gu, Tsung-Yi Lin,
+    Weicheng Kuo, and Yin Cui. ]{#bib.bib20.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Open-vocabulary object
+    detection via vision and language knowledge distillation.
+    ]{#bib.bib20.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2104.13921]{#bib.bib20.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib20.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib20}
+-   [[\[21\]]{.ltx_tag .ltx_tag_bibitem} [[ Chuan Guo, Geoff Pleiss, Yu
+    Sun, and Kilian Q. Weinberger. ]{#bib.bib21.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[On calibration of modern
+    neural networks. ]{#bib.bib21.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In Doina Precup and Yee Whye Teh, editors,
+    ]{#bib.bib21.3.1 .ltx_text style="font-size:90%;"}[Proceedings of
+    the 34th International Conference on Machine
+    Learning]{#bib.bib21.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, volume 70 of ]{#bib.bib21.5.3 .ltx_text
+    style="font-size:90%;"}[Proceedings of Machine Learning
+    Research]{#bib.bib21.6.4 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 1321--1330. PMLR, 06--11 Aug 2017.
+    ]{#bib.bib21.7.5 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib21}
+-   [[\[22\]]{.ltx_tag .ltx_tag_bibitem} [[ Kaiming He, Xiangyu Zhang,
+    Shaoqing Ren, and Jian Sun. ]{#bib.bib22.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Deep residual learning
+    for image recognition. ]{#bib.bib22.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib22.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the IEEE conference
+    on computer vision and pattern recognition]{#bib.bib22.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 770--778, 2016.
+    ]{#bib.bib22.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib22}
+-   [[\[23\]]{.ltx_tag .ltx_tag_bibitem} [[ Peter Henderson, Riashat
+    Islam, Philip Bachman, Joelle Pineau, Doina Precup, and David Meger.
+    ]{#bib.bib23.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Deep reinforcement learning that matters. ]{#bib.bib23.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib23.3.1 .ltx_text style="font-size:90%;"}[Proceedings of
+    the AAAI conference on artificial intelligence]{#bib.bib23.4.2
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[,
+    volume 32, 2018. ]{#bib.bib23.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib23}
+-   [[\[24\]]{.ltx_tag .ltx_tag_bibitem} [[ Amir Hertz, Ron Mokady, Jay
+    Tenenbaum, Kfir Aberman, Yael Pritch, and Daniel Cohen-Or.
+    ]{#bib.bib24.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Prompt-to-prompt image editing with cross attention control.
+    ]{#bib.bib24.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2208.01626]{#bib.bib24.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib24.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib24}
+-   [[\[25\]]{.ltx_tag .ltx_tag_bibitem} [[ Geoffrey E. Hinton, Oriol
+    Vinyals, and Jeffrey Dean. ]{#bib.bib25.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Distilling the knowledge
+    in a neural network. ]{#bib.bib25.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[ArXiv]{#bib.bib25.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[,
+    abs/1503.02531, 2015. ]{#bib.bib25.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib25}
+-   [[\[26\]]{.ltx_tag .ltx_tag_bibitem} [[ Andrew G Howard, Menglong
+    Zhu, Bo Chen, Dmitry Kalenichenko, Weijun Wang, Tobias Weyand, Marco
+    Andreetto, and Hartwig Adam. ]{#bib.bib26.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Mobilenets: Efficient
+    convolutional neural networks for mobile vision applications.
+    ]{#bib.bib26.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:1704.04861]{#bib.bib26.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2017. ]{#bib.bib26.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib26}
+-   [[\[27\]]{.ltx_tag .ltx_tag_bibitem} [[ Aishwarya Kamath, Mannat
+    Singh, Yann LeCun, Gabriel Synnaeve, Ishan Misra, and Nicolas
+    Carion. ]{#bib.bib27.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Mdetr-modulated detection for end-to-end
+    multi-modal understanding. ]{#bib.bib27.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib27.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the IEEE/CVF
+    International Conference on Computer Vision]{#bib.bib27.4.2
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, pages
+    1780--1790, 2021. ]{#bib.bib27.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib27}
+-   [[\[28\]]{.ltx_tag .ltx_tag_bibitem} [[ Jonathan Krause, Michael
+    Stark, Jia Deng, and Li Fei-Fei. ]{#bib.bib28.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[3d object representations
+    for fine-grained categorization. ]{#bib.bib28.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib28.3.1
+    .ltx_text style="font-size:90%;"}[2013 IEEE International Conference
+    on Computer Vision Workshops]{#bib.bib28.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 554--561, 2013.
+    ]{#bib.bib28.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib28}
+-   [[\[29\]]{.ltx_tag .ltx_tag_bibitem} [[ Boyi Li, Kilian Q
+    Weinberger, Serge Belongie, Vladlen Koltun, and René Ranftl.
+    ]{#bib.bib29.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Language-driven semantic segmentation. ]{#bib.bib29.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2201.03546]{#bib.bib29.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib29.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib29}
+-   [[\[30\]]{.ltx_tag .ltx_tag_bibitem} [[ Junnan Li, Dongxu Li, Silvio
+    Savarese, and Steven Hoi. ]{#bib.bib30.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Blip-2: Bootstrapping
+    language-image pre-training with frozen image encoders and large
+    language models. ]{#bib.bib30.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2301.12597]{#bib.bib30.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2023.
+    ]{#bib.bib30.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib30}
+-   [[\[31\]]{.ltx_tag .ltx_tag_bibitem} [[ Junnan Li, Dongxu Li,
+    Caiming Xiong, and Steven Hoi. ]{#bib.bib31.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Blip: Bootstrapping
+    language-image pre-training for unified vision-language
+    understanding and generation. ]{#bib.bib31.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib31.3.1
+    .ltx_text style="font-size:90%;"}[International Conference on
+    Machine Learning]{#bib.bib31.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 12888--12900. PMLR, 2022.
+    ]{#bib.bib31.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib31}
+-   [[\[32\]]{.ltx_tag .ltx_tag_bibitem} [[ Junnan Li, Ramprasaath
+    Selvaraju, Akhilesh Gotmare, Shafiq Joty, Caiming Xiong, and Steven
+    Chu Hong Hoi. ]{#bib.bib32.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Align before fuse: Vision and language
+    representation learning with momentum distillation. ]{#bib.bib32.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Advances in
+    neural information processing systems]{#bib.bib32.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 34:9694--9705, 2021.
+    ]{#bib.bib32.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib32}
+-   [[\[33\]]{.ltx_tag .ltx_tag_bibitem} [[ Liunian Harold Li, Pengchuan
+    Zhang, Haotian Zhang, Jianwei Yang, Chunyuan Li, Yiwu Zhong, Lijuan
+    Wang, Lu Yuan, Lei Zhang, Jenq-Neng Hwang, et al. ]{#bib.bib33.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Grounded
+    language-image pre-training. ]{#bib.bib33.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib33.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the IEEE/CVF
+    Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib33.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 10965--10975, 2022. ]{#bib.bib33.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib33}
+-   [[\[34\]]{.ltx_tag .ltx_tag_bibitem} [[ Minghua Liu, Ruoxi Shi,
+    Kaiming Kuang, Yinhao Zhu, Xuanlin Li, Shizhong Han, Hong Cai, Fatih
+    Porikli, and Hao Su. ]{#bib.bib34.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Openshape: Scaling up 3d
+    shape representation towards open-world understanding.
+    ]{#bib.bib34.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2305.10764]{#bib.bib34.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2023. ]{#bib.bib34.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib34}
+-   [[\[35\]]{.ltx_tag .ltx_tag_bibitem} [[ Vivian Liu and Lydia B
+    Chilton. ]{#bib.bib35.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Design guidelines for prompt engineering
+    text-to-image generative models. ]{#bib.bib35.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib35.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the 2022 CHI
+    Conference on Human Factors in Computing Systems]{#bib.bib35.4.2
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, pages
+    1--23, 2022. ]{#bib.bib35.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib35}
+-   [[\[36\]]{.ltx_tag .ltx_tag_bibitem} [[ Yufan Liu, Jiajiong Cao,
+    Bing Li, Chunfeng Yuan, Weiming Hu, Yangxi Li, and Yunqiang Duan.
+    ]{#bib.bib36.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Knowledge distillation via instance relationship graph.
+    ]{#bib.bib36.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib36.3.1 .ltx_text style="font-size:90%;"}[Proceedings
+    of the IEEE/CVF Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib36.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 7096--7104, 2019. ]{#bib.bib36.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib36}
+-   [[\[37\]]{.ltx_tag .ltx_tag_bibitem} [[ Zongyang Ma, Guan Luo, Jin
+    Gao, Liang Li, Yuxin Chen, Shaoru Wang, Congxuan Zhang, and Weiming
+    Hu. ]{#bib.bib37.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Open-vocabulary one-stage detection with
+    hierarchical visual-language knowledge distillation.
+    ]{#bib.bib37.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib37.3.1 .ltx_text style="font-size:90%;"}[Proceedings
+    of the IEEE/CVF Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib37.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 14074--14083, 2022. ]{#bib.bib37.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib37}
+-   [[\[38\]]{.ltx_tag .ltx_tag_bibitem} [[ Long Ouyang, Jeff Wu, Xu
+    Jiang, Diogo Almeida, Carroll L Wainwright, Pamela Mishkin, Chong
+    Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, et al.
+    ]{#bib.bib38.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Training language models to follow instructions with human
+    feedback. ]{#bib.bib38.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2203.02155]{#bib.bib38.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib38.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib38}
+-   [[\[39\]]{.ltx_tag .ltx_tag_bibitem} [[ Wonpyo Park, Dongju Kim, Yan
+    Lu, and Minsu Cho. ]{#bib.bib39.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Relational knowledge
+    distillation. ]{#bib.bib39.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib39.3.1 .ltx_text
+    style="font-size:90%;"}[Proceedings of the IEEE/CVF Conference on
+    Computer Vision and Pattern Recognition]{#bib.bib39.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 3967--3976, 2019.
+    ]{#bib.bib39.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib39}
+-   [[\[40\]]{.ltx_tag .ltx_tag_bibitem} [[ Omkar M Parkhi, Andrea
+    Vedaldi, Andrew Zisserman, and C. V. Jawahar. ]{#bib.bib40.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Cats and dogs.
+    ]{#bib.bib40.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib40.3.1 .ltx_text style="font-size:90%;"}[2012 IEEE
+    Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib40.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 3498--3505, 2012. ]{#bib.bib40.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib40}
+-   [[\[41\]]{.ltx_tag .ltx_tag_bibitem} [[ Songyou Peng, Kyle Genova,
+    Chiyu Jiang, Andrea Tagliasacchi, Marc Pollefeys, Thomas Funkhouser,
+    et al. ]{#bib.bib41.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Openscene: 3d scene understanding with open
+    vocabularies. ]{#bib.bib41.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2211.15654]{#bib.bib41.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib41.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib41}
+-   [[\[42\]]{.ltx_tag .ltx_tag_bibitem} [[ Zhiliang Peng, Li Dong,
+    Hangbo Bao, Qixiang Ye, and Furu Wei. ]{#bib.bib42.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[A unified view of masked
+    image modeling. ]{#bib.bib42.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2210.10615]{#bib.bib42.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib42.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib42}
+-   [[\[43\]]{.ltx_tag .ltx_tag_bibitem} [[ Sarah Pratt, Rosanne Liu,
+    and Ali Farhadi. ]{#bib.bib43.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[What does a platypus look like? generating
+    customized prompts for zero-shot image classification.
+    ]{#bib.bib43.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2209.03320]{#bib.bib43.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib43.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib43}
+-   [[\[44\]]{.ltx_tag .ltx_tag_bibitem} [[ Alec Radford, Jong Wook Kim,
+    Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish
+    Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, et al.
+    ]{#bib.bib44.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Learning transferable visual models from natural language
+    supervision. ]{#bib.bib44.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib44.3.1 .ltx_text
+    style="font-size:90%;"}[International conference on machine
+    learning]{#bib.bib44.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 8748--8763. PMLR, 2021.
+    ]{#bib.bib44.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib44}
+-   [[\[45\]]{.ltx_tag .ltx_tag_bibitem} [[ Mengye Ren, Eleni
+    Triantafillou, Sachin Ravi, Jake Snell, Kevin Swersky, Joshua B
+    Tenenbaum, Hugo Larochelle, and Richard S Zemel. ]{#bib.bib45.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Meta-learning
+    for semi-supervised few-shot classification. ]{#bib.bib45.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:1803.00676]{#bib.bib45.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2018. ]{#bib.bib45.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib45}
+-   [[\[46\]]{.ltx_tag .ltx_tag_bibitem} [[ Victor Sanh, Albert Webson,
+    Colin Raffel, Stephen H Bach, Lintang Sutawika, Zaid Alyafeai,
+    Antoine Chaffin, Arnaud Stiegler, Teven Le Scao, Arun Raja, et al.
+    ]{#bib.bib46.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Multitask prompted training enables zero-shot task generalization.
+    ]{#bib.bib46.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2110.08207]{#bib.bib46.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib46.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib46}
+-   [[\[47\]]{.ltx_tag .ltx_tag_bibitem} [[ Christoph Schuhmann, Richard
+    Vencu, Romain Beaumont, Robert Kaczmarczyk, Clayton Mullis, Aarush
+    Katta, Theo Coombes, Jenia Jitsev, and Aran Komatsuzaki.
+    ]{#bib.bib47.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Laion-400m: Open dataset of clip-filtered 400 million image-text
+    pairs. ]{#bib.bib47.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2111.02114]{#bib.bib47.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2021.
+    ]{#bib.bib47.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib47}
+-   [[\[48\]]{.ltx_tag .ltx_tag_bibitem} [[ Sheng Shen, Liunian Harold
+    Li, Hao Tan, Mohit Bansal, Anna Rohrbach, Kai-Wei Chang, Zhewei Yao,
+    and Kurt Keutzer. ]{#bib.bib48.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[How much can clip benefit vision-and-language
+    tasks? ]{#bib.bib48.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2107.06383]{#bib.bib48.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2021.
+    ]{#bib.bib48.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib48}
+-   [[\[49\]]{.ltx_tag .ltx_tag_bibitem} [[ Ximeng Sun, Ping Hu, and
+    Kate Saenko. ]{#bib.bib49.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Dualcoop: Fast adaptation to multi-label
+    recognition with limited annotations. ]{#bib.bib49.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2206.09541]{#bib.bib49.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib49.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib49}
+-   [[\[50\]]{.ltx_tag .ltx_tag_bibitem} [[ Mingxing Tan and Quoc Le.
+    ]{#bib.bib50.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Efficientnet: Rethinking model scaling for convolutional neural
+    networks. ]{#bib.bib50.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib50.3.1 .ltx_text
+    style="font-size:90%;"}[International conference on machine
+    learning]{#bib.bib50.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 6105--6114. PMLR, 2019.
+    ]{#bib.bib50.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib50}
+-   [[\[51\]]{.ltx_tag .ltx_tag_bibitem} [[ Changyao Tian, Wenhai Wang,
+    Xizhou Zhu, Xiaogang Wang, Jifeng Dai, and Yu Qiao. ]{#bib.bib51.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Vl-ltr:
+    Learning class-wise visual-linguistic representation for long-tailed
+    visual recognition. ]{#bib.bib51.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[European Conference on
+    Computer Vision]{#bib.bib51.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib51.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib51}
+-   [[\[52\]]{.ltx_tag .ltx_tag_bibitem} [[ Yonglong Tian, Dilip
+    Krishnan, and Phillip Isola. ]{#bib.bib52.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Contrastive
+    representation distillation. ]{#bib.bib52.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:1910.10699]{#bib.bib52.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2019. ]{#bib.bib52.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib52}
+-   [[\[53\]]{.ltx_tag .ltx_tag_bibitem} [[ Hugo Touvron, Matthieu Cord,
+    Matthijs Douze, Francisco Massa, Alexandre Sablayrolles, and Hervé
+    Jégou. ]{#bib.bib53.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Training data-efficient image transformers &
+    distillation through attention. ]{#bib.bib53.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib53.3.1
+    .ltx_text style="font-size:90%;"}[International conference on
+    machine learning]{#bib.bib53.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 10347--10357. PMLR, 2021.
+    ]{#bib.bib53.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib53}
+-   [[\[54\]]{.ltx_tag .ltx_tag_bibitem} [[ Feng Wang and Huaping Liu.
+    ]{#bib.bib54.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Understanding the behaviour of contrastive loss. ]{#bib.bib54.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib54.3.1 .ltx_text style="font-size:90%;"}[Proceedings of
+    the IEEE/CVF conference on computer vision and pattern
+    recognition]{#bib.bib54.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 2495--2504, 2021. ]{#bib.bib54.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib54}
+-   [[\[55\]]{.ltx_tag .ltx_tag_bibitem} [[ Peng Wang, An Yang, Rui Men,
+    Junyang Lin, Shuai Bai, Zhikang Li, Jianxin Ma, Chang Zhou, Jingren
+    Zhou, and Hongxia Yang. ]{#bib.bib55.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Unifying architectures,
+    tasks, and modalities through a simple sequence-to-sequence learning
+    framework. ]{#bib.bib55.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[International Conference on Machine
+    Learning]{#bib.bib55.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib55.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib55}
+-   [[\[56\]]{.ltx_tag .ltx_tag_bibitem} [[ Wenhui Wang, Hangbo Bao, Li
+    Dong, Johan Bjorck, Zhiliang Peng, Qiang Liu, Kriti Aggarwal,
+    Owais Khan Mohammed, Saksham Singhal, Subhojit Som, et al.
+    ]{#bib.bib56.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Image as a foreign language: Beit pretraining for all vision and
+    vision-language tasks. ]{#bib.bib56.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2208.10442]{#bib.bib56.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib56.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib56}
+-   [[\[57\]]{.ltx_tag .ltx_tag_bibitem} [[ Wenhui Wang, Hangbo Bao, Li
+    Dong, Johan Bjorck, Zhiliang Peng, Qiang Liu, Kriti Aggarwal,
+    Owais Khan Mohammed, Saksham Singhal, Subhojit Som, et al.
+    ]{#bib.bib57.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Image as a foreign language: Beit pretraining for all vision and
+    vision-language tasks. ]{#bib.bib57.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2208.10442]{#bib.bib57.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib57.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib57}
+-   [[\[58\]]{.ltx_tag .ltx_tag_bibitem} [[ Zhecan Wang, Noel Codella,
+    Yen-Chun Chen, Luowei Zhou, Jianwei Yang, Xiyang Dai, Bin Xiao,
+    Haoxuan You, Shih-Fu Chang, and Lu Yuan. ]{#bib.bib58.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Clip-td: Clip targeted
+    distillation for vision-language tasks. ]{#bib.bib58.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2201.05729]{#bib.bib58.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib58.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib58}
+-   [[\[59\]]{.ltx_tag .ltx_tag_bibitem} [[ Zirui Wang, Jiahui Yu,
+    Adams Wei Yu, Zihang Dai, Yulia Tsvetkov, and Yuan Cao.
+    ]{#bib.bib59.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Simvlm: Simple visual language model pretraining with weak
+    supervision. ]{#bib.bib59.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[International Conference on Learning
+    Representations]{#bib.bib59.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib59.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib59}
+-   [[\[60\]]{.ltx_tag .ltx_tag_bibitem} [[ Jason Wei, Maarten Bosma,
+    Vincent Y Zhao, Kelvin Guu, Adams Wei Yu, Brian Lester, Nan Du,
+    Andrew M Dai, and Quoc V Le. ]{#bib.bib60.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Finetuned language models
+    are zero-shot learners. ]{#bib.bib60.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2109.01652]{#bib.bib60.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib60.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib60}
+-   [[\[61\]]{.ltx_tag .ltx_tag_bibitem} [[ Peter Welinder, Steve
+    Branson, Takeshi Mita, Catherine Wah, Florian Schroff, Serge
+    Belongie, and Pietro Perona. ]{#bib.bib61.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Caltech-ucsd birds 200.
+    ]{#bib.bib61.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Technical Report CNS-TR-201, Caltech, 2010. ]{#bib.bib61.3.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib61}
+-   [[\[62\]]{.ltx_tag .ltx_tag_bibitem} [[ Kan Wu, Jinnian Zhang,
+    Houwen Peng, Mengchen Liu, Bin Xiao, Jianlong Fu, and Lu Yuan.
+    ]{#bib.bib62.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Tinyvit: Fast pretraining distillation for small vision
+    transformers. ]{#bib.bib62.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib62.3.1 .ltx_text
+    style="font-size:90%;"}[Computer Vision--ECCV 2022: 17th European
+    Conference, Tel Aviv, Israel, October 23--27, 2022, Proceedings,
+    Part XXI]{#bib.bib62.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 68--85. Springer, 2022.
+    ]{#bib.bib62.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib62}
+-   [[\[63\]]{.ltx_tag .ltx_tag_bibitem} [[ Jianxiong Xiao, James Hays,
+    Krista A. Ehinger, Aude Oliva, and Antonio Torralba.
+    ]{#bib.bib63.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Sun database: Large-scale scene recognition from abbey to zoo.
+    ]{#bib.bib63.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib63.3.1 .ltx_text style="font-size:90%;"}[2010 IEEE
+    Computer Society Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib63.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 3485--3492, 2010. ]{#bib.bib63.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib63}
+-   [[\[64\]]{.ltx_tag .ltx_tag_bibitem} [[ Le Xue, Mingfei Gao, Chen
+    Xing, Roberto Martín-Martín, Jiajun Wu, Caiming Xiong, Ran Xu,
+    Juan Carlos Niebles, and Silvio Savarese. ]{#bib.bib64.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Ulip: Learning unified
+    representation of language, image and point cloud for 3d
+    understanding. ]{#bib.bib64.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2212.05171]{#bib.bib64.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib64.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib64}
+-   [[\[65\]]{.ltx_tag .ltx_tag_bibitem} [[ Yuan Yao, Ao Zhang, Zhengyan
+    Zhang, Zhiyuan Liu, Tat-Seng Chua, and Maosong Sun. ]{#bib.bib65.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Cpt: Colorful
+    prompt tuning for pre-trained vision-language models.
+    ]{#bib.bib65.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2109.11797]{#bib.bib65.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib65.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib65}
+-   [[\[66\]]{.ltx_tag .ltx_tag_bibitem} [[ Lu Yuan, Dongdong Chen,
+    Yi-Ling Chen, Noel Codella, Xiyang Dai, Jianfeng Gao, Houdong Hu,
+    Xuedong Huang, Boxin Li, Chunyuan Li, et al. ]{#bib.bib66.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Florence: A new
+    foundation model for computer vision. ]{#bib.bib66.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2111.11432]{#bib.bib66.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib66.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib66}
+-   [[\[67\]]{.ltx_tag .ltx_tag_bibitem} [[ Yuhang Zang, Wei Li, Kaiyang
+    Zhou, Chen Huang, and Chen Change Loy. ]{#bib.bib67.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Unified vision and
+    language prompt learning. ]{#bib.bib67.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2210.07225]{#bib.bib67.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib67.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib67}
+-   [[\[68\]]{.ltx_tag .ltx_tag_bibitem} [[ Chiyuan Zhang, Samy Bengio,
+    Moritz Hardt, Benjamin Recht, and Oriol Vinyals. ]{#bib.bib68.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Understanding
+    deep learning requires rethinking generalization. ]{#bib.bib68.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib68.3.1 .ltx_text style="font-size:90%;"}[International
+    Conference on Learning Representations]{#bib.bib68.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2017. ]{#bib.bib68.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib68}
+-   [[\[69\]]{.ltx_tag .ltx_tag_bibitem} [[ Renrui Zhang, Rongyao Fang,
+    Wei Zhang, Peng Gao, Kunchang Li, Jifeng Dai, Yu Qiao, and Hongsheng
+    Li. ]{#bib.bib69.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Tip-adapter: Training-free clip-adapter for
+    better vision-language modeling. ]{#bib.bib69.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2111.03930]{#bib.bib69.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib69.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib69}
+-   [[\[70\]]{.ltx_tag .ltx_tag_bibitem} [[ Yiwu Zhong, Jianwei Yang,
+    Pengchuan Zhang, Chunyuan Li, Noel Codella, Liunian Harold Li,
+    Luowei Zhou, Xiyang Dai, Lu Yuan, Yin Li, et al. ]{#bib.bib70.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Regionclip:
+    Region-based language-image pretraining. ]{#bib.bib70.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib70.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the IEEE/CVF
+    Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib70.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 16793--16803, 2022. ]{#bib.bib70.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib70}
+-   [[\[71\]]{.ltx_tag .ltx_tag_bibitem} [[ Kaiyang Zhou, Jingkang Yang,
+    Chen Change Loy, and Ziwei Liu. ]{#bib.bib71.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Conditional prompt
+    learning for vision-language models. ]{#bib.bib71.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib71.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the IEEE/CVF
+    Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib71.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 16816--16825, 2022. ]{#bib.bib71.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib71}
+-   [[\[72\]]{.ltx_tag .ltx_tag_bibitem} [[ Kaiyang Zhou, Jingkang Yang,
+    Chen Change Loy, and Ziwei Liu. ]{#bib.bib72.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Learning to prompt for
+    vision-language models. ]{#bib.bib72.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[International Journal of
+    Computer Vision]{#bib.bib72.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 130(9):2337--2348, 2022. ]{#bib.bib72.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib72}
+-   [[\[73\]]{.ltx_tag .ltx_tag_bibitem} [[ Kaiyang Zhou, Jingkang Yang,
+    Chen Change Loy, and Ziwei Liu. ]{#bib.bib73.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Learning to prompt for
+    vision-language models. ]{#bib.bib73.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[International Journal of
+    Computer Vision]{#bib.bib73.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 130(9):2337--2348, 2022. ]{#bib.bib73.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib73}
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+
+::: {#Sx2 .section .ltx_section}
+## Appendix {#appendix .ltx_title .ltx_title_section}
+:::
+
+::: {#S1a .section .ltx_section}
+## [A ]{.ltx_tag .ltx_tag_section}Dataset Statistics {#a-dataset-statistics .ltx_title .ltx_title_section}
+
+<figure id="S1.T13" class="ltx_table">
+<table id="S1.T13.5"
+class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
+<thead class="ltx_thead">
+<tr id="S1.T13.5.6.1" class="header ltx_tr">
+<th id="S1.T13.5.6.1.1"
+class="ltx_td ltx_th ltx_th_column ltx_th_row ltx_border_r ltx_border_tt"
+style="padding-left: 1.3pt; padding-right: 1.3pt"></th>
+<th id="S1.T13.5.6.1.2"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.6.1.2.1" class="ltx_text"
+style="font-size:70%;">CaltechBirds</span></th>
+<th id="S1.T13.5.6.1.3"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.6.1.3.1" class="ltx_text"
+style="font-size:70%;">StanfordCars</span></th>
+<th id="S1.T13.5.6.1.4"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.6.1.4.1" class="ltx_text"
+style="font-size:70%;">Flower102</span></th>
+<th id="S1.T13.5.6.1.5"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.6.1.5.1" class="ltx_text"
+style="font-size:70%;">Food101</span></th>
+<th id="S1.T13.5.6.1.6"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.6.1.6.1" class="ltx_text"
+style="font-size:70%;">SUN397</span></th>
+<th id="S1.T13.5.6.1.7"
+class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.6.1.7.1" class="ltx_text"
+style="font-size:70%;">tiered-ImageNet</span></th>
+</tr>
+</thead>
+<tbody class="ltx_tbody">
+<tr id="S1.T13.1.1" class="odd ltx_tr">
+<th id="S1.T13.1.1.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r ltx_border_t"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+class="math inline">|𝒳<sub>train</sub>|</span></th>
+<td id="S1.T13.1.1.2" class="ltx_td ltx_align_center ltx_border_t"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.1.1.2.1" class="ltx_text"
+style="font-size:70%;">4122</span></td>
+<td id="S1.T13.1.1.3" class="ltx_td ltx_align_center ltx_border_t"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.1.1.3.1" class="ltx_text"
+style="font-size:70%;">2874</span></td>
+<td id="S1.T13.1.1.4" class="ltx_td ltx_align_center ltx_border_t"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.1.1.4.1" class="ltx_text"
+style="font-size:70%;">3112</span></td>
+<td id="S1.T13.1.1.5" class="ltx_td ltx_align_center ltx_border_t"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.1.1.5.1" class="ltx_text"
+style="font-size:70%;">35700</span></td>
+<td id="S1.T13.1.1.6" class="ltx_td ltx_align_center ltx_border_t"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.1.1.6.1" class="ltx_text"
+style="font-size:70%;">38663</span></td>
+<td id="S1.T13.1.1.7" class="ltx_td ltx_align_center ltx_border_t"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.1.1.7.1" class="ltx_text"
+style="font-size:70%;">314108</span></td>
+</tr>
+<tr id="S1.T13.2.2" class="even ltx_tr">
+<th id="S1.T13.2.2.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+class="math inline">|𝒳<sub>id</sub>|</span></th>
+<td id="S1.T13.2.2.2" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.2.2.2.1" class="ltx_text"
+style="font-size:70%;">1740</span></td>
+<td id="S1.T13.2.2.3" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.2.2.3.1" class="ltx_text"
+style="font-size:70%;">1164</span></td>
+<td id="S1.T13.2.2.4" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.2.2.4.1" class="ltx_text"
+style="font-size:70%;">1303</span></td>
+<td id="S1.T13.2.2.5" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.2.2.5.1" class="ltx_text"
+style="font-size:70%;">15300</span></td>
+<td id="S1.T13.2.2.6" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.2.2.6.1" class="ltx_text"
+style="font-size:70%;">16444</span></td>
+<td id="S1.T13.2.2.7" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.2.2.7.1" class="ltx_text"
+style="font-size:70%;">134587</span></td>
+</tr>
+<tr id="S1.T13.3.3" class="odd ltx_tr">
+<th id="S1.T13.3.3.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+class="math inline">|𝒳<sub>ood</sub>|</span></th>
+<td id="S1.T13.3.3.2" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.3.3.2.1" class="ltx_text"
+style="font-size:70%;">5926</span></td>
+<td id="S1.T13.3.3.3" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.3.3.3.1" class="ltx_text"
+style="font-size:70%;">4106</span></td>
+<td id="S1.T13.3.3.4" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.3.3.4.1" class="ltx_text"
+style="font-size:70%;">3774</span></td>
+<td id="S1.T13.3.3.5" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.3.3.5.1" class="ltx_text"
+style="font-size:70%;">50000</span></td>
+<td id="S1.T13.3.3.6" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.3.3.6.1" class="ltx_text"
+style="font-size:70%;">53647</span></td>
+<td id="S1.T13.3.3.7" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.3.3.7.1" class="ltx_text"
+style="font-size:70%;">124261</span></td>
+</tr>
+<tr id="S1.T13.4.4" class="even ltx_tr">
+<th id="S1.T13.4.4.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_r"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+class="math inline">|𝒴<sub>id</sub>|</span></th>
+<td id="S1.T13.4.4.2" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.4.4.2.1" class="ltx_text"
+style="font-size:70%;">100</span></td>
+<td id="S1.T13.4.4.3" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.4.4.3.1" class="ltx_text"
+style="font-size:70%;">98</span></td>
+<td id="S1.T13.4.4.4" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.4.4.4.1" class="ltx_text"
+style="font-size:70%;">51</span></td>
+<td id="S1.T13.4.4.5" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.4.4.5.1" class="ltx_text"
+style="font-size:70%;">51</span></td>
+<td id="S1.T13.4.4.6" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.4.4.6.1" class="ltx_text"
+style="font-size:70%;">200</span></td>
+<td id="S1.T13.4.4.7" class="ltx_td ltx_align_center"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.4.4.7.1" class="ltx_text"
+style="font-size:70%;">351</span></td>
+</tr>
+<tr id="S1.T13.5.5" class="odd ltx_tr">
+<th id="S1.T13.5.5.1"
+class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb ltx_border_r"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+class="math inline">|𝒴<sub>ood</sub>|</span></th>
+<td id="S1.T13.5.5.2" class="ltx_td ltx_align_center ltx_border_bb"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.5.2.1" class="ltx_text"
+style="font-size:70%;">100</span></td>
+<td id="S1.T13.5.5.3" class="ltx_td ltx_align_center ltx_border_bb"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.5.3.1" class="ltx_text"
+style="font-size:70%;">98</span></td>
+<td id="S1.T13.5.5.4" class="ltx_td ltx_align_center ltx_border_bb"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.5.4.1" class="ltx_text"
+style="font-size:70%;">51</span></td>
+<td id="S1.T13.5.5.5" class="ltx_td ltx_align_center ltx_border_bb"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.5.5.1" class="ltx_text"
+style="font-size:70%;">50</span></td>
+<td id="S1.T13.5.5.6" class="ltx_td ltx_align_center ltx_border_bb"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.5.6.1" class="ltx_text"
+style="font-size:70%;">197</span></td>
+<td id="S1.T13.5.5.7" class="ltx_td ltx_align_center ltx_border_bb"
+style="padding-left: 1.3pt; padding-right: 1.3pt"><span
+id="S1.T13.5.5.7.1" class="ltx_text"
+style="font-size:70%;">97</span></td>
+</tr>
+</tbody>
+</table>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S1.T13.10.1.1"
+class="ltx_text" style="font-size:129%;">Table 13</span>: </span><span
+id="S1.T13.11.2" class="ltx_text" style="font-size:129%;">Dataset
+Statistics for our main experiments. Terminologies follow Sec. <a
+href="https://ar5iv.labs.arxiv.org/html/2307.03135#S3" class="ltx_ref"
+title="3 Overview ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"><span
+class="ltx_text ltx_ref_tag">3</span></a>.</span></figcaption>
+</figure>
+
+::: {#S1a.p1 .ltx_para}
+In Tab. [[13]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S1.T13 "Table 13 ‣ A Dataset Statistics ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we provide dataset split statistics for the experiments introduced in
+Sec. [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S3 "3 Overview ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}
+of the main paper.
+:::
+:::
+
+::: {#S2a .section .ltx_section}
+## [B ]{.ltx_tag .ltx_tag_section}Training Details and Hyperparameters for Main Experiments {#b-training-details-and-hyperparameters-for-main-experiments .ltx_title .ltx_title_section}
+
+::: {#S2a.p1 .ltx_para}
+During agent training on $\mathcal{X}_{\text{train}}$, for CaltechBirds,
+Stanford Cars, and Flower102, due to their relatively small dataset
+size, we train agents for 450 epochs to ensure convergence; for Food101,
+SUN397, and tiered-ImageNet, we train agents for 90 epochs. For
+ResNet-based students, we adopt an initial learning rate of 0.05 with
+batch size 128, which is decreased to $0.005$ after $1/3$ of training
+epochs and to $0.0005$ after $2/3$ of training epochs. We adopt standard
+data augmentation (Random cropping image to 224x224, and random
+horizontal flip). For ViT-based students, we adopt a one-cycle learning
+rate schedule with a learning-rate peak of $0.0002$. We also apply
+RandAugment \[[10](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib10){.ltx_ref}\],
+a strong data augmentation method, to cope with overfitting. However,
+even with RandAugment, we still observe that the performance on
+$\mathcal{X}_{\text{ood}}$ starts to decrease at some point in training,
+suggesting that it is challenging to train ViT students on small to
+medium-scale datasets to obtain good out-of-distribution
+generalizability.
+:::
+
+::: {#S2a.p2 .ltx_para}
+During few-shot learning on $\mathcal{X}_{\text{ood}}$, we adopt a
+balanced training batch, where at most half of samples come from
+few-shot samples on $\mathcal{X}_{\text{ood}}$ and the rest of samples
+come from $\mathcal{X}_{\text{train}}$. For CaltechBirds, Stanford Cars,
+and Flower102, we train agents for 100 epochs. For Food101, SUN397, and
+tiered-ImageNet, we train agents for 20 epochs. We adopt a one-cycle
+learning rate schedule for all student networks. For ResNet-based
+students, the learning-rate peak is $0.003$. For ViT-based students, the
+learning-rate peak is $0.0001$. We adopt the same data augment strategy
+as before.
+:::
+
+::: {#S2a.p3 .ltx_para}
+All experiment results are obtained from the average performance of the
+last 5 epochs of training.
+:::
+:::
+
+::: {#S3a .section .ltx_section}
+## [C ]{.ltx_tag .ltx_tag_section}More Metric Evaluations {#c-more-metric-evaluations .ltx_title .ltx_title_section}
+
+<figure id="S3.T16" class="ltx_table">
+<div class="ltx_flex_figure ltx_flex_table">
+<div class="ltx_flex_cell ltx_flex_size_1">
+</div>
+<div class="ltx_flex_break">
+
+</div>
+<div class="ltx_flex_cell ltx_flex_size_1">
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S3.T16.53.2.1"
+class="ltx_text" style="font-size:129%;">Table 14</span>: </span><span
+id="S3.T16.9.1" class="ltx_text" style="font-size:129%;">We evaluate
+<span class="math inline">ℳ<sub>rel</sub></span> (higher the better) on
+different datasets to measure how students preserve the relative feature
+relationships of the teacher’s visual representation space.</span>
+<span class="ltx_tag ltx_tag_table"><span id="S3.T16.60.5.1"
+class="ltx_text" style="font-size:129%;">Table 15</span>: </span><span
+id="S3.T16.26.4" class="ltx_text" style="font-size:129%;">We evaluate
+<span class="math inline">ℳ<sub>neigh</sub></span> (higher the better)
+on different datasets to measure how students preserve the local
+structure of the teacher’s visual representation space. <span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub></span>
+in each entry denote <span
+class="math inline">ℳ<sub>neigh</sub> (𝒳<sub>train</sub>)</span> and
+<span class="math inline">ℳ<sub>neigh</sub> (𝒳<sub>ood</sub>)</span>,
+respectively.</span>
+<span class="ltx_tag ltx_tag_table"><span id="S3.T16.53.2.1"
+class="ltx_text" style="font-size:129%;">Table 14</span>: </span><span
+id="S3.T16.9.1" class="ltx_text" style="font-size:129%;">We evaluate
+<span class="math inline">ℳ<sub>rel</sub></span> (higher the better) on
+different datasets to measure how students preserve the relative feature
+relationships of the teacher’s visual representation space.</span>
+<span class="ltx_tag ltx_tag_table"><span id="S3.T16.60.5.1"
+class="ltx_text" style="font-size:129%;">Table 15</span>: </span><span
+id="S3.T16.26.4" class="ltx_text" style="font-size:129%;">We evaluate
+<span class="math inline">ℳ<sub>neigh</sub></span> (higher the better)
+on different datasets to measure how students preserve the local
+structure of the teacher’s visual representation space. <span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub></span>
+in each entry denote <span
+class="math inline">ℳ<sub>neigh</sub> (𝒳<sub>train</sub>)</span> and
+<span class="math inline">ℳ<sub>neigh</sub> (𝒳<sub>ood</sub>)</span>,
+respectively.</span>
+<span class="ltx_tag ltx_tag_table"><span id="S3.T16.67.5.1"
+class="ltx_text" style="font-size:129%;">Table 16</span>: </span><span
+id="S3.T16.48.4" class="ltx_text" style="font-size:129%;">We evaluate
+<span class="math inline">ℳ<sub>vlalign</sub></span> (lower the better)
+on different datasets to measure the proximity between student and
+teacher vision-language alignment structures. <span
+class="math inline"><em>x</em><sub>1</sub>/<em>x</em><sub>2</sub></span>
+in each entry denote <span
+class="math inline">ℳ<sub>vlalign</sub> (𝒳<sub>train</sub>)</span> and
+<span class="math inline">ℳ<sub>vlalign</sub> (𝒳<sub>ood</sub>)</span>,
+respectively.</span></figcaption>
+</figure>
+
+::: {#S3a.p1 .ltx_para}
+In this section, we evaluate $\mathcal{M}_{\text{rel}}$,
+$\mathcal{M}_{\text{neigh}}$, and $\mathcal{M}_{\text{vlalign}}$ on more
+datasets to complement our results on teacher-student visual space and
+vision-language alignment in Sec. [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S4 "4 Teacher-Student Visual Space and Vision-Language Alignments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+$\mathcal{M}_{\text{rel}}$ results are presented in Tab. [[16]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S3.T16 "Table 16 ‣ C More Metric Evaluations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+$\mathcal{M}_{\text{neigh}}$ results are presented in
+Tab. [[16]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S3.T16 "Table 16 ‣ C More Metric Evaluations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+$\mathcal{M}_{\text{vlalign}}$ results are presented in
+Tab. [[16]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S3.T16 "Table 16 ‣ C More Metric Evaluations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+:::
+:::
+
+::: {#S4a .section .ltx_section}
+## [D ]{.ltx_tag .ltx_tag_section}Example ChatGPT Label Description Generations from Different Prompts {#d-example-chatgpt-label-description-generations-from-different-prompts .ltx_title .ltx_title_section}
+
+::: {#S4a.p1 .ltx_para}
+In Sec. [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6 "6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we investigated leveraging different prompts to control the level of
+semantic details ChatGPT generates for the description of each label,
+and how these different generated label descriptions impact student
+performance. In this section, we provide a list of example label
+descriptions generated using various prompts.
+:::
+
+::: {#S4a.p2 .ltx_para}
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S4.I1.i1}
+
+    ::: {#S4.I1.i1.p1 .ltx_para}
+    [Original prompt]{#S4.I1.i1.p1.1.1 .ltx_text .ltx_font_bold} in
+    Sec. [[5]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S5 "5 Language Representation Enrichment ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}:
+    "Use a single sentence to describe the appearance and shape of
+    {cls}. Only describe the shape and appearance."
+
+    -   [[[--]{#S4.I1.i1.I1.i1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i1.I1.i1}
+
+        ::: {#S4.I1.i1.I1.i1.p1 .ltx_para}
+        [The Egyptian Cat, or Egyptian Mau, is a medium-sized feline
+        with a lithe and muscular body, a short, spotted coat in colors
+        such as silver or bronze, and large, almond-shaped green
+        eyes.]{#S4.I1.i1.I1.i1.p1.1.1 .ltx_text .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i1.I1.i2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i1.I1.i2}
+
+        ::: {#S4.I1.i1.I1.i2.p1 .ltx_para}
+        [The space bar is a rectangular key on a computer keyboard that
+        is longer horizontally than other keys and has a slightly
+        concave shape for the thumb.]{#S4.I1.i1.I1.i2.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i1.I1.i3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i1.I1.i3}
+
+        ::: {#S4.I1.i1.I1.i3.p1 .ltx_para}
+        [Hair spray typically comes in a cylindrical container with a
+        nozzle on top for spraying, and may vary in size and color
+        depending on the brand and type.]{#S4.I1.i1.I1.i3.p1.1.1
+        .ltx_text .ltx_font_typewriter}
+        :::
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S4.I1.i2}
+
+    ::: {#S4.I1.i2.p1 .ltx_para}
+    ["More Succinct" prompt]{#S4.I1.i2.p1.1.1 .ltx_text .ltx_font_bold}
+    in Sec. [[6]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6 "6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}:
+    "Use a single sentence to broadly describe the appearance and shape
+    of {cls}. Don't give too much details. Only describe the shape and
+    appearance."
+
+    -   [[[--]{#S4.I1.i2.I1.i1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i2.I1.i1}
+
+        ::: {#S4.I1.i2.I1.i1.p1 .ltx_para}
+        [The Egyptian cat, also known as the Egyptian Mau, has a
+        slender, athletic body with a spotted coat and large, expressive
+        eyes.]{#S4.I1.i2.I1.i1.p1.1.1 .ltx_text .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i2.I1.i2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i2.I1.i2}
+
+        ::: {#S4.I1.i2.I1.i2.p1 .ltx_para}
+        [The space bar is a rectangular-shaped key located at the
+        bottom-center of a standard computer
+        keyboard.]{#S4.I1.i2.I1.i2.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i2.I1.i3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i2.I1.i3}
+
+        ::: {#S4.I1.i2.I1.i3.p1 .ltx_para}
+        [Hair spray is typically contained in an aerosol can with a
+        long, narrow nozzle used for spraying the product onto
+        hair.]{#S4.I1.i2.I1.i3.p1.1.1 .ltx_text .ltx_font_typewriter}
+        :::
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S4.I1.i3}
+
+    ::: {#S4.I1.i3.p1 .ltx_para}
+    ["More Detailed" prompt]{#S4.I1.i3.p1.1.1 .ltx_text .ltx_font_bold}
+    in Sec. [[6]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6 "6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}:
+    "Use a single sentence and short, simple, descriptive phrases to
+    describe the detailed appearance and detailed shape of {cls}."
+
+    -   [[[--]{#S4.I1.i3.I1.i1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i3.I1.i1}
+
+        ::: {#S4.I1.i3.I1.i1.p1 .ltx_para}
+        [The Egyptian Cat has a slender, muscular build, a distinctively
+        slender face with large pointy ears, almond-shaped green or gold
+        eyes, and a short, smooth coat in colors such as black, white,
+        or tortoiseshell.]{#S4.I1.i3.I1.i1.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i3.I1.i2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i3.I1.i2}
+
+        ::: {#S4.I1.i3.I1.i2.p1 .ltx_para}
+        [The space bar is a horizontal, elongated key located at the
+        bottom center of a computer keyboard, typically featuring a
+        smooth, concave surface, and comes in various sizes and colors
+        for different models.]{#S4.I1.i3.I1.i2.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i3.I1.i3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i3.I1.i3}
+
+        ::: {#S4.I1.i3.I1.i3.p1 .ltx_para}
+        [The hair spray is a pressurized aerosol can or pump bottle with
+        a plastic or metal container, typically transparent or colored,
+        and comes in various strengths and formulas, used for holding
+        and styling the hair in place.]{#S4.I1.i3.I1.i3.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S4.I1.i4}
+
+    ::: {#S4.I1.i4.p1 .ltx_para}
+    ["More Distinct" prompt]{#S4.I1.i4.p1.1.1 .ltx_text .ltx_font_bold}
+    in Sec. [[6]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6 "6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}:
+    "Use a single sentence to describe the unique, distinctive
+    appearance and shape of {cls}. Only describe the unique, distinctive
+    shape and appearance."
+
+    -   [[[--]{#S4.I1.i4.I1.i1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i4.I1.i1}
+
+        ::: {#S4.I1.i4.I1.i1.p1 .ltx_para}
+        [The Egyptian Cat, also known as the Egyptian Mau, is
+        characterized by its medium size, muscular build, distinctive
+        spots on its fur, a black stripe running from its eyes to the
+        neck, and green or gold eyes.]{#S4.I1.i4.I1.i1.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i4.I1.i2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i4.I1.i2}
+
+        ::: {#S4.I1.i4.I1.i2.p1 .ltx_para}
+        [The space bar has a long, rectangular shape with a concave top
+        and a convex bottom, and is wider than most other keys on the
+        keyboard.]{#S4.I1.i4.I1.i2.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    -   [[[--]{#S4.I1.i4.I1.i3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag
+        .ltx_tag_item}]{#S4.I1.i4.I1.i3}
+
+        ::: {#S4.I1.i4.I1.i3.p1 .ltx_para}
+        [Hair spray usually comes in a cylindrical container with a long
+        nozzle that sprays a fine mist, and may have a cap or cover on
+        top to protect the nozzle.]{#S4.I1.i4.I1.i3.p1.1.1 .ltx_text
+        .ltx_font_typewriter}
+        :::
+    :::
+:::
+:::
+
+::: {#S5a .section .ltx_section}
+## [E ]{.ltx_tag .ltx_tag_section}More details on Comparing Different Few Shot Learning Strategies {#e-more-details-on-comparing-different-few-shot-learning-strategies .ltx_title .ltx_title_section}
+
+::: {#S5a.p1 .ltx_para}
+In this section, we provide more implementation details of our ablation
+experiment in Sec. [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S6 "6 Ablations ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+where we compare finetuning student visual backbone vs. training-free
+retrieval for few shot learning on $\mathcal{X}_{\text{ood}}$.
+Finetuning student visual backbone follows the same settings in
+Sec. [[B]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S2a "B Training Details and Hyperparameters for Main Experiments ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}.
+For training-free retrieval, we adopt an approach similar to
+Tip-Adapter \[[69](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib69){.ltx_ref}\],
+except that we use the student image model $S$ as the visual encoder and
+teacher's language model $T_{\text{img}}$ as the textual encoder. We set
+$\alpha = 1.0$ and $\beta = 5.5$.
+:::
+:::
+
+::: {#S6a .section .ltx_section}
+## [F ]{.ltx_tag .ltx_tag_section}More details on Sec. [[7]{.ltx_text .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S7 "7 Application ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref} Application {#f-more-details-on-sec.-7-application .ltx_title .ltx_title_section}
+
+::: {#S6a.p1 .ltx_para}
+For our experiments in Sec. [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S7 "7 Application ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref},
+we are in a multi-label classification setting, and the student network
+needs to output whether it is feasible to grasp each YCB object given
+the current observation. During student training, we find learning a
+common positive prompt and a common negative prompt for all labels to be
+very helpful, and we adopt
+DualCoOp \[[49](https://ar5iv.labs.arxiv.org/html/2307.03135#bib.bib49){.ltx_ref}\]
+to learn these prompts. To encourage the global student visual feature
+be region-aware, we adopt the region aggregation method from DualCoOp
+for all of our experiments. We additionally calibrate the positive and
+negative probabilities (for each label, positive probability + negative
+probability = 1) by learning a common probability bias on the fly. An
+object $y$ is then predicted as positive if its positive probability is
+greater than $0.5 + \text{bias}$.
+:::
+
+::: {#S6a.p2 .ltx_para}
+The two evaluation metrics we calculated in Sec. [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2307.03135#S7 "7 Application ‣ Distilling Large Vision-Language Model with Out-of-Distribution Generalizability"){.ltx_ref}
+can be formally defined as follows:
+
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S6.I1.i1}
+
+    ::: {#S6.I1.i1.p1 .ltx_para}
+    Overall accuracy over all YCB objects in the label set $\mathcal{Y}$
+    ($\mathcal{Y} = \mathcal{Y}_{\text{id}}$ on
+    $\mathcal{X}_{\text{id}}$ and
+    $\mathcal{Y} = {\mathcal{Y}_{\text{id}} \cup \mathcal{Y}_{\text{ood}}}$
+    on $\mathcal{X}_{\text{ood}}$):
+
+      -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+         $$\mathcal{M}_{1} = \frac{\sum_{i = 1}^{|\mathcal{Y}|}{\sum_{j = 1}^{|\mathcal{X}|}{\text{correct}\operatorname{}{(x_{j},y_{i})}}}}{{|\mathcal{X}|}\operatorname{}{|\mathcal{Y}|}}$$      [(9)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+      -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+    Here $\text{correct}\operatorname{}{(x_{j},y_{i})}$ outputs 1 if the
+    existence of object $y_{i}$ is predicted correctly in the
+    observation $x_{j}$, and 0 otherwise.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S6.I1.i2}
+
+    ::: {#S6.I1.i2.p1 .ltx_para}
+    F1-measure over objects that exist in an observation, averaged over
+    all observations:
+
+      -- -------------------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------------
+         $\mathcal{M}_{2,\text{precision}}\operatorname{}{(y)}$   $= \frac{\sum_{i = 1}^{|\mathcal{X}|}{{\mathbf{1}_{y \in {\text{obj}\operatorname{}{(x_{i})}}}*\text{correct}}\operatorname{}{(x_{i},y)}}}{\sum_{i = 1}^{|\mathcal{X}|}{\min{({\mathbf{1}_{y \in {\text{obj}\operatorname{}{(x_{i})}}} + {\text{pred}\operatorname{}{(x_{i},y)}}},1)}}}$      [(10)]{.ltx_tag .ltx_tag_equationgroup .ltx_align_right}
+         $\mathcal{M}_{2,\text{precision}}$                       $= \frac{\sum_{y \in \mathcal{Y}}{\mathcal{M}_{2,\text{precision}}\operatorname{}{(y)}}}{|\mathcal{Y}|}$                                                                                                                                                                                      
+         $\mathcal{M}_{2,\text{recall}}\operatorname{}{(y)}$      $= \frac{\sum_{i = 1}^{|\mathcal{X}|}{{\mathbf{1}_{y \in {\text{obj}\operatorname{}{(x_{i})}}}*\text{correct}}\operatorname{}{(x_{i},y)}}}{\sum_{i = 1}^{|\mathcal{X}|}\mathbf{1}_{y \in {\text{obj}\operatorname{}{(x_{i})}}}}$                                                              
+         $\mathcal{M}_{2,\text{recall}}$                          $= \frac{\sum_{y \in \mathcal{Y}}{\mathcal{M}_{2,\text{recall}}\operatorname{}{(y)}}}{|\mathcal{Y}|}$                                                                                                                                                                                         
+         $\mathcal{M}_{2,\text{F1}}$                              $= \frac{2}{\frac{1}{\mathcal{M}_{2,\text{precision}}} + \frac{1}{\mathcal{M}_{2,\text{recall}}}}$                                                                                                                                                                                            
+      -- -------------------------------------------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------------
+
+    Here $\text{pred}\operatorname{}{(x_{i},y)}$ equals 1 if the student
+    network predicts that the object $y$ exists in observation $x_{i}$,
+    and 0 otherwise.
+    :::
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2307.03134){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./2307.03135_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2307.03135){.ar5iv-text-button
+.ar5iv-severity-warning} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2307.03135){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2307.03135){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2307.03136){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Sat Aug 5 14:32:45 2023 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+
+::: {#simplifyJobsPortals}
+:::
+:::

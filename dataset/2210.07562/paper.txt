@@ -1,0 +1,1663 @@
+::: ltx_page_main
+::: ltx_page_content
+# TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers {#tokenmixup-efficient-attention-guided-token-level-data-augmentation-for-transformers .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [Hyeong Kyu Choi  ,   Joonmyung Choi$^{*}$,   Hyunwoo J. Kim\
+Department of Computer Science and Engineering, Korea University\
+[{imhgchoi, pizard, hyunwoojkim}@korea.ac.kr]{#id3.2.id1 .ltx_text
+.ltx_font_typewriter}\
+]{.ltx_personname}[The first two authors contributed
+equallycorresponding author]{.ltx_author_notes}]{.ltx_creator
+.ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Mixup is a commonly adopted data augmentation technique for image
+classification. Recent advances in mixup methods primarily focus on
+mixing based on saliency. However, many saliency detectors require
+intense computation and are especially burdensome for parameter-heavy
+transformer models. To this end, we propose TokenMixup, an efficient
+attention-guided token-level data augmentation method that aims to
+maximize the saliency of a mixed set of tokens. TokenMixup provides
+$\times 15$ faster saliency-aware data augmentation compared to
+gradient-based methods. Moreover, we introduce a variant of TokenMixup
+which mixes tokens within a single instance, thereby enabling
+multi-scale feature augmentation. Experiments show that our methods
+significantly improve the baseline models' performance on CIFAR and
+ImageNet-1K, while being more efficient than previous methods. We also
+reach state-of-the-art performance on CIFAR-100 among from-scratch
+transformer models. Code is available at
+[[https://github.com/mlvlab/TokenMixup]{#id2.1.1.1 .ltx_text
+.ltx_font_typewriter}.](https://github.com/mlvlab/TokenMixup){.ltx_ref
+.ltx_href target="_blank"}
+:::
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+Various data augmentation methods have been proposed for computer vision
+tasks. One of the most successful augmentation methods is
+mixup [[zhang2017mixup]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib1){.ltx_ref}
+, which is commonly applied to image classification. It attempts to
+augment the input by taking a convex combination of two random
+instances, and by reassigning the ground truth label correspondingly.
+Building on mixup, many subsequent works [[yun2019cutmix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib2){.ltx_ref}
+; [[kim2020puzzle]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib3){.ltx_ref}
+; [[kim2021co]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib4){.ltx_ref}
+; [[uddin2020saliencymix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib5){.ltx_ref}
+; [[verma2019manifold]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib6){.ltx_ref}
+; [[venkataramanan2021alignmix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib7){.ltx_ref}
+; [[hong2021stylemix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib8){.ltx_ref}
+; [[dabouei2021supermix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib9){.ltx_ref}
+have been introduced. They focus on mixing instances in a more
+meaningful way ([e.g.]{#S1.p1.1.1 .ltx_text .ltx_font_italic},
+saliency-aware mixup, manifold level mixup, submodular diversity
+maximization [etc.]{#S1.p1.1.2 .ltx_text .ltx_font_italic}), while a
+great majority attempts to perform mixup based on saliency.\
+These saliency-aware mixup methods often entail gradient computation. To
+detect salient regions, the input is forward-propagated once and
+back-propagated to extract the gradient map. However, such a mechanism
+tends to be computationally heavy. This is especially pertinent to
+transformer-based models [[vaswani2017attention]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib10){.ltx_ref}
+, as they generally retain high parameter volume. Keeping this in mind,
+we aim to present a saliency-aware mixup method favorable for
+transformers. Specifically, we regard self-attention as the inherent
+saliency detector, which serves as an efficient means for augmentation.
+:::
+
+::: {#S1.p2 .ltx_para}
+We accordingly propose [TokenMixup]{#S1.p2.1.1 .ltx_text
+.ltx_font_bold}, an efficient attention-guided token-level mixup method.
+Its objective is to mix intermediate token sets so that the saliency
+level of a batch is maximized. To detect salient tokens, we take
+advantage of the attention map to achieve a $\times 15$ speed-up
+compared to the gradient-based saliency estimator, without compromising
+model performance. The batch saliency is maximized by optimally matching
+instance pairs, accomplished by an algorithm that exactly solves the
+optimization problem. We also introduce ScoreNet, a simple module that
+measures the difficulty of an instance. Based on ScoreNet, TokenMixup is
+applied selectively with respect to sample difficulty, which can be
+viewed as a type of curriculum learning method. To the best of our
+knowledge, this is the first attempt in the literature to discuss mixup
+from a curriculum learning perspective. Furthermore, we present a novel
+mixup approach that combines intermediate tokens across transformer
+layers within a single instance. We name this Vertical TokenMixup (VTM)
+since it [vertically]{#S1.p2.1.2 .ltx_text .ltx_font_italic} mixes
+tokens to provide rich multi-scale information to the attention layer.
+:::
+
+::: {#S1.p3 .ltx_para}
+Experiments on image classification datasets imply that our methods are
+both effective and efficient. Also, an advantage of TokenMixup is that
+it can be used in parallel with other mixup methods. In combination with
+those methods, we improve our baselines' performance by significant
+margins on CIFAR-10, CIFAR-100, and ImageNet-1K. Especially for
+CIFAR-100, we achieve a new state-of-the-art performance among
+transformer-based models that do not use pre-trained models.
+:::
+
+::: {#S1.p4 .ltx_para}
+Then, our contributions are fourfold:
+
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i1}
+
+    ::: {#S1.I1.i1.p1 .ltx_para}
+    We propose TokenMixup, an efficient attention-guided token-level
+    mixup for transformers. By incorporating the self-attention map, we
+    achieve $\times 15$ faster saliency-aware data augmentation compared
+    to gradient-based methods.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i2}
+
+    ::: {#S1.I1.i2.p1 .ltx_para}
+    We incorporate curriculum learning into mixup, to adaptively perform
+    TokenMixup in an intermediate layer based on the confidence score of
+    ScoreNet.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i3}
+
+    ::: {#S1.I1.i3.p1 .ltx_para}
+    We also studied a variant, Vertical TokenMixup, which performs mixup
+    with a single sample and enables multi-scale feature augmentation.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S1.I1.i4}
+
+    ::: {#S1.I1.i4.p1 .ltx_para}
+    We achieve state-of-the-art performance on CIFAR-100 among
+    transformer models trained from scratch. We also gain significant
+    improvements over baseline models for image classification.
+    :::
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Related Works {#related-works .ltx_title .ltx_title_section}
+
+::: {#S2.SS0.SSS0.Px1 .section .ltx_paragraph}
+#### Mixup. {#mixup. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px1.p1 .ltx_para}
+Input Mixup [[zhang2017mixup]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib1){.ltx_ref}
+is a data augmentation method widely adopted for image classification.
+The classification model is trained with a convex combination of input
+images and labels. A special case of Input Mixup is
+CutMix [[yun2019cutmix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib2){.ltx_ref}
+, which can be seen as a pixel-wise mixup method with binary masks.
+Recent advances in these mixup methods mainly focus on appropriately
+utilizing saliency information, and on mixing in image feature levels.\
+The core motivation of saliency-based mixup is that salient regions
+should be preserved when mixed, to retain a sufficient amount of
+information and learn more natural feature representations.
+SaliencyMix [[uddin2020saliencymix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib5){.ltx_ref}
+adopts various saliency detectors to directly extract salient regions.
+Puzzle Mix [[kim2020puzzle]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib3){.ltx_ref}
+attempts to mix images using saliency information while retaining local
+statistics. Co-Mixup [[kim2021co]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib4){.ltx_ref}
+maximizes gradient-based saliency while encouraging supermodular
+diversity of the mixed images. SuperMix [[dabouei2021supermix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib9){.ltx_ref}
+takes advantage of supervised signals to mix input images based on
+saliency.\
+On the other hand, Manifold Mixup [[verma2019manifold]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib6){.ltx_ref}
+has provided theoretical grounds on the advantages of mixing images in
+the higher level of features. Manifold mixing helps the model learn
+flatter representation and smoother decision boundaries. Moreover, it is
+noted that it enhances robustness to adversarial attacks. Recently,
+AlignMix [[venkataramanan2021alignmix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib7){.ltx_ref}
+was proposed to further align geometric properties of objects by mixing
+instances in the feature space. Furthermore,
+StyleMix [[hong2021stylemix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib8){.ltx_ref}
+proposed to manipulate content and style information disparately to
+generate more abundant and robust samples.
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px2 .section .ltx_paragraph}
+#### Vision Transformers. {#vision-transformers. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px2.p1 .ltx_para}
+Originating from the natural language processing field, the
+Transformer [[vaswani2017attention]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib10){.ltx_ref}
+model enjoyed tremendous success in numerous computer vision
+applications, [e.g.]{#S2.SS0.SSS0.Px2.p1.1.1 .ltx_text
+.ltx_font_italic}, image classification, object
+detection [[carion2020end]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib11){.ltx_ref}
+; [[zhu2020deformable]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib12){.ltx_ref}
+, and human-object interaction detection [[kim2021hotr]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib13){.ltx_ref}
+; [[park2022consistency]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib14){.ltx_ref}
+[et cetera]{#S2.SS0.SSS0.Px2.p1.1.2 .ltx_text .ltx_font_italic}.
+Specifically, image classification is one of the most fundamental
+computer vision tasks. Starting from the
+ViT [[dosovitskiy2020image]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib15){.ltx_ref}
+, many works have attempted to assimilate the convolutional operation
+with transformer blocks [[liu2021swin]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib16){.ltx_ref}
+; [[wang2021pyramid]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib17){.ltx_ref}
+; [[yuan2021incorporating]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib18){.ltx_ref}
+; [[heo2021rethinking]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib19){.ltx_ref}
+; [[han2021transformer]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib20){.ltx_ref}
+; [[d2021convit]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib21){.ltx_ref}
+. Other variants have effectively incorporated the convolutional neural
+network into the transformer to achieve superior
+performance [[hassani2021escaping]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib22){.ltx_ref}
+; [[wu2021cvt]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib23){.ltx_ref}
+; [[xu2021co]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib24){.ltx_ref}
+; [[chu2021conditional]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib25){.ltx_ref}
+; [[chu2021twins]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib26){.ltx_ref}
+.
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Methods {#methods .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para}
+Here, we introduce TokenMixup, a simple but effective mixup method for
+transformer models. The goal of our method is to augment intermediate
+tokens while maximizing the saliency level. This can be accomplished in
+three major steps: 1) Sample difficulty assessment, 2) Attention-guided
+saliency detection & optimal assignment, 3) Token-level mixup. The
+following subsections provide detailed descriptions of the steps.
+:::
+
+<figure id="S3.F1" class="ltx_figure">
+<img src="./token_files/htm_v14.png" id="S3.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="550"
+height="204" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span
+id="S3.F1.20.10" class="ltx_text ltx_font_bold"
+style="font-size:80%;">TokenMixup.<span id="S3.F1.20.10.10"
+class="ltx_text ltx_font_medium"> Batch samples <span
+class="math inline"><em>X</em></span> are first filtered with respect to
+difficulty scores evaluated by ScoreNet in <span
+class="math inline">ℱ</span>, resulting in <span id="S3.F1.20.10.10.1"
+class="ltx_text ltx_font_italic">easy</span> samples <span
+class="math inline">$\overset{\sim}{X}$</span>. Then, images in <span
+class="math inline">$\overset{\sim}{X}$</span> are optimally paired with
+samples in <span class="math inline"><em>X</em></span> via Hungarian
+matching, so that the overall saliency of the mini-batch is maximized
+after mixup. For a matched pair (<span
+class="math inline">${\overset{\sim}{X}}^{(i)}$</span>, <span
+class="math inline"><em>X</em><sup>(<em>j</em>)</sup></span>), tokens of
+<span class="math inline">${\overset{\sim}{X}}^{(i)}$</span> with
+sufficiently lower saliency levels than the tokens of <span
+class="math inline"><em>X</em><sup>(<em>j</em>)</sup></span> are
+replaced, resulting in a new token set <span
+class="math inline">${\overset{\sim}{X}}_{\text{mix}}^{(i)}$</span>
+containing a greater saliency level.</span></span></figcaption>
+</figure>
+
+::: {#S3.SS1 .section .ltx_subsection}
+### [3.1 ]{.ltx_tag .ltx_tag_subsection}Sample Difficulty Assessment {#sample-difficulty-assessment .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS1.p1 .ltx_para}
+We first assess the difficulty of the input to adaptively decide whether
+to apply augmentation. To evaluate sample difficulty, a measuring
+function $\mathcal{F}$ needs to be defined. We utilize a parameterized
+module, ScoreNet, which is a simple MLP that predicts the target value
+$Y^{(i)}$ based on the intermediate tokens $X^{(i)}$, where $i$ is the
+index of the sample in a batch [(See the supplement for
+figure)]{#S3.SS1.p1.4.1 .ltx_text style="color:#000000;"}. Given the
+ScoreNet output, the difficulty score is evaluated with the prediction
+loss computed as
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${{\mathcal{F}\operatorname{}{(X^{(i)},Y^{(i)})}} = {\text{CrossEntropy}\operatorname{}{({\text{ScoreNet}\operatorname{}{(X^{(i)})}},Y^{(i)})}}}.$$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+If the score is greater than a threshold $\tau$, the sample is deemed
+sufficiently hard and no mixup is performed. On the other hand, the set
+of [easy]{#S3.SS1.p1.7.1 .ltx_text .ltx_font_italic} samples with
+${\mathcal{F}\operatorname{}{(X^{(i)},Y^{(i)})}} < \tau$ denoted as
+$\overset{\sim}{X}$ will be augmented by Token-level mixup after pairing
+with other samples in a mini-batch, as illustrated in
+Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.F1 "Figure 1 ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}.
+Note that ScoreNet is trained simultaneously with the main model and
+training ScoreNet to assess sample difficulty at the intermediate layer
+can be viewed as an auxiliary task.
+:::
+:::
+
+::: {#S3.SS2 .section .ltx_subsection}
+### [3.2 ]{.ltx_tag .ltx_tag_subsection}Attention-guided Saliency Detection & Optimal Assignment {#attention-guided-saliency-detection-optimal-assignment .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS2.p1 .ltx_para}
+Several works [[heo2021rethinking]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib19){.ltx_ref}
+; [[rao2021dynamicvit]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib27){.ltx_ref}
+; [[roh2021sparse]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib28){.ltx_ref}
+; [[wang2021pnp]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib29){.ltx_ref}
+have discussed the imbalanced information of tokens. Due to this
+imbalance, random token mixing would potentially cause significant
+information loss and meaningless token replacements (See the supplement
+for relevant analysis). Thus, we aim to mix tokens based on saliency.
+:::
+
+::: {#S3.SS2.SSS0.Px1 .section .ltx_paragraph}
+#### Attention-guided saliency detection. {#attention-guided-saliency-detection. .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS2.SSS0.Px1.p1 .ltx_para}
+Instead of the computationally heavy gradient-based saliency
+detectors [[kim2020puzzle]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib3){.ltx_ref}
+; [[kim2021co]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib4){.ltx_ref}
+, we take advantage of the attention map, an inherent saliency
+approximator within transformer modules. Specifically, we can infer the
+saliency of the tokens in the $i^{t\operatorname{}h}$ layer via
+Attention Rollout [[abnar2020quantifying]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib30){.ltx_ref}
+, which computes the attention imposed on the tokens from layer $i$ to
+$i + \ell$ ($\ell \geq 0$) as
+
+  -- --------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${A = {{\Phi^{(i)} \cdot \Phi^{({i + 1})}}\operatorname{}\cdots\operatorname{}\Phi^{({i + \ell})}}},$$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+such that
+$\Phi^{(i)} = {\frac{1}{H}\operatorname{}{\sum_{h = 1}^{H}\Phi_{h}^{(i)}}}$
+where $H$ is the number of heads in the multi-head attention layer, and
+$\Phi_{h}^{(i)}$ is the $h^{t\operatorname{}h}$ attention head of layer
+$i$. In order to retrieve $A$, the samples need to be propagated for the
+subsequent $\ell$ layers with stop-gradient. Since each additional
+forward propagation is an overhead, we approximate Attention Rollout by
+setting $\ell = 0$. That is, we only use the attention map of the
+following layer as the saliency estimator. We find this a sufficient
+approximation of the full Attention Rollout. See
+section [[5.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S5.SS1 "5.1 Soundness of Saliency Estimation ‣ 5 Analysis ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+for analysis on the soundness of the approximated saliency map. Then,
+the saliency score $S_{t}$ can be computed as
+
+  -- ----------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${S_{t} = {\frac{1}{n}\operatorname{}{\sum\limits_{i = 1}^{n}A_{i,t}}}},$$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $t = {1,2,\ldots,n}$ denotes the token index.
+:::
+:::
+
+::: {#S3.SS2.SSS0.Px2 .section .ltx_paragraph}
+#### Optimal assignment. {#optimal-assignment. .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS2.SSS0.Px2.p1 .ltx_para}
+Based on the estimated saliency of tokens, we aim to maximize the
+overall saliency level by optimally assigning a different mixup target
+for each instance. So, we first define
+$P_{i,j} \in {I\operatorname{}R^{n}}$ as the saliency difference between
+a random instance pair $(i,j)$, which is computed as
+
+  -- ---------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${{P_{i,j}\operatorname{}\overset{\bigtriangleup}{=}\operatorname{}S_{j}} - S_{i}},$$      [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where ${{i,j} = 1},{2,\ldots,b}$ and $S_{i} \in {I\operatorname{}R^{n}}$
+is the token saliency map from the $i^{t\operatorname{}h}$ instance.
+Then, we represent our objective as an optimization problem written as
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${{\max\limits_{\sigma \in \mathcal{M}}\max\limits_{r_{i} \in {I\operatorname{}B^{n}}}}\operatorname{}{\sum\limits_{i = 1}^{b}{{({P_{i,{\sigma\operatorname{}{(i)}}} - \rho})}^{\top}\operatorname{}r_{i}}}},$$      [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+where $\mathcal{M}$ is the set of all possible batch permutations of the
+$b$ instances, and $\sigma \in \mathcal{M}$ refers to an arbitrary
+permutation. $\rho$ is the threshold hyperparameter that controls the
+minimum saliency gain required for a token to be mixed, and $r_{i}$ is a
+binary decision vector for the $i^{t\operatorname{}h}$ instance.
+[i.e.]{#S3.SS2.SSS0.Px2.p1.17.1 .ltx_text .ltx_font_italic}, token $t$
+of $i$ is replaced with token $t$ of $\sigma\operatorname{}{(i)}$ when
+$r_{i,t} = 1$, and preserved when
+$r_{i,t} = {0\operatorname{}{({t = {1,2,\ldots,n}})}}$.
+:::
+
+::: {#S3.SS2.SSS0.Px2.p2 .ltx_para}
+The above optimization problem can be exactly solved by utilizing the
+Hungarian Matching algorithm [[munkres1957algorithms]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib31){.ltx_ref}
+. The matching algorithm requires the score matrix,
+$C \in {I\operatorname{}R^{b \times b}}$, which is computed as
+
+  -- ----------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${C_{i,j} = {\sum\limits_{t = 1}^{n}{\text{max}\operatorname{}{({P_{i,j}^{(t)} - \rho},\:0)}}}},$$      [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where each item in $C_{i,j}$ refers to the maximum saliency gain
+resulting from mixing ${\overset{\sim}{X}}^{(i)}$ and $X^{(j)}$. The
+actual maximum gain will be reached when $\rho = 0$, but we set a
+positive threshold to control the minimum saliency gain required for
+each token to be replaced. Then, by applying the Hungarian algorithm, we
+can find the optimal batch permutation $\sigma^{*}$ such that
+
+  -- ------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $${\sigma^{*} = {\underset{\sigma}{\arg ⁡\max}\operatorname{}{\sum\limits_{i = 1}^{n}C_{i,{\sigma\operatorname{}{(i)}}}}}}.$$      [(7)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+Then, by mixing ${\overset{\sim}{X}}^{(i)}$ and
+$X^{({\sigma^{*}\operatorname{}{(i)}})}$, our objective is optimized.
+:::
+
+<figure id="alg1"
+class="ltx_float ltx_float_algorithm ltx_framed ltx_framed_top">
+<div class="ltx_flex_figure">
+<div class="ltx_flex_cell">
+<p><span id="alg1.6.1" class="ltx_text ltx_font_bold">Input:</span>
+<span
+class="math inline"><em>X</em> ∈ <em>I</em> <em>R</em><sup><em>b</em> × <em>n</em> × <em>d</em></sup></span>,
+<span
+class="math inline"><em>Y</em> ∈ <em>I</em> <em>R</em><sup><em>b</em> × <em>c</em></sup></span>,
+<span class="math inline"><em>τ</em></span>, <span
+class="math inline"><em>ρ</em></span><br />
+<span id="alg1.6.2" class="ltx_text ltx_font_bold">Output:</span> <span
+class="math inline"><em>X</em> ∈ <em>I</em> <em>R</em><sup><em>b</em> × <em>n</em> × <em>d</em></sup></span>,
+<span
+class="math inline"><em>Y</em> ∈ <em>I</em> <em>R</em><sup><em>b</em> × <em>c</em></sup></span></p>
+</div>
+<div class="ltx_flex_cell">
+<div id="alg1.9" class="ltx_listing">
+<div id="alg1.l1" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l1.2.1.1"
+class="ltx_text" style="font-size:80%;">1:</span></span><span
+class="math inline"><em>U</em><sup>(<em>i</em>)</sup> ← evaluate
+difficulty of  <em>X</em><sup>(<em>i</em>)</sup></span> s.t. <span
+class="math inline"><em>i</em> = 1, 2, …, <em>b</em></span> <span
+id="alg1.l1.1" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> Eq. (<a
+href="https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E1"
+class="ltx_ref"
+title="1 ‣ 3.1 Sample Difficulty Assessment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"><span
+class="ltx_text ltx_ref_tag">1</span></a>) </span>
+</div>
+<div id="alg1.l2" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l2.2.1.1"
+class="ltx_text" style="font-size:80%;">2:</span></span><span
+class="math inline"><em>S</em><sub><em>t</em></sub><sup>(<em>i</em>)</sup> ← evaluate
+saliency of each token with ℓ-step attention rollout</span> <span
+id="alg1.l2.1" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> Eq. (<a
+href="https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E3"
+class="ltx_ref"
+title="3 ‣ Attention-guided saliency detection. ‣ 3.2 Attention-guided Saliency Detection &amp; Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"><span
+class="ltx_text ltx_ref_tag">3</span></a>) </span>
+</div>
+<div id="alg1.l3" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l3.1.1.1"
+class="ltx_text" style="font-size:80%;">3:</span></span><span
+class="math inline">${{\overset{\sim}{X}}^{(i)},{\overset{\sim}{Y}}^{(i)},{\overset{\sim}{S}}^{(i)}}\leftarrow$</span>
+select easy samples w.r.t <span class="math inline"><em>U</em></span>
+and <span class="math inline"><em>τ</em></span>      s.t. <span
+class="math inline"><em>i</em> = 1, 2, …, <em>b</em><sup>′</sup></span>
+</div>
+<div id="alg1.l4" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l4.2.1.1"
+class="ltx_text" style="font-size:80%;">4:</span></span><span
+class="math inline">$C_{i\operatorname{}j}\leftarrow{\sum_{t}{\text{max}\operatorname{}{({S_{t}^{(j)}
+- {\overset{\sim}{S}}_{t}^{(i)} - \rho},\:0)}}}$</span> s.t. <span
+class="math inline"><em>i</em> = 1, 2, …, <em>b</em><sup>′</sup></span>
+and <span class="math inline"><em>j</em> = 1, 2, …, <em>b</em></span>
+<span id="alg1.l4.1" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> Eq. (<a
+href="https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E6"
+class="ltx_ref"
+title="6 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection &amp; Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"><span
+class="ltx_text ltx_ref_tag">6</span></a>) </span>
+</div>
+<div id="alg1.l5" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l5.1.1.1"
+class="ltx_text" style="font-size:80%;">5:</span></span><span
+class="math inline"><em>σ</em> (<em>m</em>) ← HungarianMatching (<em>C</em><sub><em>i</em> <em>j</em></sub>)</span>
+s.t. <span
+class="math inline"><em>m</em> = 1, 2, …, <em>b</em><sup>′</sup></span>
+and <span
+class="math inline"><em>σ</em> (<em>m</em>) ∈ {1, 2, …, <em>b</em>}</span>
+</div>
+<div id="alg1.l6" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l6.2.1.1"
+class="ltx_text" style="font-size:80%;">6:</span></span><span
+class="math inline">${\overset{\sim}{X}}_{\text{mix}}^{(i)}\leftarrow$</span>
+Mix-token(<span
+class="math inline">${\overset{\sim}{X}}^{(i)},X^{({\sigma\operatorname{}{(i)}})};\rho)$</span>
+     s.t. <span
+class="math inline"><em>i</em> = 1, 2, …, <em>b</em><sup>′</sup></span>
+<span id="alg1.l6.1" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> Eq. (<a
+href="https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E10"
+class="ltx_ref"
+title="10 ‣ 3.3 Token-level Mixup ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"><span
+class="ltx_text ltx_ref_tag">10</span></a>) </span>
+</div>
+<div id="alg1.l7" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l7.2.1.1"
+class="ltx_text" style="font-size:80%;">7:</span></span><span
+class="math inline">${\overset{\sim}{Y}}_{\text{mix}}^{(i)}\leftarrow$</span>
+Relabel(<span
+class="math inline">${\overset{\sim}{Y}}^{(i)},Y^{({\sigma\operatorname{}{(i)}})})$</span>
+<span id="alg1.l7.1" class="ltx_text" style="float:right;"><span
+class="math inline">⊳</span> Eq. (<a
+href="https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E11"
+class="ltx_ref"
+title="11 ‣ 3.3 Token-level Mixup ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"><span
+class="ltx_text ltx_ref_tag">11</span></a>) </span>
+</div>
+<div id="alg1.l8" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l8.1.1.1"
+class="ltx_text" style="font-size:80%;">8:</span></span>restore <span
+class="math inline">${\overset{\sim}{X}}_{\text{mix}}^{(i)},{\overset{\sim}{Y}}_{\text{mix}}^{(i)}$</span>
+to <span class="math inline"><em>X</em></span>, <span
+class="math inline"><em>Y</em></span>      s.t. <span
+class="math inline"><em>i</em> = 1, 2, …, <em>b</em><sup>′</sup></span>
+</div>
+<div id="alg1.l9" class="ltx_listingline">
+<span class="ltx_tag ltx_tag_listingline"><span id="alg1.l9.1.1.1"
+class="ltx_text" style="font-size:80%;">9:</span></span><span
+id="alg1.l9.2" class="ltx_text ltx_font_bold">return </span> <span
+class="math inline"><em>X</em></span>, <span
+class="math inline"><em>Y</em></span>
+</div>
+</div>
+</div>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg1.8.1.1"
+class="ltx_text ltx_font_bold">Algorithm 1</span> </span>
+TokenMixup</figcaption>
+</figure>
+
+::: {#S3.SS2.SSS0.Px2.p3 .ltx_para}
+By incorporating sample difficulty assessment (section [[3.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.SS1 "3.1 Sample Difficulty Assessment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref})
+into ([[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E5 "5 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection & Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}),
+our final objective is written as
+
+  -- ---------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+     $\max\limits_{\sigma \in \mathcal{M}}$   $\max\limits_{r_{i} \in {I\operatorname{}B^{n}}}\operatorname{}{\sum\limits_{i = 1}^{b}{\mathbb{1}_{\{{{\mathcal{F}\operatorname{}{(X^{(i)},Y^{(i)})}} < \tau}\}}\operatorname{}{({P_{i,{\sigma\operatorname{}{(i)}}} - \rho})}^{\top}\operatorname{}r_{i}}}$      [(8)]{.ltx_tag .ltx_tag_equationgroup .ltx_align_right}
+                                              ${{\text{s.t.}\operatorname{}\:\:1^{\top}\operatorname{}r_{i}} \leq {n \times \mathbb{1}_{\{{{\mathcal{F}\operatorname{}{(X^{(i)},Y^{(i)})}} < \tau}\}}}},$                                                                                                        
+  -- ---------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ---------------------------------------------------------
+
+where $\mathcal{F}$ is the difficulty measurer, and $\tau$ is the
+difficulty threshold. $\mathbb{1}$ denotes the indicator function, while
+$\mathbf{1}$ is a one vector. If the sample is hard,
+[i.e.]{#S3.SS2.SSS0.Px2.p3.10.1 .ltx_text .ltx_font_italic},
+${\mathcal{F}\operatorname{}{(X^{(i)},Y^{(i)})}} \geq \tau$, the
+constraint becomes ${\mathbf{1}^{\top}\operatorname{}r_{i}} \leq 0$,
+enforcing all elements of $r_{i}$ to be 0. In that case, none of the
+tokens will be mixed. On the other hand, if the sample is easy,
+[i.e.]{#S3.SS2.SSS0.Px2.p3.10.2 .ltx_text .ltx_font_italic},
+${\mathcal{F}\operatorname{}{(X^{(i)},Y^{(i)})}} < \tau$, the constraint
+is ${\mathbf{1}^{\top}\operatorname{}r_{i}} \leq n$ which is satisfied
+by any random $r_{i}$ vector. Then, the objective becomes identical
+to ([[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E5 "5 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection & Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}).
+:::
+:::
+:::
+
+::: {#S3.SS3 .section .ltx_subsection}
+### [3.3 ]{.ltx_tag .ltx_tag_subsection}Token-level Mixup {#token-level-mixup .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS3.p1 .ltx_para}
+Now, the remaining question is [how]{#S3.SS3.p1.10.1 .ltx_text
+.ltx_font_italic} the tokens of ${\overset{\sim}{X}}^{(i)}$ and
+$X^{({\sigma^{*}\operatorname{}{(i)}})}$ are going to be mixed. As
+defined in objective ([[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E5 "5 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection & Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}),
+we use a hard replacement of tokens with respect to decision vector
+$r_{i}$. Then, mixing is performed by replacing token index $t$ from the
+original instance $i$, with token $t$ from the paired instance
+$j = {\sigma^{*}\operatorname{}{(i)}}$, so that $P_{i,j}^{(t)} > \rho$
+is satisfied. In other words, only the token indices that increase
+saliency level greater than $\rho$ are mixed. This is accomplished by
+defining an appropriate binary mask
+$M_{t} \in {I\operatorname{}B^{n}\operatorname{}{({t = {1,2,\ldots,n}})}}$
+containing
+
+  -- -------------------------------------------------------------- -- ----------------------------------------------------
+     $$M_{t} = \begin{cases}                                           [(9)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     0 & {,S_{t}^{(j)} - {\overset{\sim}{S}}_{t}^{(i)} > \rho} \\      
+     1 & {,\text{otherwise}}                                           
+     \end{cases}$$                                                     
+  -- -------------------------------------------------------------- -- ----------------------------------------------------
+
+where ${\overset{\sim}{S}}_{t}^{(i)}$ is the saliency score of
+${\overset{\sim}{X}}_{t}^{(i)}$. Then, the mask is employed as
+
+  -- --------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{\overset{\sim}{X}}_{\text{mix}}^{(i)} = {{M \odot {\overset{\sim}{X}}^{(i)}} + {{({1 - M})} \odot X^{(j)}}}},$$      [(10)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+where operator $\odot$ denotes element-wise multiplication and
+${\overset{\sim}{X}}^{(i)}$, $X^{(j)}$ refer to the paired instances. We
+also reassign labels based on the replaced tokens' saliency score. The
+new mixed label is computed as
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     $${{\overset{\sim}{Y}}_{\text{mix}}^{(i)} = {{\frac{\sum_{t = 1}^{n}{M_{t} \cdot {\overset{\sim}{S}}_{t}^{(i)}}}{{\sum_{t = 1}^{n}{M_{t} \cdot {\overset{\sim}{S}}_{t}^{(i)}}} + {{({1 - M_{t}})} \cdot S_{t}^{(j)}}} \cdot {\overset{\sim}{Y}}^{(i)}} + {\frac{\sum_{t = 1}^{n}{{({1 - M_{t}})} \cdot S_{t}^{(j)}}}{{\sum_{t = 1}^{n}{M_{t} \cdot {\overset{\sim}{S}}_{t}^{(i)}}} + {{({1 - M_{t}})} \cdot S_{t}^{(j)}}} \cdot Y^{(j)}}}}.$$      [(11)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+
+::: {#S3.SS3.p2 .ltx_para}
+Consequently, relatively unimportant tokens will be replaced with
+salient tokens from another instance, and its label will be adjusted
+with respect to the change in overall saliency level. See
+Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.F1 "Figure 1 ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+for visualization, and Algorithm [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#alg1 "Algorithm 1 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection & Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+for overall computation process. More detailed pseudocode is provided in
+the supplement.
+:::
+:::
+
+::: {#S3.SS4 .section .ltx_subsection}
+### [3.4 ]{.ltx_tag .ltx_tag_subsection}Vertical TokenMixup {#vertical-tokenmixup .ltx_title .ltx_title_subsection}
+
+<figure id="S3.F2" class="ltx_figure">
+<img src="./token_files/vtm_v17.png" id="S3.F2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="510"
+height="264" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 2: </span><span
+id="S3.F2.2.1" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Vertical TokenMixup<span id="S3.F2.2.1.1"
+class="ltx_text ltx_font_medium">. By applying VTM, the <span
+class="math inline"><em>κ</em></span> most salient tokens from each
+previous layer are brought up to form the key and value tokens. By
+utilizing a cross-attention mechanism, the dimension is preserved while
+being able to aggregate multi-scale information for token augmentation.
+The figure demonstrates the case when VTM is applied to layer 3.
+</span></span></figcaption>
+</figure>
+
+::: {#S3.SS4.p1 .ltx_para}
+Mixing multiple [instances]{#S3.SS4.p1.5.1 .ltx_text .ltx_font_italic}
+is not the only way to mixup. We also present a simple variant of
+TokenMixup, which provides token-level augmentation within a single
+sample by utilizing the tokens from previous layers. Similar to
+([[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E5 "5 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection & Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}),
+we can define a new objective for Vertical TokenMixup as
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${{\max\limits_{l \in \mathcal{L}}\max\limits_{r_{i} \in {I\operatorname{}B^{n}}}}\operatorname{}{\sum\limits_{i = 1}^{b}{{({P_{i,{l\operatorname{}{(i)}}} - \rho})}^{\top} \cdot r_{i}}}},$$      [(12)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+
+where $\mathcal{L}$ is the set of previous layer indices, and
+$l\operatorname{}{(i)}$ returns an arbitrary layer index for the
+$i^{t\operatorname{}h}$ instance. This objective can be optimized by a
+similar scheme as in Algorithm [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#alg1 "Algorithm 1 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection & Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}.
+However, considering that the tokens from each layer with an identical
+index tend to contain similar information, saliency difference matrix
+$P_{i,{l\operatorname{}{(i)}}} = {S_{l\operatorname{}{(i)}} - S_{i}}$
+(as in ([[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.E4 "4 ‣ Optimal assignment. ‣ 3.2 Attention-guided Saliency Detection & Optimal Assignment ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}))
+will most likely be constant across indices. This may lead to
+meaningless mixup without much increase in saliency level. Therefore, we
+take a different approach to mix tokens [vertically]{#S3.SS4.p1.4.1
+.ltx_text .ltx_font_italic}.
+:::
+
+::: {#S3.SS4.p2 .ltx_para}
+The simplest method would be to concatenate all tokens from previous
+layers and apply self-attention. But due to the quadratic complexity of
+self-attention, naive concatenation may induce excessive computation. To
+reduce overhead, we selectively pool the $\kappa$ most salient tokens
+from each previous layer and concatenate them to the original token set.
+Also, to preserve input dimension, we adopt the cross-attention
+mechanism. If $X_{1}$ is the original token set and $X_{2}$ is the
+concatenated token set, vertical cross-attention is expressed as
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+     $${Z = {\text{Softmax}\operatorname{}{({X_{1}\operatorname{}W_{q}\operatorname{}{({X_{2}\operatorname{}W_{k}})}^{\top}})}\operatorname{}X_{2}\operatorname{}W_{v}}},$$      [(13)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- -----------------------------------------------------
+
+where $W_{q},W_{k},W_{v}$ denote the projection layers for query, key,
+and value, respectively. See Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3.F2 "Figure 2 ‣ 3.4 Vertical TokenMixup ‣ 3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+for visualization, and the supplement for pseudocode.
+:::
+:::
+
+::: {#S3.SS5 .section .ltx_subsection}
+### [3.5 ]{.ltx_tag .ltx_tag_subsection}Discussions {#discussions .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS5.SSS0.Px1 .section .ltx_paragraph}
+#### TokenMixup as Curriculum Learning. {#tokenmixup-as-curriculum-learning. .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS5.SSS0.Px1.p1 .ltx_para}
+A general framework for curriculum learning consists of two main
+components: Difficulty Measurer and Training
+Scheduler [[wang2021survey]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib32){.ltx_ref}
+. TokenMixup satisfies these conditions, as ScoreNet measures the
+difficulty of each input, and augmenting the tokens based on input
+difficulty naturally schedules training. In the early training phase
+where the model parameter is not optimized, most instances will be
+evaluated [difficult]{#S3.SS5.SSS0.Px1.p1.1.1 .ltx_text
+.ltx_font_italic} and no TokenMixup is performed. As the model
+converges, on the other hand, many samples will become
+[easy]{#S3.SS5.SSS0.Px1.p1.1.2 .ltx_text .ltx_font_italic}, triggering
+augmentation to make the task more challenging overall. Also, TokenMixup
+is applied discriminatively based on individual sample difficulty which
+enables more intricate curriculum scheduling. See
+section [[5.3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S5.SS3 "5.3 What TokenMixup Learns ‣ 5 Analysis ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+for empirical demonstration. These properties will be especially useful
+when other mixup methods [[zhang2017mixup]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib1){.ltx_ref}
+; [[yun2019cutmix]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib2){.ltx_ref}
+; [[kim2020puzzle]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib3){.ltx_ref}
+; [[kim2021co]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib4){.ltx_ref}
+are used in parallel. For instance, if input mixup is already applied,
+further augmentation may be unnecessary. In such a case, ScoreNet will
+regard the sample sufficiently difficult, and no further mixup will be
+performed.
+:::
+:::
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Preliminaries {#preliminaries .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.SSS0.Px1 .section .ltx_paragraph}
+#### Baseline. {#baseline. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px1.p1 .ltx_para}
+In experiments on CIFAR [[krizhevsky2009learning]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib33){.ltx_ref}
+, we used Compact Convolution Transformer
+(CCT) [[hassani2021escaping]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib22){.ltx_ref}
+as our baseline. For ImageNet-1k [[ILSVRC15]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib34){.ltx_ref}
+experiments, we used the vanilla
+ViT-B/16 [[dosovitskiy2020image]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib15){.ltx_ref}
+as baseline. Then, our augmentation methods are evaluated on three
+representative image classification datasets: CIFAR-10, CIFAR-100, and
+ImageNet-1K.
+:::
+:::
+
+::: {#S4.SS1.SSS0.Px2 .section .ltx_paragraph}
+#### Experimental setup. {#experimental-setup. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px2.p1 .ltx_para}
+We evaluate TokenMixup and its variant, Vertical TokenMixup (VTM), on
+CIFAR and ImageNet with different settings. To avoid confusion, we
+denote the original TokenMixup as Horizontal TokenMixup (HTM) in the
+following sections. For CIFAR experiments, we adopt the 1500-epoch
+version of CCT. We modified the learning rate scheduler and positional
+embedding type to achieve better performance than original papers
+(denoted $*$ in Table [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S4.T1 "Table 1 ‣ 4.2 Experimental Results ‣ 4 Experiments ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}).
+Other experiment settings follow [[hassani2021escaping]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib22){.ltx_ref}
+, and all experiments on CIFAR datasets were conducted on a single RTX
+A6000 GPU. For ImageNet-1K experiments, we used the ViT-B/16 model
+pre-trained and fine-tuned on ImageNet-21k and ImageNet-1k, where we
+took advantage of the officially released pre-trained weights.
+Experiments for Horizontal TokenMixup were conducted on a single NVIDIA
+A100 GPU, and 4 RTX 3090 GPUs were used in parallel for Vertical
+TokenMixup. Other experiment settings are reported in the supplement.
+:::
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Experimental Results {#experimental-results .ltx_title .ltx_title_subsection}
+
+<figure id="S4.T1" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 1: </span><span
+id="S4.T1.3.1" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Experimental results on CIFAR.<span
+id="S4.T1.3.1.1" class="ltx_text ltx_font_medium"> Experiment results
+with TokenMixup on CCT are compared with state-of-the-art models that do
+not use pretrained models for initialization. Top-1 validation accuracy
+is reported for each model, and baseline models denoted with * reports
+retrained performance. Also, the number in the parenthesis indicates the
+number of epochs used for training, and the parameter numbers are
+retrieved from the CIFAR-100 models. Best performances are highlighted
+in yellow.</span></span></figcaption>
+</figure>
+
+<figure id="S4.T2" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 2: </span> <span
+id="S4.T2.4.2" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Experimental results on ImageNet.<span
+id="S4.T2.4.2.2" class="ltx_text ltx_font_medium"> Experiment results
+with TokenMixup on ViT are compared. We report Top-1 and Top-5
+validation accuracy on ImageNet-1k. For the baseline model, we used
+ViT-B/16 (<span class="math inline">224 × 224</span>). <span
+class="math inline"><sup>†</sup></span> denotes fine-tuned performance
+officially reported by the authors of ViT.</span></span></figcaption>
+</figure>
+
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Analysis {#analysis .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para}
+Here, we analyze TokenMixup to answer the following research questions:
+[Q1]{#S5.p1.1.1 .ltx_text .ltx_font_bold}. Is the Attention an
+appropriate saliency approximation? [Q2]{#S5.p1.1.2 .ltx_text
+.ltx_font_bold}. What are the effects of each component in TokenMixup?
+[Q3]{#S5.p1.1.3 .ltx_text .ltx_font_bold}. What properties does
+TokenMixup have?
+:::
+
+<figure id="S5.F3" class="ltx_figure">
+<img src="./token_files/rollout_v3.png" id="S5.F3.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="598"
+height="163" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 3: </span><span
+id="S5.F3.2.1" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Qualitative comparison of saliency
+detectors.<span id="S5.F3.2.1.1" class="ltx_text ltx_font_medium"> The
+saliency map derived for each method is provided. We can observe that
+the methods render similar outputs. Note, the values are minmax scaled
+to [0,1].</span></span></figcaption>
+</figure>
+
+<figure id="S5.T3" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 3: </span><span
+id="S5.T3.4.2" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Saliency detector comparison.<span
+id="S5.T3.4.2.2" class="ltx_text ltx_font_medium"> Our method (HTM)
+achieves high accuracy while being <span
+class="math inline"> × 15</span> as fast as the gradient method. Also,
+we observe only <span class="math inline"> × 3</span> latency compared
+to the random baseline.</span></span></figcaption>
+</figure>
+
+::: {#S5.SS1 .section .ltx_subsection}
+### [5.1 ]{.ltx_tag .ltx_tag_subsection}Soundness of Saliency Estimation {#soundness-of-saliency-estimation .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS1.p1 .ltx_para}
+In TokenMixup, we estimate the saliency using the attention map from the
+subsequent layer. The soundness of this approximation would be one of
+the main questions regarding saliency detection. So, we provide relevant
+analyses on the appropriateness of our saliency approximation method to
+answer the research question [Q1]{#S5.SS1.p1.1.1 .ltx_text
+.ltx_font_bold}.
+:::
+
+::: {#S5.SS1.SSS0.Px1 .section .ltx_paragraph}
+#### Qualitative examples. {#qualitative-examples. .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS1.SSS0.Px1.p1 .ltx_para}
+Here, we provide a qualitative analysis on the performance of each
+saliency detector. In Figure [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S5.F3 "Figure 3 ‣ 5 Analysis ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref},
+we can observe that there is no significant difference between the full
+attention rollout and the 1-step approximation,
+[i.e.]{#S5.SS1.SSS0.Px1.p1.1.1 .ltx_text .ltx_font_italic}, the
+subsequent attention map. Slight discrepancy in the sharpness of the
+distribution can be observed, but it does not greatly affect our method
+that utilizes saliency threshold $\rho$. Moreover, attention-based
+methods seem to be more accurate than the gradient-based detector in
+certain cases. See the supplement for additional qualitative examples,
+and also the quantified comparison on the sharpness measures of the two
+methods.
+:::
+:::
+
+::: {#S5.SS1.SSS0.Px2 .section .ltx_paragraph}
+#### Efficiency comparison. {#efficiency-comparison. .ltx_title .ltx_title_paragraph}
+
+<figure id="S5.T4" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 4: </span><span
+id="S5.T4.2.1" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Ablation study on CIFAR-100.<span
+id="S5.T4.2.1.1" class="ltx_text ltx_font_medium"> Performance on
+CIFAR-100 is evaluated by ablating each component one-by-one. We observe
+that optimal assignment and label reassignment plays a significant
+role.</span></span></figcaption>
+</figure>
+
+::: {#S5.SS1.SSS0.Px2.p1 .ltx_para}
+We compare the efficiency of three saliency detectors: gradient-based,
+attention-based, and random baseline. For the gradient-based detector,
+we follow the method used in Co-Mixup [[kim2021co]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib4){.ltx_ref}
+, and random baseline refers to a random selection of tokens. In
+Table [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S5.T3 "Table 3 ‣ 5 Analysis ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref},
+we report the average latency of saliency detection per iteration in our
+CIFAR-100 experiment setting with a batch size of 128. Compared to the
+gradient-based method, attention-based saliency detection with 1-step
+rollout achieves approximately $\times 15$ speed-up while demonstrating
+even better performance.
+:::
+:::
+:::
+
+::: {#S5.SS2 .section .ltx_subsection}
+### [5.2 ]{.ltx_tag .ltx_tag_subsection}Component Analysis {#component-analysis .ltx_title .ltx_title_subsection}
+
+::: {#S5.SS2.p1 .ltx_para}
+In this section, we analyze the effect of each component in Horizontal
+TokenMixup and Vertical TokenMixup so as to answer [Q2]{#S5.SS2.p1.3.1
+.ltx_text .ltx_font_bold}. In Table [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S5.T4 "Table 4 ‣ Efficiency comparison. ‣ 5.1 Soundness of Saliency Estimation ‣ 5 Analysis ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref},
+we provide ablation studies on components of HTM: Sample difficulty
+assessment (ScoreNet), Optimal assignment, Token-level mixup, and
+Saliency-based label reassignment. By ablating ScoreNet, all instances
+are mixed regardless of sample difficulty; note, ScoreNet still receives
+supervision signals. By getting rid of optimal assignment, mixup pairs
+are not assigned via Hungarian matching; pairs are randomly selected.
+Token-level mixup and label reassignment is relevant to the method by
+which tokens are selected. Then, by ablating mixup, we randomly select
+tokens to replace, while label reassignment ablation derives new labels
+based on the number of tokens that have been replaced. We also conducted
+sensitivity tests on key hyperparameters $\tau$, $\rho$, and $\kappa$,
+but tables and discussions were moved to the supplement due to spatial
+constraints.
+:::
+:::
+
+::: {#S5.SS3 .section .ltx_subsection}
+### [5.3 ]{.ltx_tag .ltx_tag_subsection}What TokenMixup Learns {#what-tokenmixup-learns .ltx_title .ltx_title_subsection}
+
+<figure id="S5.T5" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 5: </span><span
+id="S5.T5.2.1" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Mixup combinations.<span id="S5.T5.2.1.1"
+class="ltx_text ltx_font_medium"> CCT performance on CIFAR-100 is
+compared for mixup method combinations. <span
+class="math inline"><sup>*</sup></span> denotes values reported in the
+original paper. Best performances among comparable settings are
+highlighted.</span></span></figcaption>
+</figure>
+
+::: {#S5.SS3.p1 .ltx_para}
+Here, we answer our research question [Q3]{#S5.SS3.p1.1.1 .ltx_text
+.ltx_font_bold} by analyzing what our mixup methods are learning. We
+demonstrate a curriculum learning perspective in terms of HTM, and
+compare our method with a direct mixup alternative, manifold
+mixup [[verma2019manifold]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib6){.ltx_ref}
+.
+:::
+
+<figure id="S5.F4" class="ltx_figure ltx_align_floatright">
+<img src="./token_files/curriculum_modified.png" id="S5.F4.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="275"
+height="181" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 4: </span><span
+id="S5.F4.2.1" class="ltx_text ltx_font_bold"
+style="font-size:80%;">Trend in the number of mixed
+instances.</span></figcaption>
+</figure>
+
+::: {#S5.SS3.SSS0.Px1 .section .ltx_paragraph}
+#### A Curriculum Learning perspective. {#a-curriculum-learning-perspective. .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS3.SSS0.Px1.p1 .ltx_para}
+In Figure [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S5.F4 "Figure 4 ‣ 5.3 What TokenMixup Learns ‣ 5 Analysis ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+we plot the trend in the number of samples per batch TokenMixup is
+activated based on ScoreNet. In the first few epochs (regime (A)), the
+number of mixed samples is relatively low, as there is less need for
+augmentation in the early phase of learning. But as the learnable
+parameters warm up, the number increases abruptly. In regime (B), the
+average number of mixed tokens slowly increases as model performance
+steadily improves. In the last learning phase (regime (C)), mixup
+frequency converges.
+:::
+:::
+
+::: {#S5.SS3.SSS0.Px2 .section .ltx_paragraph}
+#### Comparison with Manifold Mixup. {#comparison-with-manifold-mixup. .ltx_title .ltx_title_paragraph}
+
+::: {#S5.SS3.SSS0.Px2.p1 .ltx_para}
+TokenMixup is applied to the intermediate tokens, similarly to manifold
+mixup [[verma2019manifold]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib6){.ltx_ref}
+which is an input mixup [[zhang2017mixup]{.ltx_text
+style="font-size:90%;"}](https://ar5iv.labs.arxiv.org/html/2210.07562#bib.bib1){.ltx_ref}
+method applied to intermediate features. By using manifold mixup,
+transformer tokens are mixed via linear interpolation, instead of the
+hard replacement of tokens as in TokenMixup. In Table [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S5.T5 "Table 5 ‣ 5.3 What TokenMixup Learns ‣ 5 Analysis ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref},
+our methods are compared with manifold mixup, along with various
+combinations of original mixup methods ([i.e.]{#S5.SS3.SSS0.Px2.p1.1.1
+.ltx_text .ltx_font_italic}, input mixup and cutmix). The best setting
+in the CCT paper adopted input mixup and cutmix. By applying HTM and VTM
+on top of that setting, we achieved state-of-the-art performance. On the
+other hand, by applying manifold mixup, we observed severe deterioration
+in accuracy. We conjecture that soft mixing of transformer tokens leads
+to over-smoothing of features, which may be inadequate for
+self-attention layers. See the supplement for visual aid.
+:::
+:::
+:::
+:::
+
+::: {#S6 .section .ltx_section}
+## [6 ]{.ltx_tag .ltx_tag_section}Conclusion {#conclusion .ltx_title .ltx_title_section}
+
+::: {#S6.p1 .ltx_para}
+We proposed TokenMixup for transformers, which adopts the attention map
+in place of computationally heavy gradient-based saliency detectors. By
+adopting the attention as the saliency map, we achieve $\times 15$
+speed-up compared to the gradient-based method with even better
+performance. We also introduce a novel perspective of curriculum
+learning to mixup, which enables adaptive augmentation based on sample
+difficulty and training schedule. To add diversity, Vertical TokenMixup
+is introduced, which mixes tokens from different layers for multi-scale
+feature augmentation within a single sample. With TokenMixup, we achieve
+state-of-the-art performance on CIFAR-100, and improve baselines by
+significant margins on CIFAR-10 and ImageNet-1K.
+:::
+:::
+
+::: {#Sx1 .section .ltx_section}
+## Acknowledgments and Disclosure of Funding {#acknowledgments-and-disclosure-of-funding .ltx_title .ltx_title_section}
+
+::: {#Sx1.p1 .ltx_para}
+This work was partly supported by ICT Creative Consilience program
+(IITP-2022-2020-0-01819) supervised by the IITP; the National
+Supercomputing Center with supercomputing resources including technical
+support (KSC-2022-CRE-0100) and Kakao Brain Corporation.
+:::
+:::
+
+::: {#bib .section .ltx_bibliography}
+## References {#references .ltx_title .ltx_title_bibliography style="font-size:90%;"}
+
+-   [[[\[1\]]{#bib.bib1.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Hongyi Zhang, Moustapha Cisse, Yann N Dauphin, and David
+    Lopez-Paz. ]{#bib.bib1.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[mixup: Beyond empirical risk minimization.
+    ]{#bib.bib1.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib1.6.1 .ltx_text
+    style="font-size:90%;"}[ICLR]{#bib.bib1.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2018. ]{#bib.bib1.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib1}
+-   [[[\[2\]]{#bib.bib2.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Sangdoo Yun, Dongyoon Han, Seong Joon Oh, Sanghyuk Chun, Junsuk
+    Choe, and Youngjoon Yoo. ]{#bib.bib2.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Cutmix: Regularization
+    strategy to train strong classifiers with localizable features.
+    ]{#bib.bib2.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib2.6.1 .ltx_text
+    style="font-size:90%;"}[ICCV]{#bib.bib2.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2019. ]{#bib.bib2.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib2}
+-   [[[\[3\]]{#bib.bib3.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Jang-Hyun Kim, Wonho Choo, and Hyun Oh Song. ]{#bib.bib3.4.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Puzzle mix:
+    Exploiting saliency and local statistics for optimal mixup.
+    ]{#bib.bib3.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib3.6.1 .ltx_text
+    style="font-size:90%;"}[ICML]{#bib.bib3.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2020. ]{#bib.bib3.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib3}
+-   [[[\[4\]]{#bib.bib4.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Jang-Hyun Kim, Wonho Choo, Hosan Jeong, and Hyun Oh Song.
+    ]{#bib.bib4.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Co-mixup: Saliency guided joint mixup with supermodular diversity.
+    ]{#bib.bib4.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2102.03065]{#bib.bib4.6.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib4.7.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib4}
+-   [[[\[5\]]{#bib.bib5.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ AFM Uddin, Mst Monira, Wheemyung Shin, TaeChoong Chung, Sung-Ho
+    Bae, et al. ]{#bib.bib5.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Saliencymix: A saliency guided data augmentation
+    strategy for better regularization. ]{#bib.bib5.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2006.01791]{#bib.bib5.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2020. ]{#bib.bib5.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib5}
+-   [[[\[6\]]{#bib.bib6.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Vikas Verma, Alex Lamb, Christopher Beckham, Amir Najafi, Ioannis
+    Mitliagkas, David Lopez-Paz, and Yoshua Bengio. ]{#bib.bib6.4.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Manifold mixup:
+    Better representations by interpolating hidden states.
+    ]{#bib.bib6.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib6.6.1 .ltx_text
+    style="font-size:90%;"}[ICML]{#bib.bib6.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2019. ]{#bib.bib6.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib6}
+-   [[[\[7\]]{#bib.bib7.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Shashanka Venkataramanan, Yannis Avrithis, Ewa Kijak, and Laurent
+    Amsaleg. ]{#bib.bib7.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Alignmix: Improving representation by
+    interpolating aligned features. ]{#bib.bib7.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib7.6.1
+    .ltx_text style="font-size:90%;"}[ICLR]{#bib.bib7.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib7.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib7}
+-   [[[\[8\]]{#bib.bib8.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Minui Hong, Jinwoo Choi, and Gunhee Kim. ]{#bib.bib8.4.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Stylemix:
+    Separating content and style for enhanced data augmentation.
+    ]{#bib.bib8.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib8.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib8.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib8.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib8}
+-   [[[\[9\]]{#bib.bib9.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Ali Dabouei, Sobhan Soleymani, Fariborz Taherkhani, and Nasser M
+    Nasrabadi. ]{#bib.bib9.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Supermix: Supervising the mixing data
+    augmentation. ]{#bib.bib9.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib9.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib9.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib9.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib9}
+-   [[[\[10\]]{#bib.bib10.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion
+    Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin.
+    ]{#bib.bib10.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Attention is all you need. ]{#bib.bib10.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib10.6.1
+    .ltx_text style="font-size:90%;"}[NeurIPS]{#bib.bib10.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2017. ]{#bib.bib10.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib10}
+-   [[[\[11\]]{#bib.bib11.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas
+    Usunier, Alexander Kirillov, and Sergey Zagoruyko. ]{#bib.bib11.4.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[End-to-end
+    object detection with transformers. ]{#bib.bib11.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib11.6.1
+    .ltx_text style="font-size:90%;"}[ECCV]{#bib.bib11.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2020. ]{#bib.bib11.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib11}
+-   [[[\[12\]]{#bib.bib12.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Xizhou Zhu, Weijie Su, Lewei Lu, Bin Li, Xiaogang Wang, and
+    Jifeng Dai. ]{#bib.bib12.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Deformable detr: Deformable transformers for
+    end-to-end object detection. ]{#bib.bib12.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib12.6.1
+    .ltx_text style="font-size:90%;"}[ICLR]{#bib.bib12.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2020. ]{#bib.bib12.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib12}
+-   [[[\[13\]]{#bib.bib13.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Bumsoo Kim, Junhyun Lee, Jaewoo Kang, Eun-Sol Kim, and Hyunwoo J
+    Kim. ]{#bib.bib13.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Hotr: End-to-end human-object interaction
+    detection with transformers. ]{#bib.bib13.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib13.6.1
+    .ltx_text style="font-size:90%;"}[CVPR]{#bib.bib13.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib13.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib13}
+-   [[[\[14\]]{#bib.bib14.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Jihwan Park, SeungJun Lee, Hwan Heo, Hyeong Kyu Choi, and
+    Hyunwoo J. Kim. ]{#bib.bib14.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Consistency learning via decoding path
+    augmentation for transformers in human object interaction detection.
+    ]{#bib.bib14.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib14.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib14.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib14.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib14}
+-   [[[\[15\]]{#bib.bib15.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk
+    Weissenborn, Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani,
+    Matthias Minderer, Georg Heigold, Sylvain Gelly, et al.
+    ]{#bib.bib15.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[An image is worth 16x16 words: Transformers for image recognition
+    at scale. ]{#bib.bib15.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib15.6.1 .ltx_text
+    style="font-size:90%;"}[ICLR]{#bib.bib15.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib15.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib15}
+-   [[[\[16\]]{#bib.bib16.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Ze Liu, Yutong Lin, Yue Cao, Han Hu, Yixuan Wei, Zheng Zhang,
+    Stephen Lin, and Baining Guo. ]{#bib.bib16.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Swin transformer:
+    Hierarchical vision transformer using shifted windows.
+    ]{#bib.bib16.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib16.6.1 .ltx_text
+    style="font-size:90%;"}[ICCV]{#bib.bib16.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib16.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib16}
+-   [[[\[17\]]{#bib.bib17.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Wenhai Wang, Enze Xie, Xiang Li, Deng-Ping Fan, Kaitao Song, Ding
+    Liang, Tong Lu, Ping Luo, and Ling Shao. ]{#bib.bib17.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Pyramid vision
+    transformer: A versatile backbone for dense prediction without
+    convolutions. ]{#bib.bib17.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib17.6.1 .ltx_text
+    style="font-size:90%;"}[ICCV]{#bib.bib17.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib17.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib17}
+-   [[[\[18\]]{#bib.bib18.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Kun Yuan, Shaopeng Guo, Ziwei Liu, Aojun Zhou, Fengwei Yu, and
+    Wei Wu. ]{#bib.bib18.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Incorporating convolution designs into visual
+    transformers. ]{#bib.bib18.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib18.6.1 .ltx_text
+    style="font-size:90%;"}[ICCV]{#bib.bib18.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib18.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib18}
+-   [[[\[19\]]{#bib.bib19.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Byeongho Heo, Sangdoo Yun, Dongyoon Han, Sanghyuk Chun, Junsuk
+    Choe, and Seong Joon Oh. ]{#bib.bib19.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Rethinking spatial
+    dimensions of vision transformers. ]{#bib.bib19.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib19.6.1
+    .ltx_text style="font-size:90%;"}[ICCV]{#bib.bib19.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib19.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib19}
+-   [[[\[20\]]{#bib.bib20.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Kai Han, An Xiao, Enhua Wu, Jianyuan Guo, Chunjing Xu, and Yunhe
+    Wang. ]{#bib.bib20.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Transformer in transformer. ]{#bib.bib20.5.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[NeurIPS]{#bib.bib20.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib20.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib20}
+-   [[[\[21\]]{#bib.bib21.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Stéphane d'Ascoli, Hugo Touvron, Matthew L Leavitt, Ari S Morcos,
+    Giulio Biroli, and Levent Sagun. ]{#bib.bib21.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Convit: Improving vision
+    transformers with soft convolutional inductive biases.
+    ]{#bib.bib21.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib21.6.1 .ltx_text
+    style="font-size:90%;"}[ICML]{#bib.bib21.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib21.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib21}
+-   [[[\[22\]]{#bib.bib22.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Ali Hassani, Steven Walton, Nikhil Shah, Abulikemu Abuduweili,
+    Jiachen Li, and Humphrey Shi. ]{#bib.bib22.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Escaping the big data
+    paradigm with compact transformers. ]{#bib.bib22.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2104.05704]{#bib.bib22.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib22.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib22}
+-   [[[\[23\]]{#bib.bib23.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Haiping Wu, Bin Xiao, Noel Codella, Mengchen Liu, Xiyang Dai,
+    Lu Yuan, and Lei Zhang. ]{#bib.bib23.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Cvt: Introducing
+    convolutions to vision transformers. ]{#bib.bib23.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib23.6.1
+    .ltx_text style="font-size:90%;"}[ICCV]{#bib.bib23.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib23.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib23}
+-   [[[\[24\]]{#bib.bib24.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Weijian Xu, Yifan Xu, Tyler Chang, and Zhuowen Tu.
+    ]{#bib.bib24.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Co-scale conv-attentional image transformers. ]{#bib.bib24.5.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib24.6.1 .ltx_text
+    style="font-size:90%;"}[ICCV]{#bib.bib24.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib24.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib24}
+-   [[[\[25\]]{#bib.bib25.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Xiangxiang Chu, Zhi Tian, Bo Zhang, Xinlong Wang, Xiaolin Wei,
+    Huaxia Xia, and Chunhua Shen. ]{#bib.bib25.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Conditional positional
+    encodings for vision transformers. ]{#bib.bib25.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2102.10882]{#bib.bib25.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib25.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib25}
+-   [[[\[26\]]{#bib.bib26.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Xiangxiang Chu, Zhi Tian, Yuqing Wang, Bo Zhang, Haibing Ren,
+    Xiaolin Wei, Huaxia Xia, and Chunhua Shen. ]{#bib.bib26.4.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Twins:
+    Revisiting the design of spatial attention in vision transformers.
+    ]{#bib.bib26.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[NeurIPS]{#bib.bib26.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib26.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib26}
+-   [[[\[27\]]{#bib.bib27.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Yongming Rao, Wenliang Zhao, Benlin Liu, Jiwen Lu, Jie Zhou, and
+    Cho-Jui Hsieh. ]{#bib.bib27.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Dynamicvit: Efficient vision transformers with
+    dynamic token sparsification. ]{#bib.bib27.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[NeurIPS]{#bib.bib27.6.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2021.
+    ]{#bib.bib27.7.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib27}
+-   [[[\[28\]]{#bib.bib28.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Byungseok Roh, JaeWoong Shin, Wuhyun Shin, and Saehoon Kim.
+    ]{#bib.bib28.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Sparse detr: Efficient end-to-end object detection with learnable
+    sparsity. ]{#bib.bib28.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib28.6.1 .ltx_text
+    style="font-size:90%;"}[ICLR]{#bib.bib28.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib28.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib28}
+-   [[[\[29\]]{#bib.bib29.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Tao Wang, Li Yuan, Yunpeng Chen, Jiashi Feng, and Shuicheng Yan.
+    ]{#bib.bib29.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Pnp-detr: towards efficient visual analysis with transformers.
+    ]{#bib.bib29.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib29.6.1 .ltx_text
+    style="font-size:90%;"}[ICCV]{#bib.bib29.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib29.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib29}
+-   [[[\[30\]]{#bib.bib30.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Samira Abnar and Willem Zuidema. ]{#bib.bib30.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Quantifying attention
+    flow in transformers. ]{#bib.bib30.5.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2005.00928]{#bib.bib30.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2020. ]{#bib.bib30.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib30}
+-   [[[\[31\]]{#bib.bib31.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ James Munkres. ]{#bib.bib31.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Algorithms for the assignment and transportation
+    problems. ]{#bib.bib31.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Journal of the society for industrial and applied
+    mathematics]{#bib.bib31.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 5(1):32--38, 1957. ]{#bib.bib31.7.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib31}
+-   [[[\[32\]]{#bib.bib32.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Xin Wang, Yudong Chen, and Wenwu Zhu. ]{#bib.bib32.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[A survey on curriculum
+    learning. ]{#bib.bib32.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[IEEE Transactions on Pattern Analysis and Machine
+    Intelligence]{#bib.bib32.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib32.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib32}
+-   [[[\[33\]]{#bib.bib33.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Alex Krizhevsky, Geoffrey Hinton, et al. ]{#bib.bib33.4.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Learning
+    multiple layers of features from tiny images, 2009. ]{#bib.bib33.5.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib33}
+-   [[[\[34\]]{#bib.bib34.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Olga Russakovsky, Jia Deng, Hao Su, Jonathan Krause, Sanjeev
+    Satheesh, Sean Ma, Zhiheng Huang, Andrej Karpathy, Aditya Khosla,
+    Michael Bernstein, Alexander C. Berg, and Li Fei-Fei.
+    ]{#bib.bib34.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Imagenet large scale visual recognition challenge.
+    ]{#bib.bib34.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[IJCV]{#bib.bib34.6.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2015. ]{#bib.bib34.7.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib34}
+-   [[[\[35\]]{#bib.bib35.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
+    ]{#bib.bib35.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Identity mappings in deep residual networks. ]{#bib.bib35.5.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib35.6.1 .ltx_text
+    style="font-size:90%;"}[ECCV]{#bib.bib35.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2016. ]{#bib.bib35.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib35}
+-   [[[\[36\]]{#bib.bib36.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Mark Sandler, Andrew Howard, Menglong Zhu, Andrey Zhmoginov, and
+    Liang-Chieh Chen. ]{#bib.bib36.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Mobilenetv2: Inverted residuals and linear
+    bottlenecks. ]{#bib.bib36.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib36.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib36.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2018. ]{#bib.bib36.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib36}
+-   [[[\[37\]]{#bib.bib37.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Sergey Zagoruyko and Nikos Komodakis. ]{#bib.bib37.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Wide residual networks.
+    ]{#bib.bib37.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:1605.07146]{#bib.bib37.6.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2016. ]{#bib.bib37.7.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib37}
+-   [[[\[38\]]{#bib.bib38.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Saining Xie, Ross Girshick, Piotr Dollár, Zhuowen Tu, and Kaiming
+    He. ]{#bib.bib38.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Aggregated residual transformations for deep
+    neural networks. ]{#bib.bib38.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib38.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib38.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2017. ]{#bib.bib38.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib38}
+-   [[[\[39\]]{#bib.bib39.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Zizhao Zhang, Han Zhang, Long Zhao, Ting Chen, Sercan Arik, and
+    Tomas Pfister. ]{#bib.bib39.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Nested hierarchical transformer: Towards
+    accurate, data-efficient and interpretable visual understanding.
+    ]{#bib.bib39.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib39.6.1 .ltx_text
+    style="font-size:90%;"}[AAAI]{#bib.bib39.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib39.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib39}
+-   [[[\[40\]]{#bib.bib40.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
+    ]{#bib.bib40.4.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Deep residual learning for image recognition. ]{#bib.bib40.5.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib40.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib40.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2016. ]{#bib.bib40.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib40}
+-   [[[\[41\]]{#bib.bib41.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Gao Huang, Zhuang Liu, Laurens Van Der Maaten, and Kilian Q
+    Weinberger. ]{#bib.bib41.4.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Densely connected convolutional networks.
+    ]{#bib.bib41.5.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib41.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib41.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2017. ]{#bib.bib41.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib41}
+-   [[[\[42\]]{#bib.bib42.2.2.1 .ltx_text
+    style="font-size:90%;"}]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [[ Ilija Radosavovic, Raj Prateek Kosaraju, Ross Girshick, Kaiming
+    He, and Piotr Dollár. ]{#bib.bib42.4.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Designing network design
+    spaces. ]{#bib.bib42.5.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib42.6.1 .ltx_text
+    style="font-size:90%;"}[CVPR]{#bib.bib42.7.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2020. ]{#bib.bib42.8.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib42}
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+
+::: {#Sx2 .section .ltx_section}
+## Checklist {#checklist .ltx_title .ltx_title_section}
+
+::: {#Sx2.p1 .ltx_para}
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I1.i1}
+
+    ::: {#Sx2.I1.i1.p1 .ltx_para}
+    For all authors...
+
+    1.  [[(a)]{.ltx_tag .ltx_tag_item}]{#Sx2.I1.i1.I1.i1}
+
+        ::: {#Sx2.I1.i1.I1.i1.p1 .ltx_para}
+        Do the main claims made in the abstract and introduction
+        accurately reflect the paper's contributions and scope?
+        [\[Yes\]]{#Sx2.I1.i1.I1.i1.p1.1.1 .ltx_text
+        style="color:#0000FF;"}
+        :::
+
+    See Section [[3]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S3 "3 Methods ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}.
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#Sx2.I1.i2}
+
+    ::: {#Sx2.I1.i2.p1 .ltx_para}
+    Did you describe the limitations of your work?
+    [\[Yes\]]{#Sx2.I1.i2.p1.1.1 .ltx_text style="color:#0000FF;"}
+    :::
+
+See the supplement
+:::
+
+::: {#Sx2.p2 .ltx_para}
+Did you discuss any potential negative societal impacts of your work?
+[\[Yes\] ]{#Sx2.p2.1.1 .ltx_text style="color:#0000FF;"}See the
+supplement Have you read the ethics review guidelines and ensured that
+your paper conforms to them? [\[Yes\] ]{#Sx2.p2.1.2 .ltx_text
+style="color:#0000FF;"} If you are including theoretical results...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I2.i1}
+
+    ::: {#Sx2.I2.i1.p1 .ltx_para}
+    Did you state the full set of assumptions of all theoretical
+    results? [\[N/A\] ]{#Sx2.I2.i1.p1.1.1 .ltx_text
+    style="color:#808080;"}
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#Sx2.I2.i2}
+
+    ::: {#Sx2.I2.i2.p1 .ltx_para}
+    Did you include complete proofs of all theoretical results? [\[N/A\]
+    ]{#Sx2.I2.i2.p1.1.1 .ltx_text style="color:#808080;"}
+    :::
+
+If you ran experiments...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I3.i1}
+
+    ::: {#Sx2.I3.i1.p1 .ltx_para}
+    Did you include the code, data, and instructions needed to reproduce
+    the main experimental results (either in the supplemental material
+    or as a URL)? [\[Yes\]]{#Sx2.I3.i1.p1.1.1 .ltx_text
+    style="color:#0000FF;"}
+    :::
+
+Did you specify all the training details (e.g., data splits,
+hyperparameters, how they were chosen)? [\[Yes\] ]{#Sx2.p2.3.1 .ltx_text
+style="color:#0000FF;"}See Section [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S4 "4 Experiments ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+and the supplement for technical details Did you report error bars
+(e.g., with respect to the random seed after running experiments
+multiple times)? [\[N/A\] ]{#Sx2.p2.3.2 .ltx_text
+style="color:#808080;"}Our experiment settings do not conduct each
+experiment multiple times. Did you include the total amount of compute
+and the type of resources used (e.g., type of GPUs, internal cluster, or
+cloud provider)? [\[Yes\] ]{#Sx2.p2.3.3 .ltx_text
+style="color:#0000FF;"}See Section [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S4 "4 Experiments ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+and the supplement for technical details. If you are using existing
+assets (e.g., code, data, models) or curating/releasing new assets...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I4.i1}
+
+    ::: {#Sx2.I4.i1.p1 .ltx_para}
+    If your work uses existing assets, did you cite the creators?
+    [\[Yes\]]{#Sx2.I4.i1.p1.1.1 .ltx_text style="color:#0000FF;"}
+    :::
+
+See the supplement or Section [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.07562#S4 "4 Experiments ‣ TokenMixup: Efficient Attention-guided Token-level Data Augmentation for Transformers"){.ltx_ref}
+baseline. Did you mention the license of the assets? [\[Yes\]
+]{#Sx2.p2.4.1 .ltx_text style="color:#0000FF;"}See the supplement Did
+you include any new assets either in the supplemental material or as a
+URL? [\[Yes\] ]{#Sx2.p2.4.2 .ltx_text style="color:#0000FF;"}See the
+supplement Did you discuss whether and how consent was obtained from
+people whose data you're using/curating? [\[Yes\] ]{#Sx2.p2.4.3
+.ltx_text style="color:#0000FF;"}See the supplement Did you discuss
+whether the data you are using/curating contains personally identifiable
+information or offensive content? [\[Yes\] ]{#Sx2.p2.4.4 .ltx_text
+style="color:#0000FF;"}See the supplement If you used crowdsourcing or
+conducted research with human subjects...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#Sx2.I5.i1}
+
+    ::: {#Sx2.I5.i1.p1 .ltx_para}
+    Did you include the full text of instructions given to participants
+    and screenshots, if applicable? [\[N/A\] ]{#Sx2.I5.i1.p1.1.1
+    .ltx_text style="color:#808080;"}
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#Sx2.I5.i2}
+
+    ::: {#Sx2.I5.i2.p1 .ltx_para}
+    Did you describe any potential participant risks, with links to
+    Institutional Review Board (IRB) approvals, if applicable? [\[N/A\]
+    ]{#Sx2.I5.i2.p1.1.1 .ltx_text style="color:#808080;"}
+    :::
+3.  [[3.]{.ltx_tag .ltx_tag_item}]{#Sx2.I5.i3}
+
+    ::: {#Sx2.I5.i3.p1 .ltx_para}
+    Did you include the estimated hourly wage paid to participants and
+    the total amount spent on participant compensation? [\[N/A\]
+    ]{#Sx2.I5.i3.p1.1.1 .ltx_text style="color:#808080;"}
+    :::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2210.07561){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./token_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2210.07562){.ar5iv-text-button
+.ar5iv-severity-error} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2210.07562){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2210.07562){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2210.07563){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Sun Jul 30 20:12:13 2023 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+
+::: {#simplifyJobsPortals}
+:::
+:::

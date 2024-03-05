@@ -1,0 +1,1626 @@
+::: ltx_page_main
+::: ltx_page_content
+# [MaskTune]{#id1.id1 .ltx_text .ltx_font_italic}: Mitigating Spurious Correlations by Forcing to Explore {#masktune-mitigating-spurious-correlations-by-forcing-to-explore .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [Saeid Asgari Taghanaki\*\
+Autodesk AI Lab\
+&Aliasghar Khani\*\
+Autodesk AI Lab\
+&Fereshte Khani\*\
+Stanford University\
+&Ali Gholami\*\
+Autodesk AI Lab\
+&Linh Tran\
+Autodesk AI Lab\
+&Ali Mahdavi-Amiri\
+Simon Fraser University\
+&Ghassan Hamarneh\
+Simon Fraser University ]{.ltx_personname}]{.ltx_creator
+.ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+A fundamental challenge of over-parameterized deep learning models is
+learning meaningful data representations that yield good performance on
+a downstream task without over-fitting spurious input features. This
+work proposes [MaskTune]{#id2.id1.1 .ltx_text .ltx_font_italic}, a
+masking strategy that prevents over-reliance on spurious (or a limited
+number of) features. [MaskTune]{#id2.id1.2 .ltx_text .ltx_font_italic}
+forces the trained model to explore new features during a single epoch
+finetuning by masking previously discovered features.
+[MaskTune]{#id2.id1.3 .ltx_text .ltx_font_italic}, unlike earlier
+approaches for mitigating shortcut learning, does not require any
+supervision, such as annotating spurious features or labels for subgroup
+samples in a dataset. Our empirical results on biased MNIST, CelebA,
+Waterbirds, and ImagenNet-9L datasets show that [MaskTune]{#id2.id1.4
+.ltx_text .ltx_font_italic} is effective on tasks that often suffer from
+the existence of spurious correlations. Finally, we show that
+[MaskTune]{#id2.id1.5 .ltx_text .ltx_font_italic} outperforms or
+achieves similar performance to the competing methods when applied to
+the selective classification (classification with rejection option)
+task. Code for [MaskTune]{#id2.id1.6 .ltx_text .ltx_font_italic} is
+available at
+[https://github.com/aliasgharkhani/Masktune](https://github.com/aliasgharkhani/Masktune){.ltx_ref
+.ltx_url .ltx_font_typewriter target="_blank"}.
+:::
+
+[^\*^[[^\*^[footnotetext: ]{.ltx_note_type}These authors contributed
+equally to this work.]{.ltx_note_content}]{.ltx_note_outer}]{#footnotex1
+.ltx_note .ltx_role_footnotetext}
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+Spurious correlations are coincidental feature associations formed
+between a subset of the input and target variables, which may be caused
+by factors such as data selection bias (Torralba and Efros,
+[2011](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib44){.ltx_ref};
+Jabri et al.,
+[2016](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib18){.ltx_ref}).
+The presence of spurious correlations in training data can cause
+over-parameterized deep neural networks to fail, often drastically, when
+such correlations do not hold in test data (Sagawa et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref})
+or when encountering domain shift (Arjovsky et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib1){.ltx_ref}).
+Consider the classification problem of cows and camels (Beery et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib3){.ltx_ref}),
+where most of the images of cows vs. camels are captured on green fields
+vs. desert backgrounds due to selection bias (and perhaps the nature of
+the problem that camels are often in the desert). A model trained on
+such data may rely on the background as the key discriminative feature
+between cows and camels, thus failing on images of cows on non-green
+backgrounds or camels on non-desert backgrounds.
+:::
+
+::: {#S1.p2 .ltx_para}
+In over-parameterized regimes, there are often several solutions with
+almost identical loss values, and the optimizer (e.g., SGD) typically
+selects a low-capacity one (Wilson et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib49){.ltx_ref};
+Valle-Perez et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib45){.ltx_ref};
+Arpit et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib2){.ltx_ref};
+Kalimeris et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib20){.ltx_ref}).
+In the presence of spurious correlations, the optimizer might choose to
+leverage them as they generally demand less capacity than the expected
+semantic cues of interest, e.g., relying on the local color or texture
+of grass instead of the elaborate visual features that give a cow its
+appearance (Bruna and Mallat,
+[2013](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib7){.ltx_ref};
+Bruna et al.,
+[2015](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib8){.ltx_ref};
+Brendel and Bethge,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib6){.ltx_ref};
+Khani and Liang,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib21){.ltx_ref}).
+:::
+
+::: {#S1.p3 .ltx_para}
+In previous work, a supervised loss function has been employed to reduce
+the effect of spurious correlations (Sagawa et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref}).
+However, identifying and annotating the spurious correlations in a large
+dataset as a training signal is impractical. Other works have attempted
+to force models to discard context and background (as spurious features)
+through input morphing using perceptual similarities (Taghanaki et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib42){.ltx_ref})
+or learning casual variables (Javed et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib19){.ltx_ref}).
+Discarding context and background, however, is incompatible with the
+human visual system that relies on contextual information when detecting
+and recognizing objects (Palmer,
+[1975](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib32){.ltx_ref};
+Biederman et al.,
+[1982](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib5){.ltx_ref};
+Chun and Jiang,
+[1998](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib10){.ltx_ref};
+Henderson and Hollingworth,
+[1999](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib17){.ltx_ref};
+Torralba,
+[2003](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib43){.ltx_ref}).
+In addition, spurious features may appear on the object itself (e.g.,
+facial attributes). Thus discarding the context and background may be a
+futile strategy in these cases.
+:::
+
+::: {#S1.p4 .ltx_para}
+Instead of requiring contextual and background information to be
+discarded or relying on a limited number of features, we propose a
+single-epoch finetuning technique called [MaskTune]{#S1.p4.1.1 .ltx_text
+.ltx_font_italic} that prevents a model from learning only the "first"
+simplest mapping (potentially spurious correlations) from the input to
+the corresponding target variable. [MaskTune]{#S1.p4.1.2 .ltx_text
+.ltx_font_italic} forces the model to explore other input variables by
+concealing (masking) the ones that have already been deemed
+discriminatory. As we finetune the model with a new set of masked
+samples, we force the training to escape its myopic and greedy
+feature-seeking approach and encourage exploring and leveraging more
+input variables. In other words, as the previous clues are hidden, the
+model is constrained to find alternative loss-minimizing input-target
+mappings. [MaskTune]{#S1.p4.1.3 .ltx_text .ltx_font_italic} conceals the
+first clues discovered by a fully trained model, whether they are
+spurious or not. This forces the model to investigate and leverage new
+complementary discriminatory input features. A model relying upon a
+broader array of complementary features (some may be spurious while
+others are not) is expected to be more robust to test data missing a
+subset of these features.
+:::
+
+<figure id="S1.F1" class="ltx_figure">
+<img src="./mask_files/x1.png" id="S1.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="283" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 1: </span><span
+id="S1.F1.3.1" class="ltx_text ltx_font_italic">MaskTune</span>
+generates a new set of masked samples by obstructing the features
+discovered by a model fully trained via empirical risk minimization
+(ERM). The ERM model is then fine-tuned for only one epoch using the
+masked version of the original training data to force new feature
+exploration. The features highlighted in yellow, red, and green
+correspond to features discovered by ERM, the masked features, and the
+newly discovered features by <span id="S1.F1.4.2"
+class="ltx_text ltx_font_italic">MaskTune</span>,
+respectively.</figcaption>
+</figure>
+
+::: {#S1.p5 .ltx_para}
+Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S1.F1 "Figure 1 ‣ 1 Introduction ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+visualizes how [MaskTune]{#S1.p5.1.1 .ltx_text .ltx_font_italic} works
+via a schematic of the cow-on-grass scenario. Even in the absence of
+spurious correlations, models tend to focus on the shortcut (e.g., ears
+or skin texture of a cow), which can prevent models from generalizing to
+scenarios where those specific parts are missing. However, the object is
+still recognizable from the remaining parts. As an alternative,
+[MaskTune]{#S1.p5.1.2 .ltx_text .ltx_font_italic} generates a diverse
+set of partially masked training examples, forcing the model to
+investigate a wider area of the input features landscape e.g., new
+pixels.
+:::
+
+::: {#S1.p6 .ltx_para}
+A further disadvantage of relying on a limited number of features is the
+model's inability to know when it does not know. Let's go back to the
+cow-camel classification example; if cows only appear on grass in the
+training set then it is unclear which of the grass or the cow refers to
+the \"cow\" label. A model that only relies on the grass feature can
+confidently make a wrong prediction when some other object appear in the
+grass in the test time. We need the model to predict only if both cow
+and grass appear in the picture and [abstain]{#S1.p6.1.1 .ltx_text
+.ltx_font_italic} otherwise. One method used in the literature to
+address this issue is selective classification (Geifman and El-Yaniv,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib16){.ltx_ref},
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib15){.ltx_ref};
+Khani et al.,
+[2016](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib22){.ltx_ref}),
+which allows a network to reject a sample if it is not confident in its
+prediction. Selective classification is essential in mission-critical
+applications such as autonomous driving, medical diagnostics, and
+robotics as they need to defer the prediction to human if they are
+uncertain about the prediction. Learning different sets of
+discriminatory features, in addition to reducing the effect of spurious
+features, enables [MaskTune]{#S1.p6.1.2 .ltx_text .ltx_font_italic} to
+be applied to the problem of selective classification.
+:::
+
+::: {#S1.p7 .ltx_para}
+We apply [MaskTune]{#S1.p7.1.1 .ltx_text .ltx_font_italic} to two main
+tasks: a) robustness to spurious correlations, and b) selective
+classification. We cover four different datasets under (a) including
+MNIST with synthetic spurious features, CelebA and Waterbirds with
+spurious features in different subgroups (Sagawa et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref}),
+and the Background Challenge (Xiao et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib50){.ltx_ref})
+which is a dataset for measuring the reliance of methods on background
+information for prediction. Under (b) we test [MaskTune]{#S1.p7.1.2
+.ltx_text .ltx_font_italic} on CIFAR-10 (Krizhevsky et al.,
+[2009](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib23){.ltx_ref}),
+SVHN (Netzer et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib31){.ltx_ref}),
+and Cats vs. Dogs (Geifman and El-Yaniv,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib16){.ltx_ref})
+datasets. On both tasks, we outperform or perform similarly to the
+previous complex methods using our simple technique.
+:::
+
+::: {#S1.p8 .ltx_para}
+To the best of our knowledge, this is the first work to present a
+finetuning technique using masked data to overcome spurious
+correlations. Our contributions are summarized as follows:
+:::
+
+::: {#S1.p9 .ltx_para}
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i1}
+
+    ::: {#S1.I1.i1.p1 .ltx_para}
+    We propose [MaskTune]{#S1.I1.i1.p1.1.1 .ltx_text .ltx_font_italic},
+    a new technique to reduce the effect of spurious correlations or
+    over-reliance on a limited number of input features without any
+    supervision such as object location or data subgroup labels.
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i2}
+
+    ::: {#S1.I1.i2.p1 .ltx_para}
+    We show that [MaskTune]{#S1.I1.i2.p1.1.1 .ltx_text .ltx_font_italic}
+    leads to learning a model that does not rely solely on the initially
+    discovered features.
+    :::
+3.  [[3.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i3}
+
+    ::: {#S1.I1.i3.p1 .ltx_para}
+    We show how our method can be applied to selective classification
+    tasks.
+    :::
+4.  [[4.]{.ltx_tag .ltx_tag_item}]{#S1.I1.i4}
+
+    ::: {#S1.I1.i4.p1 .ltx_para}
+    We empirically verify the robustness of the learned representations
+    to spurious correlations on a variety of datasets.
+    :::
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Method {#method .ltx_title .ltx_title_section}
+
+::: {#S2.p1 .ltx_para}
+[Setup.]{#S2.p1.4.1 .ltx_text .ltx_font_bold} We consider the supervised
+learning setting with inputs
+$x \in \mathcal{X} \subset {\mathbb{R}}^{d}$ and corresponding labels
+$y \in \mathcal{Y} = {\{ 1,\ldots,k\}}$. We assume having access to
+samples $\mathcal{D}^{0} = {\{{(x_{i},y_{i})}\}}_{i = 1}^{n}$ drawn from
+an unknown underlying distribution
+$p_{d\operatorname{}a\operatorname{}t\operatorname{}a}\operatorname{}{(x,y)}$.
+:::
+
+::: {#S2.p2 .ltx_para}
+Our goal is to learn the parameters $\theta \in \Theta$ of a prediction
+model $m_{\theta}:{\mathcal{X}\rightarrow\mathcal{Y}}$ that obtains low
+classification error w.r.t some loss function (e.g., cross entropy)
+$\ell:{{\Theta \times {({\mathcal{X} \times \mathcal{Y}})}}\rightarrow{\mathbb{R}}}$.
+Specifically, we minimize:\
+
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\mathcal{L}\operatorname{}{(\theta)}} = {{\mathbb{E}}_{{x,y} \sim {p_{data}\operatorname{}{(x,y)}}}\operatorname{}{\lbrack{\ell\operatorname{}{({m_{\theta}\operatorname{}{(x)}},y)}}\rbrack}} \approx {\frac{1}{n}\operatorname{}{\sum\limits_{i = 1}^{n}{\ell\operatorname{}{({m_{\theta}\operatorname{}{(x_{i})}},y_{i})}}}}$$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#S2.p3 .ltx_para}
+where $n$ is the number of pairs in the training data.
+:::
+
+::: {#S2.p4 .ltx_para}
+Besides having good prediction accuracy, we aim to develop a model which
+does not solely rely on spurious or a limited number of input features.
+We propose to mask the input training data to create a new set. We then
+finetune ([for only one epoch]{#S2.p4.1.1 .ltx_text .ltx_font_italic}) a
+fully trained ERM model with the new masked data to reduce over-reliance
+on spurious or a limited number of features. The single epoch
+fine-tuning is done using a small learning rate e.g., the last decayed
+learning rate that the ERM has used in the first step. We found that
+large learning rates or more than one epoch fine-tuning leads to
+forgetting the discriminative features learned by the ERM.
+:::
+
+::: {#S2.p5 .ltx_para}
+[Input Masking.]{#S2.p5.8.1 .ltx_text .ltx_font_bold} A key ingredient
+of our approach is a masking function $\mathcal{G}$ that is applied
+offline (i.e., after full training). The goal here is to construct a new
+masked dataset by concealing the most discriminative features in the
+input discovered by a model after full training. This should encourage
+the model to investigate new features with the masked training set
+during finetuning. As for $\mathcal{G}$, we adopt the
+xGradCAM (Selvaraju et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib37){.ltx_ref}),
+which was originally designed for a visual explanation of deep models by
+creating rough localization maps based on the gradient of the model loss
+w.r.t. the output of a desired model layer. Given an input image of size
+$H \times W \times C$, xGradCAM outputs a localization map $\mathcal{A}$
+of size $H \times W \times 1$, which shows the contribution of each
+pixel of the input image in predicting the most probable class, i.e., it
+calculates the loss by choosing the class with highest logit value (not
+the true label) as the target class. After acquiring the localization
+map, for each sample $(x_{i},y_{i})$, where $x_{i} \in X$ and
+$y_{i} \in Y$, we mask the locations with the most contribution as:
+:::
+
+::: {#S2.p6 .ltx_para}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $${\hat{x_{i}} = {{\mathcal{T}\operatorname{}{(\mathcal{A}_{x_{i}};\tau)}} \odot x_{i}}};{\mathcal{A}_{x_{i}} = {\mathcal{G}\operatorname{}{({m_{\theta}\operatorname{}{(x_{i})}},y_{i})}}}$$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+::: {#S2.p7 .ltx_para}
+where $\mathcal{T}$ refers to a thresholding function by the threshold
+factor $\tau$ (i.e.,
+$\mathcal{T} = \mathbb{1}_{\mathcal{A}_{x_{i}} \leq \tau}$), and $\odot$
+denotes element-wise multiplication. As the resolution of $\mathcal{A}$
+is typically coarser than that of the input data,
+$\mathcal{T}\operatorname{}{(\mathcal{A}_{x_{i}})}$ is up-sampled to the
+size of the input.
+:::
+
+::: {#S2.p8 .ltx_para}
+Procedurally, we first learn model $m_{\theta}^{\text{initial}}$ using
+original unmasked training data $\mathcal{D}^{\text{initial}}$. Then we
+use $m_{\theta}^{\text{initial}}$, $\mathcal{G}$ and $\mathcal{T}$ to
+create the masked set $\mathcal{D}^{\text{masked}}$. Finally, the fully
+trained predictor $m_{\theta}^{\text{initial}}$ is tuned using
+$\mathcal{D}^{\text{masked}}$ to obtain $m_{\theta}^{\text{final}}$.
+:::
+
+::: {#S2.p9 .ltx_para}
+As for the masking step, any explainability approach can be applied
+(note that some may have more computational complexity, such as
+ScoreCAM (Wang et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib48){.ltx_ref})).
+We use xGradCAM (Selvaraju et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib37){.ltx_ref})
+as it is fast and produces relatively denser heat-maps than other
+methods (Srinivas and Fleuret,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib41){.ltx_ref};
+Selvaraju et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib37){.ltx_ref};
+Wang et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib48){.ltx_ref}).
+:::
+
+::: {#S2.SS1 .section .ltx_subsection}
+### [2.1 ]{.ltx_tag .ltx_tag_subsection}[MaskTune]{#S2.SS1.2.1 .ltx_text .ltx_font_italic} in Over-parameterized Regimes {#masktune-in-over-parameterized-regimes .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS1.p1 .ltx_para}
+Consider the overparametrized regime, in which the model family has
+sufficient complexity to fully fit the training data. It has been shown
+that deep neural nets are overparametrized and can fit completely random
+data (Zhang et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib53){.ltx_ref}).
+The generalization ability of deep neural nets is still not clear, but
+there are some speculation that connect the deep network generalization
+to their tendency of choosing simple functions that fit the training
+data (Valle-Perez et al.,
+[2018](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib45){.ltx_ref};
+Arpit et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib2){.ltx_ref}).
+However, this simplicity bias can cause side effects such as their poor
+performance with respect to adversarial examples (Raghunathan et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib34){.ltx_ref})
+or to distribution shifts (Khani and Liang,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib21){.ltx_ref};
+Shah et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib38){.ltx_ref}).
+:::
+
+::: {#S2.SS1.p2 .ltx_para}
+Here we study the effect of masking input features on complexity of a
+model in a situation where indeed the training procedure chooses the
+least complex model that fits training data. We show that in this case
+masking will result in learning a more complex model that discovers new
+features as the previous ones are blocked.
+:::
+
+::: {#S2.SS1.p3 .ltx_para}
+Formally, let $\mathcal{C}$ denote a function that measures model
+complexity and assume that the masking function $\mathcal{T}$ (as
+described in [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S2.E2 "2 ‣ 2 Method ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref})
+only returns binary values, i.e., an indicator function that only keeps
+some features and zeros out the rest. We show that if training procedure
+returns the least complex model then masking results in a more complex
+model.
+:::
+
+::: {#Thmproposition1 .ltx_theorem .ltx_theorem_proposition}
+###### [[Proposition 1]{#Thmproposition1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#Thmproposition1.2.2 .ltx_text .ltx_font_bold} {#proposition-1. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmproposition1.p1 .ltx_para}
+[Consider an optimizing procedure that finds
+$\min\mathcal{C}{(m_{\theta})},s.t.,\ell{(m_{\theta})} = 0$ as defined
+in [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S2.E1 "1 ‣ 2 Method ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}.
+Let masking function $\mathcal{T}$ return binary values. If both models
+$m_{\theta}$ and $m_{\theta}^{\text{𝑖𝑛𝑖𝑡𝑖𝑎𝑙}}$ fit the training data
+(i.e., zero loss) then we have
+${\mathcal{C}\operatorname{}{(m_{\theta}^{\text{𝑓𝑖𝑛𝑎𝑙}})}} \geq {\mathcal{C}\operatorname{}{(m_{\theta}^{\text{𝑖𝑛𝑖𝑡𝑖𝑎𝑙}})}}$.]{#Thmproposition1.p1.5.5
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#S2.SS1.1 .ltx_proof}
+###### Proof. {#proof. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#S2.SS1.1.p1 .ltx_para}
+Note that both models belong to the model family
+(${m_{\theta}^{\text{initial}},m_{\theta}^{\text{final}}} \in \Theta$),
+and they both fit the training data. In the first step, training
+procedure chooses $m_{\theta}^{\text{initial}}$ over
+$m_{\theta}^{\text{final}}$; therefore according to our assumption
+${\mathcal{C}\operatorname{}{(m_{\theta}^{\text{final}})}} \geq {\mathcal{C}\operatorname{}{(m_{\theta}^{\text{initial}})}}$.
+∎
+:::
+:::
+:::
+
+::: {#S2.SS2 .section .ltx_subsection}
+### [2.2 ]{.ltx_tag .ltx_tag_subsection}Adapting [MaskTune]{#S2.SS2.1.1 .ltx_text .ltx_font_italic} for Selective Classification {#adapting-masktune-for-selective-classification .ltx_title .ltx_title_subsection}
+
+::: {#S2.SS2.p1 .ltx_para}
+Here we show how to use [MaskTune]{#S2.SS2.p1.2.1 .ltx_text
+.ltx_font_italic} for the selective classification problem. In order to
+make a more reliable prediction, we ensemble the original model
+($m_{\theta}^{\text{initial}}$) and [MaskTune]{#S2.SS2.p1.2.2 .ltx_text
+.ltx_font_italic} ($m_{\theta}^{\text{final}}$) and only predict if both
+models agree. As a result, if there exist two sets of features that can
+predict the label, our method only predicts if both agree on the label
+(e.g., grass and cow in Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S1.F1 "Figure 1 ‣ 1 Introduction ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}).
+:::
+
+::: {#S2.SS2.p2 .ltx_para}
+To get an intuition on the performance of [MaskTune]{#S2.SS2.p2.1.1
+.ltx_text .ltx_font_italic} for selective classification, similar to
+(Khani et al.,
+[2016](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib22){.ltx_ref})
+we analyze the noiseless overparametrized linear regression. We show
+that [MaskTune]{#S2.SS2.p2.1.2 .ltx_text .ltx_font_italic} adaptation,
+explained above, abstains in the presence of covariate shift, thus
+leading to a more reliable prediction.
+:::
+
+::: {#S2.SS2.p3 .ltx_para}
+In particular, we show that [MaskTune]{#S2.SS2.p3.12.1 .ltx_text
+.ltx_font_italic} only predicts if the relationship between masked and
+unmasked features in training data holds in the test time. For example,
+if features describing "cow" are predictable of "grass" in training data
+(i.e., they always co-occur) then we only predict if they co-occur in
+the test data as well. Formally, let $s$ denote the masked feature after
+the first round and $z$ denote the rest of the $d - 1$ features. As we
+are in the overparametrized regime, $s$ can be predicted from $z$, let
+$\beta$ be the min-norm solution for predicting $s$ from $z$, i.e.,
+$s = {\beta^{\top}\operatorname{}z}$ for training data. We now show that
+both models agree with each other for a new test set if
+$s = {\beta^{\top}\operatorname{}z}$ in the test time as well. In other
+words, there is not covariate shift between $s$ and $z$.
+:::
+
+::: {#Thmproposition2 .ltx_theorem .ltx_theorem_proposition}
+###### [[Proposition 2]{#Thmproposition2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#Thmproposition2.2.2 .ltx_text .ltx_font_bold} {#proposition-2. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmproposition2.p1 .ltx_para}
+[Let $S \in {\mathbb{R}}^{n}$ be the concatenation, across all $n$
+training samples, of a single masked scalar feature, out of $d$ possible
+features, and $Z \in {\mathbb{R}}^{n \times {({d - 1})}}$ be the
+remaining $d - 1$ features. Let the model family $\Theta$ be the linear
+functions, and the optimization function chooses the min $L_{2}$-norm
+solution that fits the training data. The models trained with and
+without $S$ agree on the predicted output for a new test set $(z,s)$,
+iff
+$s = {{({Z^{\top}\operatorname{}{({Z\operatorname{}Z^{T}})}^{- 1}\operatorname{}S})}^{\top}\operatorname{}z}$.]{#Thmproposition2.p1.10.10
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#S2.SS2.p4 .ltx_para}
+The full proof is in the appendix. Note that
+$({Z^{\top}\operatorname{}{({Z\operatorname{}Z^{T}})}^{- 1}\operatorname{}S})$
+is the min-norm solution for predicting $s$ from $z$ in the training
+data. This proposition states that the models agree only if the relation
+between the masked feature ($s$) and remaining features ($z$) in
+training holds in the test data as well.
+:::
+
+::: {#S2.SS2.p5 .ltx_para}
+In practice, we need to trade off between the coverage and precision.
+Therefore, instead of a hard threshold and predicting only if both
+models agree, we ensemble $m_{\theta}^{\text{initial}}$ and
+$m_{\theta}^{\text{final}}$ by multiplying their probabilities. In order
+to achieve the coverage goal, we find the desired threshold for
+abstaining in the validation set (see Section [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4 "4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+for details).
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Implementation Details {#implementation-details .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para}
+[Classification with Spurious Features.]{#S3.p1.1.1 .ltx_text
+.ltx_font_bold} For all of the datasets in Section [[4.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.SS1 "4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref},
+we use SGD with a momentum of 0.9 and weight decay of 1e-4. For biased
+MNIST, we used a simple convolutional neural network with four
+convolutional layers and a linear head. We trained this model with a
+batch size of 128 for 100 epochs with a learning rate of 0.01. We
+decreased the learning rate by a factor of 0.5 every 25 epochs. In the
+case of Background Challenge, we trained an ImageNet pre-trained
+ResNet50 with a batch size of 1,024 for 100 epochs decaying the learning
+rate by 0.1 after every 30 epochs. For the CelebA dataset, we trained an
+ImageNet pre-trained ResNet50 with a batch size of 512 for 20 epochs
+with a learning rate of 1e-4.
+:::
+
+::: {#S3.p2 .ltx_para}
+[Selective Classification.]{#S3.p2.1.1 .ltx_text .ltx_font_bold} For all
+the datasets in Section [[4.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.SS2 "4.2 Selective Classification ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref},
+we trained a ResNet32 from scratch. For CIFAR-10, we used SGD with a
+momentum of 0.9, weight decay of 1e-4, learning rate of 0.1, and batch
+size of 128. We trained it for 300 epochs and halved the learning rate
+every 25 epochs. For SVHN, we used the same hyperparameters as CIFAR-10
+with only two differences: the weight decay and batch size were 5e-4 and
+1,024, respectively. For Cats vs. Dogs dataset, we used Adam optimizer
+with a weight decay of 1e-4 and a learning rate of 0.001. We trained the
+model for 200 epochs with a batch size of 128 and dropped the learning
+rate by a factor of 0.1 on epoch 50.
+:::
+
+::: {#S3.p3 .ltx_para}
+[Masking Threshold.]{#S3.p3.9.1 .ltx_text .ltx_font_bold} Our goal is to
+mask the most important features, i.e., the core of the heat maps
+generated by the explainability methods. Masking a few input variables
+has almost no effect on the model's behavior, whereas large masks may
+destroy useful signals in the input, resulting in very low training
+accuracy. To reduce the search space of the masking threshold $\tau$
+across all tasks, we experimented with
+$\tau = {\{\mu_{i},{\mu_{i} + \sigma_{i}},{\mu_{i} + {2\operatorname{}\sigma_{i}}},{\mu_{i} + {3\operatorname{}\sigma_{i}}}\}}$
+where $\mu_{i}$ and $\sigma_{i}$ represent mean and standard deviation
+over the heatmap values for training sample $x_{i}$. We also
+experimented with mean value over [all]{#S3.p3.9.2 .ltx_text
+.ltx_font_italic} training samples, using soft masks (i.e., no
+threshold), and sorting and masking the K-top activated variables. We
+found $\mu_{i} + {2\operatorname{}\sigma_{i}}$ works better in general
+as $\mu_{i}$ and $\mu_{i} + \sigma_{i}$ remove a large portion of the
+input while $\mu_{i} + {3\operatorname{}\sigma_{i}}$ removes very few
+variables.
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Experimental Results {#experimental-results .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para}
+We evaluate our [MaskTune]{#S4.p1.1.1 .ltx_text .ltx_font_italic} method
+on two main applications: a) classification with spurious
+correlations---we expect [MaskTune]{#S4.p1.1.2 .ltx_text
+.ltx_font_italic} to prevent such correlations by identifying and
+masking them and b) selective classification where the ability to
+abstain is critical---we expect [MaskTune]{#S4.p1.1.3 .ltx_text
+.ltx_font_italic} to improve reliability by forcing a model to
+investigate additional variables in the input and learn more complex
+relationships. In each experiment, we compare our method to relevant
+baselines and competing methods.
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Classification with Spurious Features {#classification-with-spurious-features .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para}
+[MNIST with Colored Squares on the Corners:]{#S4.SS1.p1.1.1 .ltx_text
+.ltx_font_bold} As a warm-up, we test the ability of our method to
+distinguish between two MNIST digit groups (0-4 and 5-9) in the presence
+of spurious features. We construct a dataset such that a classifier
+would achieve poor accuracy by relying on spurious input features. To
+this end, we group digits labeled 0 to 4 into class 0 and those labeled
+5 to 9 into class 1. Next, in the training set, we place 99% and 1% of
+the new class 0 and new class 1 data on a background with a small blue
+square on the top left corner, respectively, and keep the remaining data
+intact. We use two test sets during testing: the original raw MNIST test
+set and a biased test set. To create the biased test set we place all of
+the digits from the group "5-9" on a background with a small blue square
+(representing spurious features) on the top left corner and keep all of
+the digits from the group "0-4" unchanged (i.e., we don't add any
+squares to their background and use the original images).
+Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.F2 "Figure 2 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+demonstrates the performance of the ERM, RandMask, and our
+[MaskTune]{#S4.SS1.p1.1.2 .ltx_text .ltx_font_italic} on both original
+and biased test sets. The RandMask method is similar to
+[MaskTune]{#S4.SS1.p1.1.3 .ltx_text .ltx_font_italic}, but masks a
+[randomly]{#S4.SS1.p1.1.4 .ltx_text .ltx_font_italic} chosen area of the
+input image. As shown in Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.F2 "Figure 2 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref},
+[MaskTune]{#S4.SS1.p1.1.5 .ltx_text .ltx_font_italic} outperforms other
+methods by a large margin on both test sets. As demonstrated in
+Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.F2 "Figure 2 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+(right), [MaskTune]{#S4.SS1.p1.1.6 .ltx_text .ltx_font_italic} forces
+the model to explore more features, as opposed to the ERM, which only
+looks into the spurious feature (the blue square). We also ran an
+experiment with multiple spurious features (Appendix [[A]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#A1 "Appendix A Appendix ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref})
+and reported results for iterative version of  [MaskTune]{#S4.SS1.p1.1.7
+.ltx_text .ltx_font_italic}.
+:::
+
+<figure id="S4.F2" class="ltx_figure">
+<img src="./mask_files/x2.png" id="S4.F2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="581"
+height="269" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Left:
+Test accuracy on the original and biased MNIST datasets. <span
+id="S4.F2.4.1" class="ltx_text ltx_font_italic">MaskTune</span>
+outperforms other methods on both the original and biased test sets.
+Right: xGradCAM visualizations before (ERM) and after applying <span
+id="S4.F2.5.2" class="ltx_text ltx_font_italic">MaskTune</span>. <span
+id="S4.F2.6.3" class="ltx_text ltx_font_italic">MaskTune</span> enforces
+exploring more input features, which leads to more robust predictions.
+Here the spurious feature is the blue square on the top left
+corner.</figcaption>
+</figure>
+
+::: {#S4.SS1.p2 .ltx_para}
+[Classification with Spurious Features in Subgroups.]{#S4.SS1.p2.1.1
+.ltx_text .ltx_font_bold} In this experiment, we leverage the
+CelebA (Liu et al.,
+[2015](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib28){.ltx_ref})
+and the Waterbirds (Sagawa et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref})
+datasets. In the CelebA dataset, there is a high correlation between
+features gender={male, female} and hair_color={blond, dark}, meaning
+that the feature gender might be used as a proxy to predict the
+hair_color. In other words, an ERM would assign the label dark to male
+images since the majority of male images have dark hair, and there are
+only 1,387 (0.85%) blond males in the training set of size 162,770. To
+balance the accuracy of predictions on different subgroups of data, the
+existing methods (Sagawa et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref})
+use subgroup information, i.e., wrong predictions of an ERM on the worst
+group (blond males) can be penalized during training. Some other
+approaches (Levy et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib25){.ltx_ref};
+Nam et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib30){.ltx_ref};
+Pezeshki et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib33){.ltx_ref};
+Taghanaki et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib42){.ltx_ref};
+Liu et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib27){.ltx_ref})
+use subgroup information during model selection (labeled validation
+set). However, it is impractical to recognize "all" subgroups in a
+dataset and label them. In Table [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.T1 "Table 1 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref},
+we show that [MaskTune]{#S4.SS1.p2.1.2 .ltx_text .ltx_font_italic}
+achieves comparable performance to both these groups of methods
+*without* using group information in training or in model selection. We
+also show [MaskTune]{#S4.SS1.p2.1.4 .ltx_text .ltx_font_italic}
+significantly improves worst-group accuracy (78% vs. 55% classification
+accuracy) in comparison to methods that do not use subgroup information
+during training or model selection. In Figure [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.F3 "Figure 3 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+(left), we highlight the important input features for predicting hair
+color on the CelebA dataste. As shown, the ERM model leverages gender
+features while [MaskTune]{#S4.SS1.p2.1.5 .ltx_text .ltx_font_italic}
+forces to investigate other features as well.
+:::
+
+<figure id="S4.T1" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 1: </span>Results
+from the CelebA dataset using ResNet-50. Our method outperforms all
+fully unsupervised methods.</figcaption>
+</figure>
+
+<figure id="S4.F3" class="ltx_figure">
+<img src="./mask_files/x3.png" id="S4.F3.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="830"
+height="569" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 3:
+</span>Activation visualizations of ERM and <span id="S4.F3.4.1"
+class="ltx_text ltx_font_italic">MaskTune</span> for CelebA (left) and
+Waterbirds (right) samples. <span id="S4.F3.5.2"
+class="ltx_text ltx_font_italic">MaskTune</span> enforces exploring new
+features. As demonstrated, after applying <span id="S4.F3.6.3"
+class="ltx_text ltx_font_italic">MaskTune</span>, the task-relevant
+input signals (hair colour and bird features) are
+emphasised.</figcaption>
+</figure>
+
+::: {#S4.SS1.p3 .ltx_para}
+Waterbirds dataset (Sagawa et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref})
+was proposed to assess the degree to which models pick up spurious
+correlations in the training set. We discovered and fixed two
+[issues]{#S4.SS1.p3.1.1 .ltx_text .ltx_font_italic} with the Waterbirds
+dataset: a) because the background images in the Places dataset (Zhou
+et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib55){.ltx_ref})
+may already contain bird images, multiple birds may appear in an image
+after overlaying the segmented bird images from the Caltech-UCSD
+Birds-200-2011 (CUB) dataset (Wah et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib46){.ltx_ref}).
+For example, the label of an image may be "landbird", but the image
+contains both land and water birds. We manually removed such images from
+the dataset. b) Because the names of the species are similar, some land
+birds have been mislabeled as waterbirds which we corrected. The
+[corrected]{#S4.SS1.p3.1.2 .ltx_text .ltx_font_italic} Waterbirds
+dataset can be found on [MaskTune]{#S4.SS1.p3.1.3 .ltx_text
+.ltx_font_italic}'s GitHub page. After addressing the two issues, the
+ERM model's worst-group accuracy increased from which is reported
+in (Sagawa et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref})
+to 80.8$\pm$`<!-- -->`{=html}1.3%. We repeated the group-DRO method and
+ERM experiments on the corrected waterbirds dataset and reported the
+results in Table [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.T2 "Table 2 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}.
+As demonstrated, our method (without any group supervision) achieves
+similar accuracy to the group-DRO that benefits from full supervision.
+In Figure [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.F3 "Figure 3 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+(right), we visualized feature importance before and after applying our
+ [MaskTune]{#S4.SS1.p3.1.4 .ltx_text .ltx_font_italic} on the modified
+Waterbirds dataset.
+:::
+
+<figure id="S4.T2" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 2: </span>Results
+from the Waterbirds dataset using ResNet-50. Our method significantly
+improves ERM’s worst-group accuracy without supervision.</figcaption>
+</figure>
+
+::: {#S4.SS1.p4 .ltx_para}
+[The Background Challenge.]{#S4.SS1.p4.1.1 .ltx_text .ltx_font_bold} As
+a further step, we evaluated [MaskTune]{#S4.SS1.p4.1.2 .ltx_text
+.ltx_font_italic} on the Background Challenge data (Xiao et al.,
+[2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib50){.ltx_ref})
+to see if the positive observations from the MNIST experiment apply to a
+more realistic scenario. The Background Challenge is a publicly
+available dataset that consists of ImageNet-9 (Deng et al.,
+[2009](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib11){.ltx_ref})
+test sets with various levels of foreground and background signals. It
+is intended to assess how much deep classifiers rely on spurious
+features for image classification. We used two configurations to compare
+[MaskTune]{#S4.SS1.p4.1.3 .ltx_text .ltx_font_italic}'s performance:
+Only FG, in which the background is completely removed, Mixed-same, in
+which the foreground is placed on a different background from the same
+class, and Mixed-rand, where the foreground is overlaid onto a random
+background.
+:::
+
+::: {#S4.SS1.p5 .ltx_para}
+As shown in Table [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.T3 "Table 3 ‣ 4.1 Classification with Spurious Features ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref},
+[MaskTune]{#S4.SS1.p5.1.1 .ltx_text .ltx_font_italic} outperforms the
+baseline ResNet-50's performance by on the Only-FG test set and
+on Mixed-same, showing that [MaskTune]{#S4.SS1.p5.1.2 .ltx_text
+.ltx_font_italic} does not rely much on the background and uses both
+background and foreground for prediction. On the Mixed-same and Only-FG
+test sets,  [MaskTune]{#S4.SS1.p5.1.3 .ltx_text .ltx_font_italic}
+outperforms other techniques because mixing/removing the background
+texture/info confuses other methods. These results show that our
+technique helps to learn task-relevant features without depending on
+nuisance signal sources.
+:::
+
+<figure id="S4.T3" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 3: </span>Results
+from the Background Challenge on ImageNet-9 using ResNet-50. Our method
+outperforms the baselines on both Mixed-same and Only FG test
+sets.</figcaption>
+</figure>
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Selective Classification {#selective-classification .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.p1 .ltx_para}
+For selective classification task, we evaluated
+[MaskTune]{#S4.SS2.p1.1.1 .ltx_text .ltx_font_italic} on three datasets:
+CIFAR-10 (Krizhevsky et al.,
+[2009](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib23){.ltx_ref}),
+SVHN (Netzer et al.,
+[2011](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib31){.ltx_ref}),
+and Cats vs. Dogs (Geifman and El-Yaniv,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib16){.ltx_ref}),
+with coverage values of {90%, 95%, 100%}. For example 90% coverage means
+abstaining 10% of the samples.
+:::
+
+::: {#S4.SS2.p2 .ltx_para}
+Given input image $j$ and the original ($m_{\theta}^{\text{initial}}$)
+and finetuned ($m_{\theta}^{\text{final}}$) models, let their respective
+inference-time prediction probabilities for class $i$ be
+$P_{i\operatorname{}j}^{\text{init}}$ and
+$P_{i\operatorname{}j}^{\text{final}}$. Then [MaskTune]{#S4.SS2.p2.10.1
+.ltx_text .ltx_font_italic} does not abstain and declares the class $i$
+as the predicted class, iff
+${P_{i\operatorname{}j}^{\text{init}} \cdot P_{i\operatorname{}j}^{\text{final}}} > \gamma$,
+where $\gamma$ is a threshold that allows for controlling the target
+coverage. To find the proper $\gamma$ for achieving the targeted
+coverage, we iterate over the validation set and find a threshold that,
+if applied to the validation set, would give the desired coverage (i.e.,
+if our target coverage is 90%, we seek for a threshold which if we apply
+for abstention on the validation set, we will abstain predicting 10% of
+validation data). Note that the probabilities of the two models are
+multiplied to ensure that as the value of either probability decreases,
+the possibility of abstention increases.
+:::
+
+::: {#S4.SS2.p3 .ltx_para}
+We compare our method to the other selective classification approaches
+such as Softmax Response (SR) (Geifman and El-Yaniv,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib16){.ltx_ref}),
+SelectiveNet (SN) (Geifman and El-Yaniv,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib16){.ltx_ref}),
+Deep Gamblers (DG) (Liu et al.,
+[2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib29){.ltx_ref}),
+and One-sided Prediction (OSP) (Gangrade et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib13){.ltx_ref}).
+Like the OSP, we first split the training data into train and validation
+sets. After training, we search for the abstention threshold on the
+validation set, then use it at the test time. As seen in
+Table [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#S4.T4 "Table 4 ‣ 4.2 Selective Classification ‣ 4 Experimental Results ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref},
+[MaskTune]{#S4.SS2.p3.1.1 .ltx_text .ltx_font_italic} outperforms all
+prior techniques on all three datasets on 95% and 100% coverage rates.
+For results on more coverage rates refer to Appendix [[A]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#A1 "Appendix A Appendix ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}.
+:::
+
+<figure id="S4.T4" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 4:
+</span>Selective classification results on CIFAR-10, SVHN, and Cats vs.
+Dogs datasets for different coverage values.</figcaption>
+</figure>
+:::
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Related Work {#related-work .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para}
+In the following, we review the related works which have attempted to
+mitigate the effect of spurious correlation in training deep models. We
+also discuss previous methods that use attention-based online masking
+and how our method differs.
+:::
+
+::: {#S5.p2 .ltx_para}
+[Robustness to Spurious Correlations.]{#S5.p2.1.1 .ltx_text
+.ltx_font_bold} Distributionally robust optimization (DRO) (Ben-Tal
+et al.,
+[2013](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib4){.ltx_ref};
+Gao et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib14){.ltx_ref};
+Duchi et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib12){.ltx_ref})
+has been proposed to improve generalization to worst cases (minority
+distributions) in a dataset. However, the DRO objective leads to
+disproportionate attention to the worst cases, even if they are
+implausible. To address this issue, Sagawa et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib35){.ltx_ref})
+proposed to leverage subgroup information during optimization. Although
+this method reduces the likelihood of the worst-case failure, it is
+based on prior solid information (i.e., subgroup labels), which is not
+always available. Several efforts have been made to reduce the
+subgroup-level supervision.  Sohoni et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib40){.ltx_ref})
+proposed a clustering-based method for obtaining sub-group information
+to be used in DRO setup. However, determining the number of clusters
+(sub-groups) in a dataset is not trivial since a small number may still
+dismiss minor subgroups while a large number may lower overall accuracy.
+Yaghoobzadeh et al.
+([2019](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib52){.ltx_ref})
+proposed measuring sample accuracy throughout training to discover
+forgettable instances, then fine-tuning models using such samples to
+increase model resilience against spurious correlations. Chen et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib9){.ltx_ref})
+demonstrated that self-training can also help decrease the effect of
+spurious features, but only if the source classifier is very accurate
+and there are not too many isolated sub-groups in the data. Liu et al.
+([2021](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib27){.ltx_ref})
+discovered that training a model twice helps it become resistant to
+spurious correlation. However, if a model reaches high classification
+accuracy in the first run, this technique is no longer useful since
+there is not enough misclassified data to retrain the model.
+[MaskTune]{#S5.p2.1.2 .ltx_text .ltx_font_italic}, on the other hand,
+employs an orthogonal approach to learn robust representations through
+gradient-based masking and fine-tuning and does not require
+subgroup-level labels during training or model selection.
+:::
+
+::: {#S5.p3 .ltx_para}
+[Online Attention-based Masking.]{#S5.p3.1.1 .ltx_text .ltx_font_bold} A
+large number of studies suggest using attention-based (soft) masks to
+eliminate irrelevant information from input data during training (Sharma
+et al.,
+[2015](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib39){.ltx_ref};
+Wang et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib47){.ltx_ref};
+Xu et al.,
+[2015](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib51){.ltx_ref};
+Zheng et al.,
+[2017](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib54){.ltx_ref}).
+Although these methods increase overall classification accuracy, they
+are incapable of disregarding spurious correlations since attention may
+be on an area of the input where the spurious correlations are dominant
+during training. For concentrating attention only on the foreground,  Li
+et al.
+([2018](https://ar5iv.labs.arxiv.org/html/2210.00055#bib.bib26){.ltx_ref})
+developed a guided attention model. Their technique, however, needs
+additional annotations of object locations/masks. Nonetheless, none of
+these methods aimed to reduce the effects of spurious correlations. Even
+with complete supervision (i.e., masking the whole background), spurious
+correlations might still occur in the foreground. [MaskTune]{#S5.p3.1.2
+.ltx_text .ltx_font_italic}, on the other hand, produces masks from a
+fully trained model and uses them for a single epoch fine-tuning.
+[MaskTune]{#S5.p3.1.3 .ltx_text .ltx_font_italic} does not require any
+additional supervision such as object location annotations.
+:::
+:::
+
+::: {#S6 .section .ltx_section}
+## [6 ]{.ltx_tag .ltx_tag_section}Conclusion {#conclusion .ltx_title .ltx_title_section}
+
+::: {#S6.p1 .ltx_para}
+In this work, we considered the problem of preventing models from
+learning spurious correlations. We introduced a new fine-tuning
+technique that is designed explicitly for spurious correlations. It
+enforces a model to explore more variables in the input and map them to
+the same target. Through experiments and theoretical analysis on
+classification with nuisance background information which typically
+suffers from the presence of spurious correlations in the data, we
+showed that models trained with [MaskTune]{#S6.p1.1.1 .ltx_text
+.ltx_font_italic} outperform previous relevant methods. We also showed
+that [MaskTune]{#S6.p1.1.2 .ltx_text .ltx_font_italic} helps to improve
+the accuracy significantly in selective classification tasks. Adapting
+[MaskTune]{#S6.p1.1.3 .ltx_text .ltx_font_italic} for non-image data,
+such as sentiment analysis, can be an intriguing future work. Another
+area for future work is [how]{#S6.p1.1.4 .ltx_text .ltx_font_italic}
+best to identify and use the most effective masked samples (rather than
+all) when fine-tuning the final model, perhaps using uncertainty
+information or active learning. Although [MaskTune]{#S6.p1.1.5 .ltx_text
+.ltx_font_italic} can help reduce the effect of many types of spurious
+correlation, such as texture, color, and localized nuisance features
+e.g., artifacts added to x-ray images by medical imaging devices, there
+are some cases where [MaskTune]{#S6.p1.1.6 .ltx_text .ltx_font_italic}
+may not be effective, such as a small transformation in all pixel values
+for some of the images in a dataset. This occurs in medical devices or
+cameras that add almost imperceptible color (values) to captured images.
+:::
+:::
+
+::: {#bib .section .ltx_bibliography}
+## References {#references .ltx_title .ltx_title_bibliography}
+
+-   [[Arjovsky et al. (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Martin Arjovsky, Léon Bottou, Ishaan Gulrajani,
+    and David Lopez-Paz. ]{.ltx_bibblock} [Invariant risk minimization.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:1907.02893*, 2019.
+    ]{.ltx_bibblock}]{#bib.bib1}
+-   [[Arpit et al. (2017)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Devansh Arpit, Stanisław Jastrzębski, Nicolas Ballas, David Krueger,
+    Emmanuel Bengio, Maxinder S Kanwal, Tegan Maharaj, Asja Fischer,
+    Aaron Courville, Yoshua Bengio, et al. ]{.ltx_bibblock} [A closer
+    look at memorization in deep networks. ]{.ltx_bibblock} [In
+    *International Conference on Machine Learning*, pages 233--242.
+    PMLR, 2017. ]{.ltx_bibblock}]{#bib.bib2}
+-   [[Beery et al. (2018)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Sara Beery, Grant Van Horn, and Pietro Perona. ]{.ltx_bibblock}
+    [Recognition in terra incognita. ]{.ltx_bibblock} [In *Proceedings
+    of the European Conference on Computer Vision (ECCV)*, pages
+    456--473, 2018. ]{.ltx_bibblock}]{#bib.bib3}
+-   [[Ben-Tal et al. (2013)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Aharon Ben-Tal, Dick Den Hertog, Anja De Waegenaere, Bertrand
+    Melenberg, and Gijs Rennen. ]{.ltx_bibblock} [Robust solutions of
+    optimization problems affected by uncertain probabilities.
+    ]{.ltx_bibblock} [*Management Science*, 59(2):341--357, 2013.
+    ]{.ltx_bibblock}]{#bib.bib4}
+-   [[Biederman et al. (1982)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Irving Biederman, Robert J Mezzanotte, and Jan C
+    Rabinowitz. ]{.ltx_bibblock} [Scene perception: Detecting and
+    judging objects undergoing relational violations. ]{.ltx_bibblock}
+    [*Cognitive psychology*, 14(2):143--177, 1982.
+    ]{.ltx_bibblock}]{#bib.bib5}
+-   [[Brendel and Bethge (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Wieland Brendel and Matthias Bethge.
+    ]{.ltx_bibblock} [Approximating cnns with bag-of-local-features
+    models works surprisingly well on imagenet. ]{.ltx_bibblock} [*arXiv
+    preprint arXiv:1904.00760*, 2019. ]{.ltx_bibblock}]{#bib.bib6}
+-   [[Bruna and Mallat (2013)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Joan Bruna and Stéphane Mallat. ]{.ltx_bibblock}
+    [Invariant scattering convolution networks. ]{.ltx_bibblock} [*IEEE
+    transactions on pattern analysis and machine intelligence*,
+    35(8):1872--1886, 2013. ]{.ltx_bibblock}]{#bib.bib7}
+-   [[Bruna et al. (2015)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Joan Bruna, Stéphane Mallat, Emmanuel Bacry, and Jean-François Muzy.
+    ]{.ltx_bibblock} [Intermittent process analysis with scattering
+    moments. ]{.ltx_bibblock} [*The Annals of Statistics*,
+    43(1):323--351, 2015. ]{.ltx_bibblock}]{#bib.bib8}
+-   [[Chen et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Yining Chen, Colin Wei, Ananya Kumar, and Tengyu Ma.
+    ]{.ltx_bibblock} [Self-training avoids using spurious features under
+    domain shift. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:2006.10032*, 2020. ]{.ltx_bibblock}]{#bib.bib9}
+-   [[Chun and Jiang (1998)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Marvin M Chun and Yuhong Jiang. ]{.ltx_bibblock} [Contextual
+    cueing: Implicit learning and memory of visual context guides
+    spatial attention. ]{.ltx_bibblock} [*Cognitive psychology*,
+    36(1):28--71, 1998. ]{.ltx_bibblock}]{#bib.bib10}
+-   [[Deng et al. (2009)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li, and
+    Li Fei-Fei. ]{.ltx_bibblock} [Imagenet: A large-scale hierarchical
+    image database. ]{.ltx_bibblock} [In *2009 IEEE conference on
+    Computer Vision and Pattern Recognition*, pages 248--255.
+    Ieee, 2009. ]{.ltx_bibblock}]{#bib.bib11}
+-   [[Duchi et al. (2021)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    John C Duchi, Peter W Glynn, and Hongseok Namkoong. ]{.ltx_bibblock}
+    [Statistics of robust optimization: A generalized empirical
+    likelihood approach. ]{.ltx_bibblock} [*Mathematics of Operations
+    Research*, 2021. ]{.ltx_bibblock}]{#bib.bib12}
+-   [[Gangrade et al. (2021)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Aditya Gangrade, Anil Kag, and Venkatesh
+    Saligrama. ]{.ltx_bibblock} [Selective classification via one-sided
+    prediction. ]{.ltx_bibblock} [In *International Conference on
+    Artificial Intelligence and Statistics*, pages 2179--2187.
+    PMLR, 2021. ]{.ltx_bibblock}]{#bib.bib13}
+-   [[Gao et al. (2017)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Rui Gao, Xi Chen, and Anton J Kleywegt. ]{.ltx_bibblock}
+    [Wasserstein distributional robustness and regularization in
+    statistical learning. ]{.ltx_bibblock} [*arXiv e-prints*, pages
+    arXiv--1712, 2017. ]{.ltx_bibblock}]{#bib.bib14}
+-   [[Geifman and El-Yaniv (2017)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Yonatan Geifman and Ran El-Yaniv.
+    ]{.ltx_bibblock} [Selective classification for deep neural networks.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:1705.08500*, 2017.
+    ]{.ltx_bibblock}]{#bib.bib15}
+-   [[Geifman and El-Yaniv (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Yonatan Geifman and Ran El-Yaniv.
+    ]{.ltx_bibblock} [Selectivenet: A deep neural network with an
+    integrated reject option. ]{.ltx_bibblock} [In *International
+    Conference on Machine Learning*, pages 2151--2159. PMLR, 2019.
+    ]{.ltx_bibblock}]{#bib.bib16}
+-   [[Henderson and Hollingworth (1999)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ John M Henderson and Andrew Hollingworth.
+    ]{.ltx_bibblock} [High-level scene perception. ]{.ltx_bibblock}
+    [*Annual review of psychology*, 50(1):243--271, 1999.
+    ]{.ltx_bibblock}]{#bib.bib17}
+-   [[Jabri et al. (2016)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Allan Jabri, Armand Joulin, and Laurens Van Der Maaten.
+    ]{.ltx_bibblock} [Revisiting visual question answering baselines.
+    ]{.ltx_bibblock} [In *European Conference on Computer Vision*, pages
+    727--739. Springer, 2016. ]{.ltx_bibblock}]{#bib.bib18}
+-   [[Javed et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Khurram Javed, Martha White, and Yoshua Bengio. ]{.ltx_bibblock}
+    [Learning causal models online. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:2006.07461*, 2020. ]{.ltx_bibblock}]{#bib.bib19}
+-   [[Kalimeris et al. (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Dimitris Kalimeris, Gal Kaplun, Preetum
+    Nakkiran, Benjamin Edelman, Tristan Yang, Boaz Barak, and Haofeng
+    Zhang. ]{.ltx_bibblock} [Sgd on neural networks learns functions of
+    increasing complexity. ]{.ltx_bibblock} [*Advances in neural
+    information processing systems*, 32, 2019.
+    ]{.ltx_bibblock}]{#bib.bib20}
+-   [[Khani and Liang (2021)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Fereshte Khani and Percy Liang. ]{.ltx_bibblock}
+    [Removing spurious features can hurt accuracy and affect groups
+    disproportionately. ]{.ltx_bibblock} [In *Proceedings of the 2021
+    ACM Conference on Fairness, Accountability, and Transparency*, pages
+    196--205, 2021. ]{.ltx_bibblock}]{#bib.bib21}
+-   [[Khani et al. (2016)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Fereshte Khani, Martin Rinard, and Percy Liang. ]{.ltx_bibblock}
+    [Unanimous prediction for 100% precision with application to
+    learning semantic mappings. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:1606.06368*, 2016. ]{.ltx_bibblock}]{#bib.bib22}
+-   [[Krizhevsky et al. (2009)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Alex Krizhevsky, Geoffrey Hinton, et al.
+    ]{.ltx_bibblock} [Learning multiple layers of features from tiny
+    images. ]{.ltx_bibblock} [2009. ]{.ltx_bibblock}]{#bib.bib23}
+-   [[Lee et al. (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Yoonho Lee, Huaxiu Yao, and Chelsea Finn. ]{.ltx_bibblock}
+    [Diversify and disambiguate: Learning from underspecified data.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:2202.03418*, 2022.
+    ]{.ltx_bibblock}]{#bib.bib24}
+-   [[Levy et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Daniel Levy, Yair Carmon, John C Duchi, and Aaron Sidford.
+    ]{.ltx_bibblock} [Large-scale methods for distributionally robust
+    optimization. ]{.ltx_bibblock} [*Advances in Neural Information
+    Processing Systems*, 33:8847--8860, 2020.
+    ]{.ltx_bibblock}]{#bib.bib25}
+-   [[Li et al. (2018)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Kunpeng Li, Ziyan Wu, Kuan-Chuan Peng, Jan Ernst, and Yun Fu.
+    ]{.ltx_bibblock} [Tell me where to look: Guided attention inference
+    network. ]{.ltx_bibblock} [In *Proceedings of the IEEE Conference on
+    Computer Vision and Pattern Recognition*, pages 9215--9223, 2018.
+    ]{.ltx_bibblock}]{#bib.bib26}
+-   [[Liu et al. (2021)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Evan Z Liu, Behzad Haghgoo, Annie S Chen, Aditi Raghunathan,
+    Pang Wei Koh, Shiori Sagawa, Percy Liang, and Chelsea Finn.
+    ]{.ltx_bibblock} [Just train twice: Improving group robustness
+    without training group information. ]{.ltx_bibblock} [In
+    *International Conference on Machine Learning*, pages 6781--6792.
+    PMLR, 2021. ]{.ltx_bibblock}]{#bib.bib27}
+-   [[Liu et al. (2015)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Ziwei Liu, Ping Luo, Xiaogang Wang, and Xiaoou Tang.
+    ]{.ltx_bibblock} [Deep learning face attributes in the wild.
+    ]{.ltx_bibblock} [In *Proceedings of the IEEE International
+    Conference on Computer Vision*, pages 3730--3738, 2015.
+    ]{.ltx_bibblock}]{#bib.bib28}
+-   [[Liu et al. (2019)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Ziyin Liu, Zhikang Wang, Paul Pu Liang, Russ R Salakhutdinov,
+    Louis-Philippe Morency, and Masahito Ueda. ]{.ltx_bibblock} [Deep
+    gamblers: Learning to abstain with portfolio theory.
+    ]{.ltx_bibblock} [*Advances in Neural Information Processing
+    Systems*, 32:10623--10633, 2019. ]{.ltx_bibblock}]{#bib.bib29}
+-   [[Nam et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Junhyun Nam, Hyuntak Cha, Sungsoo Ahn, Jaeho Lee, and Jinwoo Shin.
+    ]{.ltx_bibblock} [Learning from failure: De-biasing classifier from
+    biased classifier. ]{.ltx_bibblock} [*Advances in Neural Information
+    Processing Systems*, 33:20673--20684, 2020.
+    ]{.ltx_bibblock}]{#bib.bib30}
+-   [[Netzer et al. (2011)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Yuval Netzer, Tao Wang, Adam Coates, Alessandro Bissacco, Bo Wu,
+    and Andrew Y Ng. ]{.ltx_bibblock} [Reading digits in natural images
+    with unsupervised feature learning. ]{.ltx_bibblock} [2011.
+    ]{.ltx_bibblock}]{#bib.bib31}
+-   [[Palmer (1975)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    tephen E Palmer. ]{.ltx_bibblock} [The effects of contextual scenes
+    on the identification of objects. ]{.ltx_bibblock} [*Memory &
+    cognition*, 3:519--526, 1975. ]{.ltx_bibblock}]{#bib.bib32}
+-   [[Pezeshki et al. (2021)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Mohammad Pezeshki, Oumar Kaba, Yoshua Bengio,
+    Aaron C Courville, Doina Precup, and Guillaume Lajoie.
+    ]{.ltx_bibblock} [Gradient starvation: A learning proclivity in
+    neural networks. ]{.ltx_bibblock} [*Advances in Neural Information
+    Processing Systems*, 34, 2021. ]{.ltx_bibblock}]{#bib.bib33}
+-   [[Raghunathan et al. (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Aditi Raghunathan, Sang Michael Xie, Fanny Yang,
+    John C Duchi, and Percy Liang. ]{.ltx_bibblock} [Adversarial
+    training can hurt generalization. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:1906.06032*, 2019. ]{.ltx_bibblock}]{#bib.bib34}
+-   [[Sagawa et al. (2019)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Shiori Sagawa, Pang Wei Koh, Tatsunori B Hashimoto, and Percy
+    Liang. ]{.ltx_bibblock} [Distributionally robust neural networks for
+    group shifts: On the importance of regularization for worst-case
+    generalization. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:1911.08731*, 2019. ]{.ltx_bibblock}]{#bib.bib35}
+-   [[Sauer and Geiger (2021)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Axel Sauer and Andreas Geiger. ]{.ltx_bibblock}
+    [Counterfactual generative networks. ]{.ltx_bibblock} [*arXiv
+    preprint arXiv:2101.06046*, 2021. ]{.ltx_bibblock}]{#bib.bib36}
+-   [[Selvaraju et al. (2017)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Ramprasaath R Selvaraju, Michael Cogswell,
+    Abhishek Das, Ramakrishna Vedantam, Devi Parikh, and Dhruv Batra.
+    ]{.ltx_bibblock} [Grad-cam: Visual explanations from deep networks
+    via gradient-based localization. ]{.ltx_bibblock} [In *Proceedings
+    of the IEEE International Conference on Computer Vision*, pages
+    618--626, 2017. ]{.ltx_bibblock}]{#bib.bib37}
+-   [[Shah et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Harshay Shah, Kaustav Tamuly, Aditi Raghunathan, Prateek Jain, and
+    Praneeth Netrapalli. ]{.ltx_bibblock} [The pitfalls of simplicity
+    bias in neural networks. ]{.ltx_bibblock} [*Advances in Neural
+    Information Processing Systems*, 33:9573--9585, 2020.
+    ]{.ltx_bibblock}]{#bib.bib38}
+-   [[Sharma et al. (2015)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Shikhar Sharma, Ryan Kiros, and Ruslan Salakhutdinov.
+    ]{.ltx_bibblock} [Action recognition using visual attention.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:1511.04119*, 2015.
+    ]{.ltx_bibblock}]{#bib.bib39}
+-   [[Sohoni et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Nimit S Sohoni, Jared A Dunnmon, Geoffrey Angus, Albert Gu, and
+    Christopher Ré. ]{.ltx_bibblock} [No subclass left behind:
+    Fine-grained robustness in coarse-grained classification problems.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:2011.12945*, 2020.
+    ]{.ltx_bibblock}]{#bib.bib40}
+-   [[Srinivas and Fleuret (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Suraj Srinivas and François Fleuret.
+    ]{.ltx_bibblock} [Full-gradient representation for neural network
+    visualization. ]{.ltx_bibblock} [*Advances in Neural Information
+    Processing Systems*, 32, 2019. ]{.ltx_bibblock}]{#bib.bib41}
+-   [[Taghanaki et al. (2021)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Saeid Asgari Taghanaki, Kristy Choi, Amir
+    Khasahmadi, and Anirudh Goyal. ]{.ltx_bibblock} [Robust
+    representation learning via perceptual similarity metrics.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:2106.06620*, 2021.
+    ]{.ltx_bibblock}]{#bib.bib42}
+-   [[Torralba (2003)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Antonio Torralba. ]{.ltx_bibblock} [Contextual priming for object
+    detection. ]{.ltx_bibblock} [*International journal of computer
+    vision*, 53(2):169--191, 2003. ]{.ltx_bibblock}]{#bib.bib43}
+-   [[Torralba and Efros (2011)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Antonio Torralba and Alexei A Efros.
+    ]{.ltx_bibblock} [Unbiased look at dataset bias. ]{.ltx_bibblock}
+    [In *CVPR 2011*, pages 1521--1528. IEEE, 2011.
+    ]{.ltx_bibblock}]{#bib.bib44}
+-   [[Valle-Perez et al. (2018)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Guillermo Valle-Perez, Chico Q Camargo, and
+    Ard A Louis. ]{.ltx_bibblock} [Deep learning generalizes because the
+    parameter-function map is biased towards simple functions.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:1805.08522*, 2018.
+    ]{.ltx_bibblock}]{#bib.bib45}
+-   [[Wah et al. (2011)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Catherine Wah, Steve Branson, Peter Welinder, Pietro Perona, and
+    Serge Belongie. ]{.ltx_bibblock} [The caltech-ucsd birds-200-2011
+    dataset. ]{.ltx_bibblock} [2011. ]{.ltx_bibblock}]{#bib.bib46}
+-   [[Wang et al. (2017)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Fei Wang, Mengqing Jiang, Chen Qian, Shuo Yang, Cheng Li, Honggang
+    Zhang, Xiaogang Wang, and Xiaoou Tang. ]{.ltx_bibblock} [Residual
+    attention network for image classification. ]{.ltx_bibblock} [In
+    *Proceedings of the IEEE Conference on Computer Vision and Pattern
+    Recognition*, pages 3156--3164, 2017. ]{.ltx_bibblock}]{#bib.bib47}
+-   [[Wang et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Haofan Wang, Zifan Wang, Mengnan Du, Fan Yang, Zijian Zhang, Sirui
+    Ding, Piotr Mardziel, and Xia Hu. ]{.ltx_bibblock} [Score-cam:
+    Score-weighted visual explanations for convolutional neural
+    networks. ]{.ltx_bibblock} [In *Proceedings of the IEEE/CVF
+    Conference on Computer Vision and Pattern Recognition Workshops*,
+    pages 24--25, 2020. ]{.ltx_bibblock}]{#bib.bib48}
+-   [[Wilson et al. (2017)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Ashia C Wilson, Rebecca Roelofs, Mitchell Stern, Nathan Srebro,
+    and Benjamin Recht. ]{.ltx_bibblock} [The marginal value of adaptive
+    gradient methods in machine learning. ]{.ltx_bibblock} [*arXiv
+    preprint arXiv:1705.08292*, 2017. ]{.ltx_bibblock}]{#bib.bib49}
+-   [[Xiao et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Kai Xiao, Logan Engstrom, Andrew Ilyas, and Aleksander Madry.
+    ]{.ltx_bibblock} [Noise or signal: The role of image backgrounds in
+    object recognition. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:2006.09994*, 2020. ]{.ltx_bibblock}]{#bib.bib50}
+-   [[Xu et al. (2015)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Kelvin Xu, Jimmy Ba, Ryan Kiros, Kyunghyun Cho, Aaron Courville,
+    Ruslan Salakhudinov, Rich Zemel, and Yoshua Bengio. ]{.ltx_bibblock}
+    [Show, attend and tell: Neural image caption generation with visual
+    attention. ]{.ltx_bibblock} [In *International Conference on Machine
+    Learning*, pages 2048--2057. PMLR, 2015.
+    ]{.ltx_bibblock}]{#bib.bib51}
+-   [[Yaghoobzadeh et al. (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Yadollah Yaghoobzadeh, Soroush Mehri, Remi
+    Tachet, Timothy J Hazen, and Alessandro Sordoni. ]{.ltx_bibblock}
+    [Increasing robustness to spurious correlations using forgettable
+    examples. ]{.ltx_bibblock} [*arXiv preprint arXiv:1911.03861*, 2019.
+    ]{.ltx_bibblock}]{#bib.bib52}
+-   [[Zhang et al. (2021)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Chiyuan Zhang, Samy Bengio, Moritz Hardt, Benjamin Recht, and Oriol
+    Vinyals. ]{.ltx_bibblock} [Understanding deep learning (still)
+    requires rethinking generalization. ]{.ltx_bibblock}
+    [*Communications of the ACM*, 64(3):107--115, 2021.
+    ]{.ltx_bibblock}]{#bib.bib53}
+-   [[Zheng et al. (2017)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Heliang Zheng, Jianlong Fu, Tao Mei, and Jiebo Luo. ]{.ltx_bibblock}
+    [Learning multi-attention convolutional neural network for
+    fine-grained image recognition. ]{.ltx_bibblock} [In *Proceedings of
+    the IEEE International Conference on Computer Vision*, pages
+    5209--5217, 2017. ]{.ltx_bibblock}]{#bib.bib54}
+-   [[Zhou et al. (2017)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Bolei Zhou, Agata Lapedriza, Aditya Khosla, Aude Oliva, and Antonio
+    Torralba. ]{.ltx_bibblock} [Places: A 10 million image database for
+    scene recognition. ]{.ltx_bibblock} [*IEEE Transactions on Pattern
+    Analysis and Machine Intelligence*, 40(6):1452--1464, 2017.
+    ]{.ltx_bibblock}]{#bib.bib55}
+:::
+
+::: {#p1 .ltx_para}
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S6.I1.i1}
+
+    ::: {#S6.I1.i1.p1 .ltx_para}
+    For all authors...
+
+    1.  [[(a)]{.ltx_tag .ltx_tag_item}]{#S6.I1.i1.I1.i1}
+
+        ::: {#S6.I1.i1.I1.i1.p1 .ltx_para}
+        Do the main claims made in the abstract and introduction
+        accurately reflect the paper's contributions and scope?
+        [\[Yes\]]{#S6.I1.i1.I1.i1.p1.1.1 .ltx_text
+        style="color:#0000FF;"}
+        :::
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S6.I1.i2}
+
+    ::: {#S6.I1.i2.p1 .ltx_para}
+    Did you describe the limitations of your work?
+    [\[Yes\]]{#S6.I1.i2.p1.1.1 .ltx_text style="color:#0000FF;"}
+    :::
+:::
+
+::: {#p2 .ltx_para}
+Did you discuss any potential negative societal impacts of your work?
+[\[Yes\] ]{#p2.1.1 .ltx_text style="color:#0000FF;"} Have you read the
+ethics review guidelines and ensured that your paper conforms to them?
+[\[Yes\] ]{#p2.1.2 .ltx_text style="color:#0000FF;"} If you are
+including theoretical results...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S6.I2.i1}
+
+    ::: {#S6.I2.i1.p1 .ltx_para}
+    Did you state the full set of assumptions of all theoretical
+    results? [\[Yes\]]{#S6.I2.i1.p1.1.1 .ltx_text
+    style="color:#0000FF;"}
+    :::
+
+Did you include complete proofs of all theoretical results? [\[Yes\]
+]{#p2.2.1 .ltx_text style="color:#0000FF;"} If you ran experiments...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S6.I3.i1}
+
+    ::: {#S6.I3.i1.p1 .ltx_para}
+    Did you include the code, data, and instructions needed to reproduce
+    the main experimental results (either in the supplemental material
+    or as a URL)? [\[Yes\]]{#S6.I3.i1.p1.1.1 .ltx_text
+    style="color:#0000FF;"}
+    :::
+
+Did you specify all the training details (e.g., data splits,
+hyperparameters, how they were chosen)? [\[Yes\] ]{#p2.3.1 .ltx_text
+style="color:#0000FF;"} Did you report error bars (e.g., with respect to
+the random seed after running experiments multiple times)? [\[Yes\]
+]{#p2.3.2 .ltx_text style="color:#0000FF;"} Did you include the total
+amount of compute and the type of resources used (e.g., type of GPUs,
+internal cluster, or cloud provider)? [\[Yes\] ]{#p2.3.3 .ltx_text
+style="color:#0000FF;"} If you are using existing assets (e.g., code,
+data, models) or curating/releasing new assets...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S6.I4.i1}
+
+    ::: {#S6.I4.i1.p1 .ltx_para}
+    If your work uses existing assets, did you cite the creators?
+    [\[Yes\]]{#S6.I4.i1.p1.1.1 .ltx_text style="color:#0000FF;"}
+    :::
+
+Did you mention the license of the assets? [\[N/A\] ]{#p2.4.1 .ltx_text
+style="color:#808080;"} Did you include any new assets either in the
+supplemental material or as a URL? [\[Yes\] ]{#p2.4.2 .ltx_text
+style="color:#0000FF;"} Did you discuss whether and how consent was
+obtained from people whose data you're using/curating? [\[N/A\]
+]{#p2.4.3 .ltx_text style="color:#808080;"} Did you discuss whether the
+data you are using/curating contains personally identifiable information
+or offensive content? [\[N/A\] ]{#p2.4.4 .ltx_text
+style="color:#808080;"} If you used crowdsourcing or conducted research
+with human subjects...
+
+1.  [[1.]{.ltx_tag .ltx_tag_item}]{#S6.I5.i1}
+
+    ::: {#S6.I5.i1.p1 .ltx_para}
+    Did you include the full text of instructions given to participants
+    and screenshots, if applicable? [\[N/A\] ]{#S6.I5.i1.p1.1.1
+    .ltx_text style="color:#808080;"}
+    :::
+2.  [[2.]{.ltx_tag .ltx_tag_item}]{#S6.I5.i2}
+
+    ::: {#S6.I5.i2.p1 .ltx_para}
+    Did you describe any potential participant risks, with links to
+    Institutional Review Board (IRB) approvals, if applicable? [\[N/A\]
+    ]{#S6.I5.i2.p1.1.1 .ltx_text style="color:#808080;"}
+    :::
+3.  [[3.]{.ltx_tag .ltx_tag_item}]{#S6.I5.i3}
+
+    ::: {#S6.I5.i3.p1 .ltx_para}
+    Did you include the estimated hourly wage paid to participants and
+    the total amount spent on participant compensation? [\[N/A\]
+    ]{#S6.I5.i3.p1.1.1 .ltx_text style="color:#808080;"}
+    :::
+:::
+
+::: {#A1 .section .ltx_appendix}
+## [Appendix A ]{.ltx_tag .ltx_tag_appendix}Appendix {#appendix-a-appendix .ltx_title .ltx_title_appendix}
+
+::: {#A1.SS1 .section .ltx_subsection}
+### [A.1 ]{.ltx_tag .ltx_tag_subsection}More Experimental Results {#a.1-more-experimental-results .ltx_title .ltx_title_subsection}
+
+::: {#A1.SS1.SSS0.Px1 .section .ltx_paragraph}
+#### Selective Classification. {#selective-classification. .ltx_title .ltx_title_paragraph}
+
+::: {#A1.SS1.SSS0.Px1.p1 .ltx_para}
+In table [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#A1.T7 "Table 7 ‣ More Aggressive Random Masking as a Baseline. ‣ A.1 More Experimental Results ‣ Appendix A Appendix ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+we show the results of the selective classification for the
+[MaskTune]{#A1.SS1.SSS0.Px1.p1.1.1 .ltx_text .ltx_font_italic} on
+different coverage values. We have run every experiment three times and
+reported the mean and std for each.
+:::
+:::
+
+::: {#A1.SS1.SSS0.Px2 .section .ltx_paragraph}
+#### Multiple Spurious Features Scenario. {#multiple-spurious-features-scenario. .ltx_title .ltx_title_paragraph}
+
+::: {#A1.SS1.SSS0.Px2.p1 .ltx_para}
+Running [MaskTune]{#A1.SS1.SSS0.Px2.p1.1.1 .ltx_text .ltx_font_italic}
+for only one iteration on a dataset with [more]{#A1.SS1.SSS0.Px2.p1.1.2
+.ltx_text .ltx_font_italic} than one spurious feature still performs
+better than ERM. If we run [MaskTune]{#A1.SS1.SSS0.Px2.p1.1.3 .ltx_text
+.ltx_font_italic} iteratively, the performance improves even more. We
+ran two iterative versions of [MaskTune]{#A1.SS1.SSS0.Px2.p1.1.4
+.ltx_text .ltx_font_italic}: accumulative and non-accumulative on the
+MNIST dataset (Table [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#A1.T5 "Table 5 ‣ Multiple Spurious Features Scenario. ‣ A.1 More Experimental Results ‣ Appendix A Appendix ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}).
+We added two coloured patches to MNIST digits as two distinct spurious
+features. We ran 1, 2, and 3 iterations of masking.
+[MaskTune]{#A1.SS1.SSS0.Px2.p1.1.5 .ltx_text .ltx_font_italic} works
+well when we do iterative accumulative masking (i.e., add new masks to
+the previously masked samples), but when we apply masks from each
+iteration to the raw input (non-accumulative), the results are not as
+good as the accumulative version. To reduce the running time, we only
+used one iteration of masking. One way to stop the accumulative masking
+is to monitor the training accuracy. If the model is not able to fit the
+data after a certain number of masking iterations (because there are no
+useful features left), the training can be stopped.
+:::
+
+<figure id="A1.T5" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 5: </span>Results
+on running <span id="A1.T5.18.1"
+class="ltx_text ltx_font_italic">MaskTune</span> for different masking
+iterations with two colored patches as two different spurious
+correlations on the MNIST dataset.</figcaption>
+</figure>
+
+::: {#A1.SS1.SSS0.Px2.p2 .ltx_para}
+[Is it harmful to use [MaskTune]{#A1.SS1.SSS0.Px2.p2.1.1.1 .ltx_text
+.ltx_font_italic} when we are unsure whether there is a spurious
+correlation in our data (e.g., ImageNet)?]{#A1.SS1.SSS0.Px2.p2.1.1
+.ltx_text .ltx_font_bold} Even if there are no spurious features in the
+input or detecting the spurious feature is difficult,
+[MaskTune]{#A1.SS1.SSS0.Px2.p2.1.2 .ltx_text .ltx_font_italic} masks the
+initially found most discriminative features, resulting in the discovery
+of the second discriminative set of features. For example, if an ERM
+model initially finds the cow's head to be the most discriminative
+feature, masking it (which is not spurious) forces the model to find the
+second best feature as well, which could be the texture of the cow's
+skin. The final model would learn both the cow's head and skin texture
+as discriminative features, rather than just the head. We ran
+[MaskTune]{#A1.SS1.SSS0.Px2.p2.1.3 .ltx_text .ltx_font_italic} on
+ImageNet. The overall test accuracy did not decrease significantly i.e.,
+from ([MaskTune]{#A1.SS1.SSS0.Px2.p2.1.4
+.ltx_text .ltx_font_italic}). After applying
+[MaskTune]{#A1.SS1.SSS0.Px2.p2.1.5 .ltx_text .ltx_font_italic},
+classification accuracy on certain classes improved significantly e.g.,
+by over For example for class "projectile, missile" the accuracy
+was improved from% to %, for class "crane" from 44% to 82%, for
+class "skunk, polecat, wood pussy" from to for class
+"coffeepot" from 48% to 64%, etc.
+:::
+:::
+
+::: {#A1.SS1.SSS0.Px3 .section .ltx_paragraph}
+#### More Aggressive Random Masking as a Baseline. {#more-aggressive-random-masking-as-a-baseline. .ltx_title .ltx_title_paragraph}
+
+::: {#A1.SS1.SSS0.Px3.p1 .ltx_para}
+We compare [MaskTune]{#A1.SS1.SSS0.Px3.p1.3.1 .ltx_text
+.ltx_font_italic} to a another version of random masking with different
+window sizes on the MNIST dataset. For each image, we randomly selected
+a window of
+$\{{{{2 \times 2},{3 \times 3},{4 \times 4},\ldots}.{n \times n}}\}$
+pixels where $n$ is the image size divided by $2$. As shown in Table
+[[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#A1.T6 "Table 6 ‣ More Aggressive Random Masking as a Baseline. ‣ A.1 More Experimental Results ‣ Appendix A Appendix ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref},
+[MaskTune]{#A1.SS1.SSS0.Px3.p1.3.2 .ltx_text .ltx_font_italic} still
+outperforms the random masking approach.
+:::
+
+<figure id="A1.T6" class="ltx_table">
+<table id="A1.T6.4" class="ltx_tabular ltx_centering ltx_align_middle">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 6: </span>Compare
+<span id="A1.T6.6.1" class="ltx_text ltx_font_italic">MaskTune</span>
+with random masking.</figcaption>
+</figure>
+
+<figure id="A1.T7" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 7:
+</span>Selective clssification results on CIFAR-10, SVHN, and Cats vs.
+Dogs datasets for different coverage values.</figcaption>
+</figure>
+:::
+:::
+:::
+
+::: {#A2 .section .ltx_appendix}
+## [Appendix B ]{.ltx_tag .ltx_tag_appendix}Hardware {#appendix-b-hardware .ltx_title .ltx_title_appendix}
+
+::: {#A2.p1 .ltx_para}
+We used two multi-GPU machines for all the experiments: a) 8 NVIDIA V100
+Tensor Core GPUs with 32 GB of memory each, 728 GB RAM, b) 4 NVIDIA
+Quadro RTX 5000 with 16 GB memory each, and 128 GB RAM.
+:::
+:::
+
+::: {#A3 .section .ltx_appendix}
+## [Appendix C ]{.ltx_tag .ltx_tag_appendix}Missing proofs {#appendix-c-missing-proofs .ltx_title .ltx_title_appendix}
+
+::: {#A3.p1 .ltx_para}
+See [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#Thmproposition2 "Proposition 2. ‣ 2.2 Adapting MaskTune for Selective Classification ‣ 2 Method ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+:::
+
+::: {#A3.1 .ltx_proof}
+###### Proof. {#proof.-1 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#A3.1.p1 .ltx_para}
+Let $Y \in {\mathbb{R}}^{d}$ be the targets in training data. Let
+${\hat{\theta}}^{+ s}$ denote the recovered coefficient for the first
+$d - 1$ features and $\hat{w}$ be the coefficient for the feature $s$.
+The parameters after the first round can be obtained by the following
+optimization problem.
+
+  -- ----------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     ${{\hat{\theta}}^{+ s},\hat{w}} = {{\underset{\theta,w}{\arg\operatorname{}\min}{\|\theta\|}_{2}^{2}} + w^{2}}$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $s.t.\mspace{21mu} Z\theta + Sw = Y,$                                                                                [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+where $\hat{w}$ denotes the weight associated with the feature $s$.
+Recall that we assumed that after training the first model we mask the
+feature $s$. The parameters for the second model that does not use
+feature $s$ can be obtained by solving the following optimization
+problem, where ${\hat{\theta}}^{- s}$ denote the recovered coefficients.
+
+  -- ------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     ${\hat{\theta}}^{- s} = {\underset{\theta}{\arg\operatorname{}\min}{\|\theta\|}_{2}^{2}}$      [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     $s.t.\mspace{21mu} Z\theta = Y,$                                                               [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+The minimum norm solution in the first round is:
+
+  -- ---------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     $\theta^{+ s} = {Z^{\top}\operatorname{}{({Z\operatorname{}Z^{\top}})}^{- 1}\operatorname{}{({Y - {S\operatorname{}\hat{w}}})}}$      [(7)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ---------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+The min-norm solution for the second round is:
+
+  -- ------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $\theta^{- s} = {Z^{\top}\operatorname{}{({Z\operatorname{}Z^{\top}})}^{- 1}\operatorname{}Y}$      [(8)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+Now we show that for a new test set $(z^{\star},s^{\star})$, the models
+$m_{\theta}^{\text{final}}$ and $m_{\theta}^{\text{initial}}$ predict
+the same if there is no covariate shift between $z$ and $s$. We are
+assuming that $\hat{w}$ is not zero meaning that the first model is
+using the feature $s$.
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+     ${{({Z^{\top}\operatorname{}{({Z\operatorname{}Z^{\top}})}^{- 1}\operatorname{}Y})}^{\top}\operatorname{}z^{\star}} = {{{({Z^{\top}\operatorname{}{({Z\operatorname{}Z^{\top}})}^{- 1}\operatorname{}{({Y - {S\operatorname{}\hat{w}}})}})}^{\top}\operatorname{}z^{\star}} + {\hat{w}\operatorname{}s^{\star}}}$      [(9)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${(Z^{\top}{(ZZ^{\top})}^{- 1}S\hat{w})})^{\top}z^{\star} = \hat{w}s^{\star}$                                                                                                                                                                                                                                          [(10)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+     ${(Z^{\top}{(ZZ^{\top})}^{- 1}S)})^{\top}z^{\star} = s^{\star}$                                                                                                                                                                                                                                                        [(11)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+
+For proving the other direction, if we have
+${(Z^{\top}{(ZZ^{\top})}^{- 1}S)})^{\top}z^{\star} = s^{\star}$ then we
+can deduce from Equation [[11]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#A3.E11 "11 ‣ Proof. ‣ Appendix C Missing proofs ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}
+to Equation [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2210.00055#A3.E9 "9 ‣ Proof. ‣ Appendix C Missing proofs ‣ MaskTune: Mitigating Spurious Correlations by Forcing to Explore"){.ltx_ref}.
+∎
+:::
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2210.00054){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./mask_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2210.00055){.ar5iv-text-button
+.ar5iv-severity-error} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2210.00055){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2210.00055){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2210.00056){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Sun Jul 30 23:32:50 2023 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+
+::: {#simplifyJobsPortals}
+:::
+:::

@@ -1,0 +1,3 @@
+paper_id,exp_id,combined_id,description,result,ref_sol
+2209.15486,0,2209.15486_0,Experiment: Run ELPH model on Cora dataset,87.72,"cd src
+python runners/run.py --dataset_name Cora --model ELPH"
