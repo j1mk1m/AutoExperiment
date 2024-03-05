@@ -3,6 +3,11 @@
 - nvidia-container-toolkit (for gpu use) https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-apt 
 
 # How to run
+First, set up base docker image:
+```
+cd baselines
+docker build -t base_image .
+```
 ```
 python main.py --baseline MLAgentBench --mode FC --local
 ```
