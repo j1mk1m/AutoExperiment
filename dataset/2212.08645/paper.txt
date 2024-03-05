@@ -1,3 +1,34 @@
+::: ltx_page_main
+::: ltx_page_content
+# Efficient Conditionally Invariant Representation Learning {#efficient-conditionally-invariant-representation-learning .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [Roman Pogodin\
+Gatsby Unit, UCL\
+[rmn.pogodin@gmail.com]{#id16.4.id1 .ltx_text .ltx_font_typewriter}\
+&Namrata Deka$^{*}$\
+UBC\
+[dnamrata@cs.ubc.ca]{#id17.5.id2 .ltx_text .ltx_font_typewriter}\
+&Yazhe Li$^{*}$\
+DeepMind & Gatsby Unit, UCL\
+[yazhe@google.com]{#id18.6.id3 .ltx_text .ltx_font_typewriter}\
+[\\AND]{#id19.7.id4 .ltx_ERROR .undefined}Danica J. Sutherland\
+UBC & Amii\
+[dsuth@cs.ubc.ca]{#id20.8.id5 .ltx_text .ltx_font_typewriter} &Victor
+Veitch\
+UChicago & Google Brain\
+[victorveitch@google.com]{#id21.9.id6 .ltx_text .ltx_font_typewriter}
+&Arthur Gretton\
+Gatsby Unit, UCL\
+[arthur.gretton@gmail.com]{#id22.10.id7 .ltx_text .ltx_font_typewriter}\
+]{.ltx_personname}[Equal contribution. $^{\dagger}$Code for image data
+experiments is available at
+[github.com/namratadeka/circe](https://github.com/namratadeka/circe){.ltx_ref
+.ltx_href target="_blank"}]{.ltx_author_notes}]{.ltx_creator
+.ltx_role_author}
+:::
+
+::: ltx_abstract
 ###### Abstract {#abstract .ltx_title .ltx_title_abstract}
 
 We introduce the Conditional Independence Regression CovariancE (CIRCE),
@@ -683,7 +714,98 @@ follows:
   -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
      $${{{\min\limits_{\theta}L}\operatorname{}{({\varphi_{\theta}\operatorname{}{(X)}},Y)}} + {\gamma\operatorname{}{CIRCE}\operatorname{}{({\varphi_{\theta}\operatorname{}{(X)}},Z,Y)}}}.$$      [(12)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
   -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
+:::
+:::
+:::
 
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Related work {#related-work .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para .ltx_noindent}
+We review prior work on kernel-based measures of conditional
+independence to determine or enforce $X \perp \perp Z|Y,$ including
+those measures we compare against in our experiments in
+[[Section]{.ltx_text .ltx_ref_tag} [4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4 "4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
+We begin with procedures based on kernel conditional feature
+covariances. The conditional kernel cross-covariance was first
+introduced as a measure of conditional dependence by Sun et al.
+([2007](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib35){.ltx_ref}).
+Following this work, a kernel-based conditional independence test (KCI)
+was proposed by Zhang et al.
+([2011](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib39){.ltx_ref}).
+The latter test relies on satisfying [[2.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem2 "Proposition 2.2 (Daudin, 1980). ‣ 2.1 Conditional independence ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+leading to a statistic[^4^[[^4^[4]{.ltx_tag .ltx_tag_note}The
+conditional-independence test statistic used by KCI is
+$\frac{1}{B}\operatorname{}\text{Tr}\operatorname{}\left( {{\overset{\sim}{K}}_{\overset{¨}{X}|Y}\operatorname{}{\overset{\sim}{K}}_{Z|Y}} \right)$,
+where $\overset{¨}{X} = {(X,Y)}$ and $\overset{\sim}{K}$ is a centered
+kernel matrix. Unlike CIRCE, ${\overset{\sim}{K}}_{\overset{¨}{X}|Y}$
+requires regressing $\overset{¨}{X}$ on $Y$ using kernel ridge
+regression.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote4 .ltx_note
+.ltx_role_footnote} that requires regression of
+$\varphi\operatorname{}{(X)}$ on $Y$ in every minibatch (as well as of
+$Z$ on $Y$, as in our setting). More recently, Quinzan et al.
+([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib28){.ltx_ref})
+introduced a variant of the Hilbert-Schmidt Conditional Independence
+Criterion (HSCIC; Park & Muandet,
+[2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib26){.ltx_ref})
+as a regularizer to learn a generalized notion of
+counterfactually-invariant representations (Veitch et al.,
+[2021](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib37){.ltx_ref}).
+Estimating
+$\text{HSCIC}\operatorname{}{(X,\left. Z \middle| Y \right.)}$ from
+finite samples requires estimating the conditional mean-embeddings
+$\mu_{X,{Z|Y}}$, $\mu_{X|Y}$ and $\mu_{Z|Y}$ via regressions
+(Grunewalder et al.,
+[2012](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib12){.ltx_ref}).
+HSCIC requires three times as many regressions as CIRCE, of which two
+must be done online in minibatches to account for the conditional
+cross-covariance terms involving $X$. We will compare against HSCIC in
+experiements, being representative of this class of methods, and having
+been employed successfully in a setting similar to ours.
+:::
+
+::: {#S3.p2 .ltx_para .ltx_noindent}
+Alternative measures of conditional independence make use of additional
+normalization over the measures described above. The Hilbert-Schmidt
+norm of the [normalized]{#S3.p2.7.1 .ltx_text .ltx_font_italic}
+cross-covariance was introduced as a test statistic for conditional
+independence by Fukumizu et al.
+([2008](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib6){.ltx_ref}),
+and was used for structure identification in directed graphical models.
+Huang et al.
+([2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib14){.ltx_ref})
+proposed using the ratio of the [maximum mean discrepancy]{#S3.p2.7.2
+.ltx_text .ltx_font_italic} (MMD) between $P_{X|{Z\operatorname{}Y}}$
+and $P_{X|Y}$, and the MMD between the Dirac measure at $X$ and
+$P_{X|Y},$ as a measure of the conditional dependence between $X$ and
+$Z$ given $Y$. The additional normalization terms in these statistics
+can result in favourable asymptotic properties when used in statistical
+testing. This comes at the cost of increased computational complexity,
+and reduced numerical stability when used as regularizers on
+minibatches.
+:::
+
+::: {#S3.p3 .ltx_para .ltx_noindent}
+Another approach, due to Shah & Peters
+([2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib31){.ltx_ref}),
+is the Generalized Covariance Measure (GCM). This is a normalized
+version of the covariance between residuals from kernel-ridge
+regressions of $X$ on $Y$ and $Z$ on $Y$ (in the multivariate case, a
+maximum over covariances between univariate regressions is taken). As
+with the approaches discussed above, the GCM also involves multiple
+regressions -- one of which (regressing $X$ on $Y$) cannot be done
+offline. Since the regressions are univariate, and since GCM simply
+regresses $Z$ and $X$ on $Y$ (instead of $\psi\operatorname{}{(Z,Y)}$
+and $\phi\operatorname{}{(X)}$ on $Y$), we anticipate that GCM might
+provide better regularization than HSCIC on minibatches. This comes at a
+cost, however, since by using regression residuals rather than
+conditionally centered features, there will be instances of conditional
+dependence that will not be detectable. We will investigate this further
+in our experiments.
+:::
+:::
 
 ::: {#S4 .section .ltx_section}
 ## [4 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
@@ -703,6 +825,14 @@ and GCM (Shah & Peters,
 
 ::: {#S4.SS1 .section .ltx_subsection}
 ### [4.1 ]{.ltx_tag .ltx_tag_subsection}Synthetic Data {#synthetic-data .ltx_title .ltx_title_subsection}
+
+<figure id="S4.F1" class="ltx_figure ltx_align_floatright">
+<img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzQuRjEucGljMSIgY2xhc3M9Imx0eF9waWN0dXJlIGx0eF9jZW50ZXJpbmciIGhlaWdodD0iOTAuOTUiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSIxNjMuNDIiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsOTAuOTUpIG1hdHJpeCgxIDAgMCAtMSAwIDApIHRyYW5zbGF0ZSgxNC4xMSwwKSB0cmFuc2xhdGUoMCwyOC45MykiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLXdpZHRoPSIwLjRwdCIgY29sb3I9IiMwMDAwMDAiPjxnIGZpbGw9IiNGRkZGRkYiIHN0cm9rZT0iIzAwMDAwMCI+PHBhdGggZD0iTSAxMy44NCAwIEMgMTMuODQgNy42NCA3LjY0IDEzLjg0IDAgMTMuODQgQyAtNy42NCAxMy44NCAtMTMuODQgNy42NCAtMTMuODQgMCBDIC0xMy44NCAtNy42NCAtNy42NCAtMTMuODQgMCAtMTMuODQgQyA3LjY0IC0xMy44NCAxMy44NCAtNy42NCAxMy44NCAwIFogTSAwIDAiPjwvcGF0aD48L2c+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMS4wIDAuMCAwLjAgMS4wIC01LjIyIC00LjczKSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIj48Zm9yZWlnbm9iamVjdCB3aWR0aD0iMTAuNDQiIGhlaWdodD0iOS40NiIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxtYXRoIGlkPSJTNC5GMS5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEiIGNsYXNzPSJsdHhfTWF0aCIgYWx0dGV4dD0iWiIgZGlzcGxheT0iaW5saW5lIj48c2VtYW50aWNzIGlkPSJTNC5GMS5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFhIj48bWkgaWQ9IlM0LkYxLnBpYzEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMS4xIiB4cmVmPSJTNC5GMS5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIj5aPC9taT48YW5ub3RhdGlvbi14bWwgZW5jb2Rpbmc9Ik1hdGhNTC1Db250ZW50IiBpZD0iUzQuRjEucGljMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYiI+PGNpIGlkPSJTNC5GMS5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIiB4cmVmPSJTNC5GMS5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMSI+8J2RjTwvY2k+PC9hbm5vdGF0aW9uLXhtbD48YW5ub3RhdGlvbiBlbmNvZGluZz0iYXBwbGljYXRpb24veC10ZXgiIGlkPSJTNC5GMS5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFjIj5aPC9hbm5vdGF0aW9uPjxhbm5vdGF0aW9uIGVuY29kaW5nPSJhcHBsaWNhdGlvbi94LWxsYW1hcHVuIiBpZD0iUzQuRjEucGljMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xZCI+aXRhbGljX1o8L2Fubm90YXRpb24+PC9zZW1hbnRpY3M+PC9tYXRoPjwvZm9yZWlnbm9iamVjdD48L2c+PGcgZmlsbD0iI0ZGRkZGRiIgc3Ryb2tlPSIjMDAwMDAwIj48cGF0aCBkPSJNIDgxLjQzIDAgQyA4MS40MyA3LjY0IDc1LjI0IDEzLjg0IDY3LjYgMTMuODQgQyA1OS45NiAxMy44NCA1My43NiA3LjY0IDUzLjc2IDAgQyA1My43NiAtNy42NCA1OS45NiAtMTMuODQgNjcuNiAtMTMuODQgQyA3NS4yNCAtMTMuODQgODEuNDMgLTcuNjQgODEuNDMgMCBaIE0gNjcuNiAwIj48L3BhdGg+PC9nPjxnIHRyYW5zZm9ybT0ibWF0cml4KDEuMCAwLjAgMC4wIDEuMCA2Mi40MSAtNC43MykiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjEwLjM4IiBoZWlnaHQ9IjkuNDYiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48bWF0aCBpZD0iUzQuRjEucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xIiBjbGFzcz0ibHR4X01hdGgiIGFsdHRleHQ9IkEiIGRpc3BsYXk9ImlubGluZSI+PHNlbWFudGljcyBpZD0iUzQuRjEucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYSI+PG1pIGlkPSJTNC5GMS5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMSIgeHJlZj0iUzQuRjEucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xLjEuY21tbCI+QTwvbWk+PGFubm90YXRpb24teG1sIGVuY29kaW5nPSJNYXRoTUwtQ29udGVudCIgaWQ9IlM0LkYxLnBpYzEuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMWIiPjxjaSBpZD0iUzQuRjEucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xLjEuY21tbCIgeHJlZj0iUzQuRjEucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xLjEiPvCdkLQ8L2NpPjwvYW5ub3RhdGlvbi14bWw+PGFubm90YXRpb24gZW5jb2Rpbmc9ImFwcGxpY2F0aW9uL3gtdGV4IiBpZD0iUzQuRjEucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYyI+QTwvYW5ub3RhdGlvbj48YW5ub3RhdGlvbiBlbmNvZGluZz0iYXBwbGljYXRpb24veC1sbGFtYXB1biIgaWQ9IlM0LkYxLnBpYzEuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMWQiPml0YWxpY19BPC9hbm5vdGF0aW9uPjwvc2VtYW50aWNzPjwvbWF0aD48L2ZvcmVpZ25vYmplY3Q+PC9nPjxnIGZpbGw9IiNGRkZGRkYiIHN0cm9rZT0iIzAwMDAwMCI+PHBhdGggZD0iTSAxNDkuMDMgMCBDIDE0OS4wMyA3LjY0IDE0Mi44NCAxMy44NCAxMzUuMiAxMy44NCBDIDEyNy41NSAxMy44NCAxMjEuMzYgNy42NCAxMjEuMzYgMCBDIDEyMS4zNiAtNy42NCAxMjcuNTUgLTEzLjg0IDEzNS4yIC0xMy44NCBDIDE0Mi44NCAtMTMuODQgMTQ5LjAzIC03LjY0IDE0OS4wMyAwIFogTSAxMzUuMiAwIj48L3BhdGg+PC9nPjxnIHRyYW5zZm9ybT0ibWF0cml4KDEuMCAwLjAgMC4wIDEuMCAxMjkuNiAtNC43MykiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCI+PGZvcmVpZ25vYmplY3Qgd2lkdGg9IjExLjE5IiBoZWlnaHQ9IjkuNDYiIHRyYW5zZm9ybT0ibWF0cml4KDEgMCAwIC0xIDAgMTYuNikiIG92ZXJmbG93PSJ2aXNpYmxlIj48bWF0aCBpZD0iUzQuRjEucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xIiBjbGFzcz0ibHR4X01hdGgiIGFsdHRleHQ9IkIiIGRpc3BsYXk9ImlubGluZSI+PHNlbWFudGljcyBpZD0iUzQuRjEucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYSI+PG1pIGlkPSJTNC5GMS5waWMxLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMSIgeHJlZj0iUzQuRjEucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xLjEuY21tbCI+QjwvbWk+PGFubm90YXRpb24teG1sIGVuY29kaW5nPSJNYXRoTUwtQ29udGVudCIgaWQ9IlM0LkYxLnBpYzEuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMWIiPjxjaSBpZD0iUzQuRjEucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xLjEuY21tbCIgeHJlZj0iUzQuRjEucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xLjEiPvCdkLU8L2NpPjwvYW5ub3RhdGlvbi14bWw+PGFubm90YXRpb24gZW5jb2Rpbmc9ImFwcGxpY2F0aW9uL3gtdGV4IiBpZD0iUzQuRjEucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYyI+QjwvYW5ub3RhdGlvbj48YW5ub3RhdGlvbiBlbmNvZGluZz0iYXBwbGljYXRpb24veC1sbGFtYXB1biIgaWQ9IlM0LkYxLnBpYzEuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMWQiPml0YWxpY19CPC9hbm5vdGF0aW9uPjwvc2VtYW50aWNzPjwvbWF0aD48L2ZvcmVpZ25vYmplY3Q+PC9nPjxnIGZpbGw9IiNGRkZGRkYiIHN0cm9rZT0iIzAwMDAwMCI+PHBhdGggZD0iTSA4MS40MyA0Ny45MSBDIDgxLjQzIDU1LjU1IDc1LjI0IDYxLjc1IDY3LjYgNjEuNzUgQyA1OS45NiA2MS43NSA1My43NiA1NS41NSA1My43NiA0Ny45MSBDIDUzLjc2IDQwLjI3IDU5Ljk2IDM0LjA4IDY3LjYgMzQuMDggQyA3NS4yNCAzNC4wOCA4MS40MyA0MC4yNyA4MS40MyA0Ny45MSBaIE0gNjcuNiA0Ny45MSI+PC9wYXRoPjwvZz48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLjAgMC4wIDAuMCAxLjAgNjIuMDQgNDMuMTgpIiBmaWxsPSIjMDAwMDAwIiBzdHJva2U9IiMwMDAwMDAiPjxmb3JlaWdub2JqZWN0IHdpZHRoPSIxMS4xMSIgaGVpZ2h0PSI5LjQ2IiB0cmFuc2Zvcm09Im1hdHJpeCgxIDAgMCAtMSAwIDE2LjYpIiBvdmVyZmxvdz0idmlzaWJsZSI+PG1hdGggaWQ9IlM0LkYxLnBpYzEuNC40LjQuNC40LjQuNC40LjQuNC40LjQuNC4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMSIgY2xhc3M9Imx0eF9NYXRoIiBhbHR0ZXh0PSJZIiBkaXNwbGF5PSJpbmxpbmUiPjxzZW1hbnRpY3MgaWQ9IlM0LkYxLnBpYzEuNC40LjQuNC40LjQuNC40LjQuNC40LjQuNC4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMWEiPjxtaSBpZD0iUzQuRjEucGljMS40LjQuNC40LjQuNC40LjQuNC40LjQuNC40LjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xLjEiIHhyZWY9IlM0LkYxLnBpYzEuNC40LjQuNC40LjQuNC40LjQuNC40LjQuNC4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMS4xLmNtbWwiPlk8L21pPjxhbm5vdGF0aW9uLXhtbCBlbmNvZGluZz0iTWF0aE1MLUNvbnRlbnQiIGlkPSJTNC5GMS5waWMxLjQuNC40LjQuNC40LjQuNC40LjQuNC40LjQuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFiIj48Y2kgaWQ9IlM0LkYxLnBpYzEuNC40LjQuNC40LjQuNC40LjQuNC40LjQuNC4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMS4xLmNtbWwiIHhyZWY9IlM0LkYxLnBpYzEuNC40LjQuNC40LjQuNC40LjQuNC40LjQuNC4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMS4xIj7wnZGMPC9jaT48L2Fubm90YXRpb24teG1sPjxhbm5vdGF0aW9uIGVuY29kaW5nPSJhcHBsaWNhdGlvbi94LXRleCIgaWQ9IlM0LkYxLnBpYzEuNC40LjQuNC40LjQuNC40LjQuNC40LjQuNC4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMWMiPlk8L2Fubm90YXRpb24+PGFubm90YXRpb24gZW5jb2Rpbmc9ImFwcGxpY2F0aW9uL3gtbGxhbWFwdW4iIGlkPSJTNC5GMS5waWMxLjQuNC40LjQuNC40LjQuNC40LjQuNC40LjQuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFkIj5pdGFsaWNfWTwvYW5ub3RhdGlvbj48L3NlbWFudGljcz48L21hdGg+PC9mb3JlaWdub2JqZWN0PjwvZz48cGF0aCBkPSJNIDU2LjA4IDM5Ljc1IEwgMTIuNDMgOC44MSIgc3R5bGU9ImZpbGw6bm9uZSI+PC9wYXRoPjxnIHRyYW5zZm9ybT0ibWF0cml4KC0wLjgxNTg0IC0wLjU3ODI2IDAuNTc4MjYgLTAuODE1ODQgMTIuNDMgOC44MSkiIHN0cm9rZS1kYXNoYXJyYXk9Im5vbmUiIHN0cm9rZS1kYXNob2Zmc2V0PSIwLjBwdCIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciI+PHBhdGggZD0iTSAtNy4yMyAzLjI0IEwgMC40MiAwIEwgLTcuMjMgLTMuMjQgWiI+PC9wYXRoPjwvZz48cGF0aCBkPSJNIDY3LjYgMzMuOCBMIDY3LjYgMTUuMjQiIHN0eWxlPSJmaWxsOm5vbmUiPjwvcGF0aD48ZyB0cmFuc2Zvcm09Im1hdHJpeCgwLjAgLTEuMCAxLjAgMC4wIDY3LjYgMTUuMjQpIiBzdHJva2UtZGFzaGFycmF5PSJub25lIiBzdHJva2UtZGFzaG9mZnNldD0iMC4wcHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPjxwYXRoIGQ9Ik0gLTcuMjMgMy4yNCBMIDAuNDIgMCBMIC03LjIzIC0zLjI0IFoiPjwvcGF0aD48L2c+PHBhdGggZD0iTSA3OS4xMSAzOS43NSBMIDEyMi43NiA4LjgxIiBzdHlsZT0iZmlsbDpub25lIj48L3BhdGg+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMC44MTU4NCAtMC41NzgyNiAwLjU3ODI2IDAuODE1ODQgMTIyLjc2IDguODEpIiBzdHJva2UtZGFzaGFycmF5PSJub25lIiBzdHJva2UtZGFzaG9mZnNldD0iMC4wcHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPjxwYXRoIGQ9Ik0gLTcuMjMgMy4yNCBMIDAuNDIgMCBMIC03LjIzIC0zLjI0IFoiPjwvcGF0aD48L2c+PHBhdGggZD0iTSAxNC4xMSAwIEwgNTIuMzYgMCIgc3R5bGU9ImZpbGw6bm9uZSI+PC9wYXRoPjxnIHRyYW5zZm9ybT0ibWF0cml4KDEuMCAwLjAgMC4wIDEuMCA1Mi4zNiAwKSIgc3Ryb2tlLWRhc2hhcnJheT0ibm9uZSIgc3Ryb2tlLWRhc2hvZmZzZXQ9IjAuMHB0IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIj48cGF0aCBkPSJNIC03LjIzIDMuMjQgTCAwLjQyIDAgTCAtNy4yMyAtMy4yNCBaIj48L3BhdGg+PC9nPjxwYXRoIGQ9Ik0gODEuNzEgMCBMIDExOS45NiAwIiBzdHlsZT0iZmlsbDpub25lIj48L3BhdGg+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMS4wIDAuMCAwLjAgMS4wIDExOS45NiAwKSIgc3Ryb2tlLWRhc2hhcnJheT0ibm9uZSIgc3Ryb2tlLWRhc2hvZmZzZXQ9IjAuMHB0IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIj48cGF0aCBkPSJNIC03LjIzIDMuMjQgTCAwLjQyIDAgTCAtNy4yMyAtMy4yNCBaIj48L3BhdGg+PC9nPjxwYXRoIGQ9Ik0gMTIuMjIgLTcuMDYgQyA0OS42MyAtMjguNjUgODUuNTcgLTI4LjY1IDEyMiAtNy42MiIgc3R5bGU9ImZpbGw6bm9uZSI+PC9wYXRoPjxnIHRyYW5zZm9ybT0ibWF0cml4KDAuODY2MDMgMC41IC0wLjUgMC44NjYwMyAxMjIgLTcuNjIpIiBzdHJva2UtZGFzaGFycmF5PSJub25lIiBzdHJva2UtZGFzaG9mZnNldD0iMC4wcHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPjxwYXRoIGQ9Ik0gLTcuMjMgMy4yNCBMIDAuNDIgMCBMIC03LjIzIC0zLjI0IFoiPjwvcGF0aD48L2c+PC9nPjwvc3ZnPg=="
+id="S4.F1.pic1" class="ltx_picture ltx_centering" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 1: </span>Causal
+structure for synthetic datasets.</figcaption>
+</figure>
 
 ::: {#S4.SS1.p1 .ltx_para .ltx_noindent}
 We first evaluate performance on the synthetic datasets proposed by
@@ -741,10 +871,77 @@ eq. 4; lower is better). Given $X = {(A,Y,Z)}$,
 $P_{{\hat{B}}_{z^{\prime}}^{*}|X}$ is the counterfactual distribution of
 $\hat{B}$ given $X = x$ and an intervention of setting $z$ to
 $z^{\prime}$.
+:::
+
+::: {#S4.SS1.SSS0.Px1 .section .ltx_paragraph}
+##### Univariate Cases {#univariate-cases .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px1.p1 .ltx_para .ltx_noindent}
+[[Table]{.ltx_text .ltx_ref_tag} [1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.T1 "Table 1 ‣ Univariate Cases ‣ 4.1 Synthetic Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
+summarizes the in-domain MSE loss and VCF comparing CIRCE to baselines.
+Without regularization, MSE loss is low in-domain but the representation
+is not invariant to changes of $Z$. With regularization, all three
+methods successfully achieve counterfactual invariance in these simple
+settings, and exhibit similar in-domain performance.
+:::
+
+<figure id="S4.T1" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table">Table 1: </span>MSE loss
+and VCF for univariate synthetic datasets. Comparison of representation
+without conditional independence regularization against regularization
+with GCM, HSCIC and CIRCE.</figcaption>
+</figure>
+:::
+
+::: {#S4.SS1.SSS0.Px2 .section .ltx_paragraph}
+##### Multivariate Cases {#multivariate-cases .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px2.p1 .ltx_para}
+We present results on 2 multivariate cases: case 1 has high dimensional
+$Z$ and case 2 has high dimensional $Y$. For each multivariate case, we
+vary the number of dimensions $d = {\{ 2,5,10,20\}}$. To visualize the
+trade-offs between in-domain performance and invariant representation,
+we plot the Pareto front of MSE loss and VCF. With high dimensional $Z$
+([[Figure]{.ltx_text .ltx_ref_tag} [2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F2 "Figure 2 ‣ Multivariate Cases ‣ 4.1 Synthetic Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}A),
+CIRCE and HSCIC have a similar trade-off profile, however it is notable
+that GCM needs to sacrifice more in-domain performance to achieve the
+same level of invariance. This may be because the GCM statistic is a
+maximum over normalized covariances of univariate residuals, which can
+be less effective in a multivariate setting. For high dimensional $Y$
+([[Figure]{.ltx_text .ltx_ref_tag} [2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F2 "Figure 2 ‣ Multivariate Cases ‣ 4.1 Synthetic Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}B),
+the regression from $Y$ to $\psi\operatorname{}{(Z)}$ is much harder. We
+observe that HSCIC becomes less efficient with increasing $d$ until at
+$d = 20$ it fails completely, while GCM still sacrifices more in-domain
+performance than CIRCE.
+:::
+
+<figure id="S4.F2" class="ltx_figure">
+<img src="./2212.08645_files/pareto_combined.png" id="S4.F2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="466"
+height="207" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 2: </span>Pareto
+front of MSE and VCF for multivariate synthetic dataset. <span
+id="S4.F2.3.1" class="ltx_text ltx_font_bold">A</span>: case 1; <span
+id="S4.F2.4.2" class="ltx_text ltx_font_bold">B</span>: case
+2.</figcaption>
+</figure>
+:::
+:::
 
 ::: {#S4.SS2 .section .ltx_subsection}
 ### [4.2 ]{.ltx_tag .ltx_tag_subsection}Image Data {#image-data .ltx_title .ltx_title_subsection}
 
+<figure id="S4.F3" class="ltx_figure ltx_align_floatright">
+<img
+src="data:image/svg+xml;base64,PHN2ZyBpZD0iUzQuRjMucGljMSIgY2xhc3M9Imx0eF9waWN0dXJlIGx0eF9jZW50ZXJpbmciIGhlaWdodD0iNjAuMjYiIG92ZXJmbG93PSJ2aXNpYmxlIiB2ZXJzaW9uPSIxLjEiIHdpZHRoPSIxMDYuOTciPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsNjAuMjYpIG1hdHJpeCgxIDAgMCAtMSAwIDApIHRyYW5zbGF0ZSg1My40OCwwKSB0cmFuc2xhdGUoMCwxNC4xMSkiIGZpbGw9IiMwMDAwMDAiIHN0cm9rZT0iIzAwMDAwMCIgc3Ryb2tlLXdpZHRoPSIwLjRwdCIgY29sb3I9IiMwMDAwMDAiPjxnIGZpbGw9IiNGRkZGRkYiIHN0cm9rZT0iIzAwMDAwMCI+PHBhdGggZD0iTSAxMy44NCAwIEMgMTMuODQgNy42NCA3LjY0IDEzLjg0IDAgMTMuODQgQyAtNy42NCAxMy44NCAtMTMuODQgNy42NCAtMTMuODQgMCBDIC0xMy44NCAtNy42NCAtNy42NCAtMTMuODQgMCAtMTMuODQgQyA3LjY0IC0xMy44NCAxMy44NCAtNy42NCAxMy44NCAwIFogTSAwIDAiPjwvcGF0aD48L2c+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMS4wIDAuMCAwLjAgMS4wIC02LjI3IC00LjczKSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIj48Zm9yZWlnbm9iamVjdCB3aWR0aD0iMTIuNTUiIGhlaWdodD0iOS40NiIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxtYXRoIGlkPSJTNC5GMy5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEiIGNsYXNzPSJsdHhfTWF0aCIgYWx0dGV4dD0iWCIgZGlzcGxheT0iaW5saW5lIj48c2VtYW50aWNzIGlkPSJTNC5GMy5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFhIj48bWkgaWQ9IlM0LkYzLnBpYzEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMS4xIiB4cmVmPSJTNC5GMy5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIj5YPC9taT48YW5ub3RhdGlvbi14bWwgZW5jb2Rpbmc9Ik1hdGhNTC1Db250ZW50IiBpZD0iUzQuRjMucGljMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYiI+PGNpIGlkPSJTNC5GMy5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIiB4cmVmPSJTNC5GMy5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMSI+8J2RizwvY2k+PC9hbm5vdGF0aW9uLXhtbD48YW5ub3RhdGlvbiBlbmNvZGluZz0iYXBwbGljYXRpb24veC10ZXgiIGlkPSJTNC5GMy5waWMxLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFjIj5YPC9hbm5vdGF0aW9uPjxhbm5vdGF0aW9uIGVuY29kaW5nPSJhcHBsaWNhdGlvbi94LWxsYW1hcHVuIiBpZD0iUzQuRjMucGljMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xZCI+aXRhbGljX1g8L2Fubm90YXRpb24+PC9zZW1hbnRpY3M+PC9tYXRoPjwvZm9yZWlnbm9iamVjdD48L2c+PGcgZmlsbD0iI0ZGRkZGRiIgc3Ryb2tlPSIjMDAwMDAwIj48cGF0aCBkPSJNIC0yNS41MyAyOC4yMyBDIC0yNS41MyAzNS44NyAtMzEuNzMgNDIuMDYgLTM5LjM3IDQyLjA2IEMgLTQ3LjAxIDQyLjA2IC01My4yMSAzNS44NyAtNTMuMjEgMjguMjMgQyAtNTMuMjEgMjAuNTkgLTQ3LjAxIDE0LjM5IC0zOS4zNyAxNC4zOSBDIC0zMS43MyAxNC4zOSAtMjUuNTMgMjAuNTkgLTI1LjUzIDI4LjIzIFogTSAtMzkuMzcgMjguMjMiPjwvcGF0aD48L2c+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMS4wIDAuMCAwLjAgMS4wIC00NC45MiAyMy41KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIj48Zm9yZWlnbm9iamVjdCB3aWR0aD0iMTEuMTEiIGhlaWdodD0iOS40NiIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxtYXRoIGlkPSJTNC5GMy5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEiIGNsYXNzPSJsdHhfTWF0aCIgYWx0dGV4dD0iWSIgZGlzcGxheT0iaW5saW5lIj48c2VtYW50aWNzIGlkPSJTNC5GMy5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFhIj48bWkgaWQ9IlM0LkYzLnBpYzEuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMS4xIiB4cmVmPSJTNC5GMy5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIj5ZPC9taT48YW5ub3RhdGlvbi14bWwgZW5jb2Rpbmc9Ik1hdGhNTC1Db250ZW50IiBpZD0iUzQuRjMucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYiI+PGNpIGlkPSJTNC5GMy5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIiB4cmVmPSJTNC5GMy5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMSI+8J2RjDwvY2k+PC9hbm5vdGF0aW9uLXhtbD48YW5ub3RhdGlvbiBlbmNvZGluZz0iYXBwbGljYXRpb24veC10ZXgiIGlkPSJTNC5GMy5waWMxLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFjIj5ZPC9hbm5vdGF0aW9uPjxhbm5vdGF0aW9uIGVuY29kaW5nPSJhcHBsaWNhdGlvbi94LWxsYW1hcHVuIiBpZD0iUzQuRjMucGljMS4yLjIuMi4yLjIuMi4yLjIuMi4yLjIuMi4yLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xZCI+aXRhbGljX1k8L2Fubm90YXRpb24+PC9zZW1hbnRpY3M+PC9tYXRoPjwvZm9yZWlnbm9iamVjdD48L2c+PGcgZmlsbD0iI0ZGRkZGRiIgc3Ryb2tlPSIjMDAwMDAwIj48cGF0aCBkPSJNIDUzLjIxIDI4LjIzIEMgNTMuMjEgMzUuODcgNDcuMDEgNDIuMDYgMzkuMzcgNDIuMDYgQyAzMS43MyA0Mi4wNiAyNS41MyAzNS44NyAyNS41MyAyOC4yMyBDIDI1LjUzIDIwLjU5IDMxLjczIDE0LjM5IDM5LjM3IDE0LjM5IEMgNDcuMDEgMTQuMzkgNTMuMjEgMjAuNTkgNTMuMjEgMjguMjMgWiBNIDM5LjM3IDI4LjIzIj48L3BhdGg+PC9nPjxnIHRyYW5zZm9ybT0ibWF0cml4KDEuMCAwLjAgMC4wIDEuMCAzNC4xNSAyMy41KSIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjMDAwMDAwIj48Zm9yZWlnbm9iamVjdCB3aWR0aD0iMTAuNDQiIGhlaWdodD0iOS40NiIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgLTEgMCAxNi42KSIgb3ZlcmZsb3c9InZpc2libGUiPjxtYXRoIGlkPSJTNC5GMy5waWMxLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEiIGNsYXNzPSJsdHhfTWF0aCIgYWx0dGV4dD0iWiIgZGlzcGxheT0iaW5saW5lIj48c2VtYW50aWNzIGlkPSJTNC5GMy5waWMxLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFhIj48bWkgaWQ9IlM0LkYzLnBpYzEuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4xLjEuMS4xLjEuMS4xLjEuMS4xLjEubTEuMS4xIiB4cmVmPSJTNC5GMy5waWMxLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIj5aPC9taT48YW5ub3RhdGlvbi14bWwgZW5jb2Rpbmc9Ik1hdGhNTC1Db250ZW50IiBpZD0iUzQuRjMucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xYiI+PGNpIGlkPSJTNC5GMy5waWMxLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMS5jbW1sIiB4cmVmPSJTNC5GMy5waWMxLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjEuMSI+8J2RjTwvY2k+PC9hbm5vdGF0aW9uLXhtbD48YW5ub3RhdGlvbiBlbmNvZGluZz0iYXBwbGljYXRpb24veC10ZXgiIGlkPSJTNC5GMy5waWMxLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMS4xLjEuMS4xLjEuMS4xLjEuMS4xLm0xLjFjIj5aPC9hbm5vdGF0aW9uPjxhbm5vdGF0aW9uIGVuY29kaW5nPSJhcHBsaWNhdGlvbi94LWxsYW1hcHVuIiBpZD0iUzQuRjMucGljMS4zLjMuMy4zLjMuMy4zLjMuMy4zLjMuMy4zLjEuMS4xLjEuMS4xLjEuMS4xLjEuMS5tMS4xZCI+aXRhbGljX1o8L2Fubm90YXRpb24+PC9zZW1hbnRpY3M+PC9tYXRoPjwvZm9yZWlnbm9iamVjdD48L2c+PHBhdGggZD0iTSAyNy45IDIwIEwgMTIuMzggOC44OCIgc3R5bGU9ImZpbGw6bm9uZSI+PC9wYXRoPjxnIHRyYW5zZm9ybT0ibWF0cml4KC0wLjgxMjcgLTAuNTgyNjkgMC41ODI2OSAtMC44MTI3IDEyLjM4IDguODgpIiBzdHJva2UtZGFzaGFycmF5PSJub25lIiBzdHJva2UtZGFzaG9mZnNldD0iMC4wcHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPjxwYXRoIGQ9Ik0gLTcuMjMgMy4yNCBMIDAuNDIgMCBMIC03LjIzIC0zLjI0IFoiPjwvcGF0aD48L2c+PHBhdGggZD0iTSAtMjcuOSAyMCBMIC0xMi4zOCA4Ljg4IiBzdHlsZT0iZmlsbDpub25lIj48L3BhdGg+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMC44MTI3IC0wLjU4MjY5IDAuNTgyNjkgMC44MTI3IC0xMi4zOCA4Ljg4KSIgc3Ryb2tlLWRhc2hhcnJheT0ibm9uZSIgc3Ryb2tlLWRhc2hvZmZzZXQ9IjAuMHB0IiBzdHJva2UtbGluZWpvaW49Im1pdGVyIj48cGF0aCBkPSJNIC03LjIzIDMuMjQgTCAwLjQyIDAgTCAtNy4yMyAtMy4yNCBaIj48L3BhdGg+PC9nPjxnIHN0cm9rZS1kYXNoYXJyYXk9IjMuMHB0LDMuMHB0IiBzdHJva2UtZGFzaG9mZnNldD0iMC4wcHQiPjxwYXRoIGQ9Ik0gLTI3LjE1IDM1LjI4IEMgLTguODEgNDUuODcgOC44MSA0NS44NyAyNy4xNSAzNS4yOCIgc3R5bGU9ImZpbGw6bm9uZSI+PC9wYXRoPjwvZz48L2c+PC9zdmc+"
+id="S4.F3.pic1" class="ltx_picture ltx_centering" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 3: </span>Causal
+structure for dSprites and Yale-B. Dashed line denotes a non-causal
+association between nodes.</figcaption>
+</figure>
 
 ::: {#S4.SS2.p1 .ltx_para .ltx_noindent}
 We next evaluate our method on two high-dimensional image datasets:
@@ -829,6 +1026,17 @@ ${\varphi\operatorname{}{(X)}} - {{\mathbb{E}}\left\lbrack {\varphi\operatorname
 and $Z - {{\mathbb{E}}\left\lbrack Z \middle| Y \right\rbrack}$ will
 also penalize the network's dependence on the observed $x$-coordinate to
 predict $Y$.
+:::
+
+<figure id="S4.F4" class="ltx_figure">
+<img src="./2212.08645_files/x1.png" id="S4.F4.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="685"
+height="201" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 4:
+</span>dSprites (linear). Blue: in-domain test loss; orange:
+out-of-domain loss (OOD); red: loss for OOD-trained encoder. Solid
+lines: median over 10 seeds; shaded areas: min/max values.</figcaption>
+</figure>
 
 ::: {#S4.SS2.SSS1.p3 .ltx_para .ltx_noindent}
 In [[Figure]{.ltx_text .ltx_ref_tag} [4]{.ltx_text
@@ -872,7 +1080,7 @@ max operation in the statistic.
 :::
 
 <figure id="S4.F5" class="ltx_figure">
-<img src="./circe_files/x2.png" id="S4.F5.g1"
+<img src="./2212.08645_files/x2.png" id="S4.F5.g1"
 class="ltx_graphics ltx_centering ltx_img_landscape" width="685"
 height="201" alt="Refer to caption" />
 <figcaption><span class="ltx_tag ltx_tag_figure">Figure 5:
@@ -911,6 +1119,258 @@ solution using a linear decoder. Results are shown in
 CIRCE shows a small advantage over HSCIC in OOD performance for the best
 regularizer choice. GCM suffers from numerical instability in this
 example, which leads to poor performance.
+:::
+
+<figure id="S4.F6" class="ltx_figure">
+<img src="./2212.08645_files/x3.png" id="S4.F6.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="685"
+height="201" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure">Figure 6:
+</span>Yale-B. Blue: in-domain test loss; orange: out-of-domain loss
+(OOD); red: loss for OOD-trained encoder. Solid lines: median over 10
+seeds; shaded areas: min/max values.</figcaption>
+</figure>
+:::
+:::
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Discussion {#discussion .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para .ltx_noindent}
+We have introduced CIRCE: a kernel-based measure of conditional
+independence, which can be used as a regularizer to enforce conditional
+independence between a network's predictions and a pre-specified
+variable with respect to which invariance is desired. The technique can
+be used in many applications, including fairness, domain invariant
+learning, and causal representation learning. Following an initial
+regression step (which can be done offline), CIRCE enforces conditional
+independence via a marginal independence requirement during
+representation learning, which makes it well suited to minibatch
+training. By contrast, alternative conditional independence regularizers
+require an additional regression step on each minibatch, resulting in a
+higher variance criterion which can be less effective in complex
+learning tasks.
+:::
+
+::: {#S5.p2 .ltx_para .ltx_noindent}
+As future work, it will be of interest to determine whether or not CIRCE
+is statistically significant on a given dataset, so as to employ it as a
+statistic for a test of conditional dependence.
+:::
+
+::: {#S5.SS0.SSSx1 .section .ltx_subsubsection}
+#### Acknowledgments {#acknowledgments .ltx_title .ltx_title_subsubsection}
+
+::: {#S5.SS0.SSSx1.p1 .ltx_para .ltx_noindent}
+This work was supported by DeepMind, the Gatsby Charitable Foundation,
+the Wellcome Trust, the Canada CIFAR AI Chairs program, the Natural
+Sciences and Engineering Resource Council of Canada, SHARCNET, Calcul
+Québec, the Digital Resource Alliance of Canada, and Open Philanthropy.
+:::
+:::
+:::
+
+::: {#bib .section .ltx_bibliography}
+## References {#references .ltx_title .ltx_title_bibliography}
+
+-   [[Bachmann et al. (2022)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Gregor Bachmann, Thomas Hofmann, and Aurélien
+    Lucchi. ]{.ltx_bibblock} [Generalization through the lens of
+    leave-one-out error. ]{.ltx_bibblock} [In *ICLR*, 2022.
+    ]{.ltx_bibblock}]{#bib.bib1}
+-   [[Beutel et al. (2019)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Alex Beutel, Jilin Chen, Tulsee Doshi, Hai Qian, Allison Woodruff,
+    Christine Luu, Pierre Kreitmann, Jonathan Bischof, and Ed H. Chi.
+    ]{.ltx_bibblock} [Putting fairness principles into practice:
+    Challenges, metrics, and improvements. ]{.ltx_bibblock} [In
+    *Proceedings of the 2019 AAAI/ACM Conference on AI, Ethics, and
+    Society*, AIES '19, 2019. ]{.ltx_bibblock}]{#bib.bib2}
+-   [[Daudin (1980)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    JJ Daudin. ]{.ltx_bibblock} [Partial association measures and an
+    application to qualitative regression. ]{.ltx_bibblock}
+    [*Biometrika*, 67(3):581--590, 1980. ]{.ltx_bibblock}]{#bib.bib3}
+-   [[Deng et al. (2009)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li, and
+    Li Fei-Fei. ]{.ltx_bibblock} [ImageNet: A large-scale hierarchical
+    image database. ]{.ltx_bibblock} [In *CVPR*, pp.  248--255, 2009.
+    ]{.ltx_bibblock}]{#bib.bib4}
+-   [[Fischer & Steinwart (2020)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Simon Fischer and Ingo Steinwart.
+    ]{.ltx_bibblock} [Sobolev norm learning rates for regularized
+    least-squares algorithms. ]{.ltx_bibblock} [*J. Mach. Learn. Res.*,
+    21:205--1, 2020. ]{.ltx_bibblock}]{#bib.bib5}
+-   [[Fukumizu et al. (2008)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ K. Fukumizu, A. Gretton, X. Sun, and
+    B. Schölkopf. ]{.ltx_bibblock} [Kernel measures of conditional
+    dependence. ]{.ltx_bibblock} [In *NeurIPS*, 2008.
+    ]{.ltx_bibblock}]{#bib.bib6}
+-   [[Georghiades et al. (2001)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ A.S. Georghiades, P.N. Belhumeur, and D.J.
+    Kriegman. ]{.ltx_bibblock} [From few to many: Illumination cone
+    models for face recognition under variable lighting and pose.
+    ]{.ltx_bibblock} [*IEEE Trans. Pattern Anal. Mach. Intelligence*,
+    23(6):643--660, 2001. ]{.ltx_bibblock}]{#bib.bib7}
+-   [[Goel et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Karan Goel, Albert Gu, Yixuan Li, and Christopher Ré.
+    ]{.ltx_bibblock} [Model patching: Closing the subgroup performance
+    gap with data augmentation. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:2008.06775*, 2020. ]{.ltx_bibblock}]{#bib.bib8}
+-   [[Gretton (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    A. Gretton. ]{.ltx_bibblock} [Introduction to RKHS, and some simple
+    kernel algorithms. ]{.ltx_bibblock} [Lecture Notes, Gatsby
+    Computational Neuroscience Unit, 2022. ]{.ltx_bibblock} [URL
+    [http://www.gatsby.ucl.ac.uk/\~gretton/coursefiles/rkhscourse.html](http://www.gatsby.ucl.ac.uk/~gretton/coursefiles/rkhscourse.html){.ltx_ref
+    .ltx_url .ltx_font_typewriter target="_blank"}.
+    ]{.ltx_bibblock}]{#bib.bib9}
+-   [[Gretton et al. (2005a)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ A. Gretton, R. Herbrich, A. J. Smola,
+    O. Bousquet, and B. Schölkopf. ]{.ltx_bibblock} [Kernel methods for
+    measuring independence. ]{.ltx_bibblock} [*Journal of Machine
+    Learning Research*, 6:2075--2129, 2005a.
+    ]{.ltx_bibblock}]{#bib.bib10}
+-   [[Gretton et al. (2005b)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Arthur Gretton, Olivier Bousquet, Alex Smola,
+    and Bernhard Schölkopf. ]{.ltx_bibblock} [Measuring statistical
+    dependence with hilbert-schmidt norms. ]{.ltx_bibblock} [In *ALT*,
+    pp.  63--77. Springer, 2005b. ]{.ltx_bibblock}]{#bib.bib11}
+-   [[Grunewalder et al. (2012)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ S. Grunewalder, G. Lever, L. Baldassarre,
+    S. Patterson, A. Gretton, and M. Pontil. ]{.ltx_bibblock}
+    [Conditional mean embeddings as regressors. ]{.ltx_bibblock} [In
+    *ICML*, 2012. ]{.ltx_bibblock}]{#bib.bib12}
+-   [[He et al. (2016)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Kaiming He, X. Zhang, Shaoqing Ren, and Jian Sun. ]{.ltx_bibblock}
+    [Deep residual learning for image recognition. ]{.ltx_bibblock}
+    [*2016 IEEE Conference on Computer Vision and Pattern Recognition
+    (CVPR)*, pp.  770--778, 2016. ]{.ltx_bibblock}]{#bib.bib13}
+-   [[Huang et al. (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Zhen Huang, Nabarun Deb, and Bodhisattva Sen. ]{.ltx_bibblock}
+    [Kernel partial correlation coefficient--a measure of conditional
+    dependence. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:2012.14804*, 2020. ]{.ltx_bibblock}]{#bib.bib14}
+-   [[Jiang & Veitch (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Yibo Jiang and Victor Veitch. ]{.ltx_bibblock} [Invariant and
+    transportable representations for anti-causal domain shifts, 2022.
+    ]{.ltx_bibblock}]{#bib.bib15}
+-   [[Kingma & Ba (2014)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Diederik P Kingma and Jimmy Ba. ]{.ltx_bibblock} [Adam: A method for
+    stochastic optimization. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:1412.6980*, 2014. ]{.ltx_bibblock}]{#bib.bib16}
+-   [[Klebanov et al. (2020)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ I. Klebanov, I. Schuster, and T.J. Sullivan.
+    ]{.ltx_bibblock} [A rigorous theory of conditional mean embeddings.
+    ]{.ltx_bibblock} [*SIAM Journal on Mathematics of Data Science*,
+    2(3):583--606, 2020. ]{.ltx_bibblock}]{#bib.bib17}
+-   [[Li et al. (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Zhu Li, Dimitri Meunier, Mattes Mollenhauer, and Arthur Gretton.
+    ]{.ltx_bibblock} [Optimal rates for regularized conditional mean
+    embedding learning. ]{.ltx_bibblock} [*arXiv preprint
+    arXiv:2208.01711*, 2022. ]{.ltx_bibblock}]{#bib.bib18}
+-   [[Long et al. (2018)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Mingsheng Long, Zhangjie Cao, Jianmin Wang, and Michael I Jordan.
+    ]{.ltx_bibblock} [Conditional adversarial domain adaptation.
+    ]{.ltx_bibblock} [*Advances in neural information processing
+    systems*, 31, 2018. ]{.ltx_bibblock}]{#bib.bib19}
+-   [[Loshchilov & Hutter (2019)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Ilya Loshchilov and Frank Hutter.
+    ]{.ltx_bibblock} [Decoupled weight decay regularization.
+    ]{.ltx_bibblock} [In *ICLR*, 2019. ]{.ltx_bibblock}]{#bib.bib20}
+-   [[Makar et al. (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Maggie Makar, Ben Packer, Dan Moldovan, Davis Blalock, Yoni Halpern,
+    and Alexander D'Amour. ]{.ltx_bibblock} [Causally motivated shortcut
+    removal using auxiliary labels. ]{.ltx_bibblock} [In
+    *AISTATS*, 2022. ]{.ltx_bibblock}]{#bib.bib21}
+-   [[Matthey et al. (2017)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Loic Matthey, Irina Higgins, Demis Hassabis, and Alexander
+    Lerchner. ]{.ltx_bibblock} [dsprites: Disentanglement testing
+    sprites dataset, 2017. ]{.ltx_bibblock} [URL
+    [https://github.com/deepmind/dsprites-dataset/](https://github.com/deepmind/dsprites-dataset/){.ltx_ref
+    .ltx_url .ltx_font_typewriter target="_blank"}.
+    ]{.ltx_bibblock}]{#bib.bib22}
+-   [[McDiarmid (1989)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Colin McDiarmid. ]{.ltx_bibblock} [On the method of bounded
+    differences. ]{.ltx_bibblock} [*Surveys in combinatorics*,
+    141(1):148--188, 1989. ]{.ltx_bibblock}]{#bib.bib23}
+-   [[Mehrabi et al. (2019)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Ninareh Mehrabi, Fred Morstatter, Nripsuta Saxena, Kristina
+    Lerman, and Aram Galstyan. ]{.ltx_bibblock} [A survey on bias and
+    fairness in machine learning, 2019. ]{.ltx_bibblock}]{#bib.bib24}
+-   [[Mollenhauer & Koltai (2020)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ M. Mollenhauer and P. Koltai. ]{.ltx_bibblock}
+    [Nonparametric approximation of conditional expectation operators.
+    ]{.ltx_bibblock} [*arXiv preprint arXiv:2012.12917*, 2020.
+    ]{.ltx_bibblock}]{#bib.bib25}
+-   [[Park & Muandet (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Junhyung Park and Krikamol Muandet. ]{.ltx_bibblock} [A
+    measure-theoretic approach to kernel conditional mean embeddings.
+    ]{.ltx_bibblock} [*Advances in neural information processing
+    systems*, 33:21247--21259, 2020. ]{.ltx_bibblock}]{#bib.bib26}
+-   [[Puli et al. (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Aahlad Manas Puli, Lily H Zhang, Eric Karl Oermann, and Rajesh
+    Ranganath. ]{.ltx_bibblock} [Out-of-distribution generalization in
+    the presence of nuisance-induced spurious correlations.
+    ]{.ltx_bibblock} [In *International Conference on Learning
+    Representations*, 2022. ]{.ltx_bibblock}]{#bib.bib27}
+-   [[Quinzan et al. (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Francesco Quinzan, Cecilia Casolo, Krikamol Muandet, Niki
+    Kilbertus, and Yucen Luo. ]{.ltx_bibblock} [Learning
+    counterfactually invariant predictors. ]{.ltx_bibblock} [*arXiv
+    preprint arXiv:2207.09768*, 2022. ]{.ltx_bibblock}]{#bib.bib28}
+-   [[Rahimi & Recht (2007)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Ali Rahimi and Benjamin Recht. ]{.ltx_bibblock} [Random features
+    for large-scale kernel machines. ]{.ltx_bibblock} [In *Advances in
+    Neural Information Processing Systems*, 2007.
+    ]{.ltx_bibblock}]{#bib.bib29}
+-   [[Sejdinovic et al. (2013)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ D. Sejdinovic, B. Sriperumbudur, A. Gretton, and
+    K. Fukumizu. ]{.ltx_bibblock} [Equivalence of distance-based and
+    rkhs-based statistics in hypothesis testing. ]{.ltx_bibblock}
+    [*Annals of Statistics*, 41(5):2263--2702, 2013.
+    ]{.ltx_bibblock}]{#bib.bib30}
+-   [[Shah & Peters (2020)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Rajen D Shah and Jonas Peters. ]{.ltx_bibblock} [The hardness of
+    conditional independence testing and the generalised covariance
+    measure. ]{.ltx_bibblock} [*The Annals of Statistics*,
+    48(3):1514--1538, 2020. ]{.ltx_bibblock}]{#bib.bib31}
+-   [[Song et al. (2009)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    L. Song, J. Huang, A. J. Smola, and K. Fukumizu. ]{.ltx_bibblock}
+    [Hilbert space embeddings of conditional distributions.
+    ]{.ltx_bibblock} [In *ICML*, 2009. ]{.ltx_bibblock}]{#bib.bib32}
+-   [[Sriperumbudur et al. (2011)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ B. Sriperumbudur, K. Fukumizu, and G. Lanckriet.
+    ]{.ltx_bibblock} [Universality, characteristic kernels and RKHS
+    embedding of measures. ]{.ltx_bibblock} [*JMLR*,
+    12:2389--2410, 2011. ]{.ltx_bibblock}]{#bib.bib33}
+-   [[Steinwart & Christmann (2008)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Ingo Steinwart and Andreas Christmann.
+    ]{.ltx_bibblock} [*Support Vector Machines*. ]{.ltx_bibblock}
+    [Information Science and Statistics. Springer, 2008.
+    ]{.ltx_bibblock}]{#bib.bib34}
+-   [[Sun et al. (2007)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    X. Sun, D. Janzing, B. Schölkopf, and K. Fukumizu. ]{.ltx_bibblock}
+    [A kernel-based causal learning algorithm. ]{.ltx_bibblock} [In
+    *ICML*, pp.  855--862, 2007. ]{.ltx_bibblock}]{#bib.bib35}
+-   [[Tachet des Combes et al. (2020)]{.ltx_tag .ltx_role_refnum
+    .ltx_tag_bibitem} [ Remi Tachet des Combes, Han Zhao, Yu-Xiang Wang,
+    and Geoffrey J Gordon. ]{.ltx_bibblock} [Domain adaptation with
+    conditional distribution matching and generalized label shift.
+    ]{.ltx_bibblock} [*Advances in Neural Information Processing
+    Systems*, 33:19276--19289, 2020. ]{.ltx_bibblock}]{#bib.bib36}
+-   [[Veitch et al. (2021)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Victor Veitch, Alexander D'Amour, Steve Yadlowsky, and Jacob
+    Eisenstein. ]{.ltx_bibblock} [Counterfactual invariance to spurious
+    correlations in text classification. ]{.ltx_bibblock} [In
+    *NeurIPS*, 2021. ]{.ltx_bibblock}]{#bib.bib37}
+-   [[Wang & Veitch (2022)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem}
+    [ Zihao Wang and Victor Veitch. ]{.ltx_bibblock} [A unified causal
+    view of domain invariant representation learning, 2022.
+    ]{.ltx_bibblock}]{#bib.bib38}
+-   [[Zhang et al. (2011)]{.ltx_tag .ltx_role_refnum .ltx_tag_bibitem} [
+    Kun Zhang, Jonas Peters, Dominik Janzing, and Bernhard Schölkopf.
+    ]{.ltx_bibblock} [Kernel-based conditional independence test and
+    application in causal discovery. ]{.ltx_bibblock} [In *UAI*, 2011.
+    ]{.ltx_bibblock}]{#bib.bib39}
 :::
 
 ::: {#Ax1 .section .ltx_appendix}
@@ -1478,610 +1938,9 @@ $K_{T\operatorname{}T} = {K_{Y\operatorname{}Y} \odot K_{Z\operatorname{}Z}^{c}}
 and $t = {(y,z)}$, if we switch one datapoint $(x_{i},t_{i})$ to
 $(x_{i}^{\prime},t_{i}^{\prime})$ and denote the vectors with switch
 coordinates as $X^{i},T^{i}$
-
-  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-     $\left| {{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{T\operatorname{}T}} \right)} - {{Tr}\operatorname{}\left( {K_{X^{i}\operatorname{}X^{i}}\operatorname{}K_{T^{i}\operatorname{}T^{i}}} \right)}} \right|$                                                                                                                                                                                                                            
-     $= \left| {{{K_{x_{i}\operatorname{}x_{i}}\operatorname{}K_{t_{i}\operatorname{}t_{i}}} - {K_{x_{i}^{\prime}\operatorname{}x_{i}^{\prime}}\operatorname{}K_{t_{i}^{\prime}\operatorname{}t_{i}^{\prime}}}} + {2\operatorname{}{\sum\limits_{j \neq i}\left( {{K_{x_{j}\operatorname{}x_{i}}\operatorname{}K_{t_{j}\operatorname{}t_{i}}} - {K_{x_{j}\operatorname{}x_{i}^{\prime}}\operatorname{}K_{t_{j}\operatorname{}t_{i}^{\prime}}}} \right)}}} \right|$   
-     ${\leq {{({2 + {4\operatorname{}{({B - 1})}}})}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{t\operatorname{}\max}} \leq {{({{4\operatorname{}B} - 2})}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{y\operatorname{}\max}\operatorname{}K_{z\operatorname{}\max}^{c}}}.$                                                                                                                                                                 
-  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-
-Therefore, for any index $i$
-
-  -- -------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-              $\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}\left| {{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}\left( {K_{Y\operatorname{}Y} \odot K_{Z\operatorname{}Z}^{c}} \right)} \right)} - {{Tr}\operatorname{}\left( {K_{X^{i}\operatorname{}X^{i}}\operatorname{}\left( {K_{Y^{i}\operatorname{}Y^{i}} \odot K_{Z^{i}\operatorname{}Z^{i}}^{c}} \right)} \right)}} \right|$   
-     $\leq$   ${\frac{{4\operatorname{}B} - 2}{B\operatorname{}{({B - 1})}}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{y\operatorname{}\max}\operatorname{}K_{z\operatorname{}\max}^{c}}.$                                                                                                                                                                                                            
-  -- -------- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-
-We can now use McDiarmid's inequality (McDiarmid,
-[1989](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib23){.ltx_ref})
-with
-
-  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-     $${c = c_{i} = {\frac{{4\operatorname{}B} - 2}{B\operatorname{}{({B - 1})}}\operatorname{}K_{x\operatorname{}\max}\operatorname{}K_{y\operatorname{}\max}\operatorname{}K_{z\operatorname{}\max}^{c}}},$$   
-  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-
-meaning that for any $\epsilon > 0$
-
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-     ${P\operatorname{}\left( {\left| {\frac{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{T\operatorname{}T}} \right)}{B\operatorname{}{({B - 1})}} - {{\mathbb{E}}\frac{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{T\operatorname{}T}} \right)}{B\operatorname{}{({B - 1})}}}} \right| \geq \epsilon} \right)} \leq {2\operatorname{}{\exp\left( {- \frac{2\operatorname{}\epsilon^{2}}{B\operatorname{}c^{2}}} \right)}}$   
-     ${= {2\operatorname{}{\exp\left( {- \frac{2\operatorname{}\epsilon^{2}\operatorname{}B\operatorname{}{({B - 1})}^{2}}{{({{4\operatorname{}B} - 2})}^{2}\operatorname{}K_{x\operatorname{}\max}^{2}\operatorname{}K_{y\operatorname{}\max}^{2}\operatorname{}K_{z\operatorname{}\max}^{2\operatorname{}c}}} \right)}}}.$                                                                                                                                              
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --
-
-Therefore, for any fixed probability the deviation $\epsilon$ from the
-mean decays as $O\operatorname{}{({1/\sqrt{B}})}$. ∎
-:::
-:::
-
-::: {#A3.Thmtheorem3 .ltx_theorem .ltx_theorem_definition}
-###### [[Definition C.3]{#A3.Thmtheorem3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem3.2.2 .ltx_text .ltx_font_bold} {#definition-c.3. .ltx_title .ltx_runin .ltx_title_theorem}
-
-::: {#A3.Thmtheorem3.p1 .ltx_para .ltx_noindent}
-A $(\beta,p)$-kernel for a given data distribution satisfies the
-following conditions (see Fischer & Steinwart
-([2020](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib5){.ltx_ref});
-Li et al.
-([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref})
-for precise definition using interpolation spaces):
-:::
-
-::: {#A3.Thmtheorem3.p2 .ltx_para}
-1.  [[(EVD)]{.ltx_tag .ltx_tag_item}]{#A3.I1.ix1}
-
-    ::: {#A3.I1.ix1.p1 .ltx_para}
-    Eigenvalues $\mu_{i}$ of the covariance operator
-    $C_{Y\operatorname{}Y}$ decay as
-    $\mu_{i} \leq {c \cdot i^{- {1/p}}}$.
-    :::
-2.  [[(EMB)]{.ltx_tag .ltx_tag_item}]{#A3.I1.ix2}
-
-    ::: {#A3.I1.ix2.p1 .ltx_para}
-    For $\alpha \in {(p,1\rbrack}$, the inclusion map
-    $\lbrack{\mathcal{H}_{Y}^{\alpha}\hookrightarrow{L_{\infty}\operatorname{}{(\pi)}}}\rbrack$
-    is continuous and bounded by $A$.
-    :::
-3.  [[(SRC)]{.ltx_tag .ltx_tag_item}]{#A3.I1.ix3}
-
-    ::: {#A3.I1.ix3.p1 .ltx_para .ltx_noindent}
-    $F \in {\lbrack\mathcal{G}\rbrack}^{\beta}$ for
-    $\beta \in {\lbrack 1,2\rbrack}$ (note that $\beta < 1$ would
-    include the misspecified setting).
-    :::
-:::
-:::
-
-::: {#A3.Thmtheorem4 .ltx_theorem .ltx_theorem_lemma}
-###### [[Lemma C.4]{#A3.Thmtheorem4.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem4.2.2 .ltx_text .ltx_font_bold} {#lemma-c.4. .ltx_title .ltx_runin .ltx_title_theorem}
-
-::: {#A3.Thmtheorem4.p1 .ltx_para .ltx_noindent}
-[Consider the well-specified case of conditional expectation estimation
-(see Li et al.,
-[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref}).
-For bounded kernels over $X,Z,Y$ and a $(\beta,p)$-kernel over $Y$,
-${F\operatorname{}{(y)}} = {{{\mathbb{E}}\left\lbrack {\psi\operatorname{}{(Z)}} \middle| Y \right\rbrack}\operatorname{}{(y)}}$,
-bounded ${\| F\|} \leq C_{F}$, and $M$ points used to estimate $F$,
-define the conditional expectation estimate as]{#A3.Thmtheorem4.p1.7.7
-.ltx_text .ltx_font_italic}
-
-  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     $${{\hat{F}\operatorname{}{(y)}} = {K_{y\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} + {\lambda_{M}\operatorname{}I}} \right)^{- 1}\operatorname{}K_{Z\operatorname{} \cdot}}},$$      [(45)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-
-[where
-$\lambda_{M} = {\Theta\operatorname{}{({1/M^{\beta + p}})}}$.]{#A3.Thmtheorem4.p1.8.1
-.ltx_text .ltx_font_italic}
-:::
-
-::: {#A3.Thmtheorem4.p2 .ltx_para}
-[Then, the estimator
-${{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}{\hat{K}}_{Z\operatorname{}Z}^{c}} \right)}/{({B\operatorname{}{({B - 1})}})}$
-of the "true" CIRCE estimator (i.e., with the actual conditional
-expectation) deviates from the true value as
-$O_{p}\operatorname{}{({1/M^{{({\beta - 1})}/{({2\operatorname{}{({\beta + p})}})}}})}$.]{#A3.Thmtheorem4.p2.2.2
-.ltx_text .ltx_font_italic}
-:::
-:::
-
-::: {#A3.SS2.8 .ltx_proof}
-###### Proof. {#proof.-6 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
-
-::: {#A3.SS2.2.p1 .ltx_para .ltx_noindent}
-First, decompose the difference:
-
-  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     ${{{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}K_{Z\operatorname{}Z}^{c}} \right)} - {{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}{\hat{K}}_{Z\operatorname{}Z}^{c}} \right)}} = {{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}\left( {K_{Z\operatorname{}Z}^{c} - K_{Z\operatorname{}Z}^{c}} \right)} \right)}$                                                                          [(46)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-     ${= {{Tr}\operatorname{}\left( {K_{X\operatorname{}X}\operatorname{}\left\lbrack {\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right) \odot K_{Y\operatorname{}Y}} \right\rbrack} \right)} = {{Tr}\operatorname{}\left( {\left\lbrack {K_{X\operatorname{}X} \odot K_{Y\operatorname{}Y}} \right\rbrack\operatorname{}\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)} \right)}},$      [(47)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-
-where in the last line we used that all matrices are symmetric.
-:::
-
-::: {#A3.SS2.3.p2 .ltx_para .ltx_noindent}
-Let's concentrate on the difference:
-
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     $\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)_{i\operatorname{}j} = {\left\langle {{\hat{F}\operatorname{}{(y_{i})}} - {F\operatorname{}{(y_{i})}}},{\psi\operatorname{}{(z_{j})}} \right\rangle + \left\langle {{\hat{F}\operatorname{}{(y_{j})}} - {F\operatorname{}{(y_{j})}}},{\psi\operatorname{}{(z_{i})}} \right\rangle}$      [(48)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-     ${+ \left\langle {F\operatorname{}{(y_{i})}},{F\operatorname{}{(y_{j})}} \right\rangle} - \left\langle {\hat{F}\operatorname{}{(y_{i})}},{{\hat{F}\operatorname{}{(y_{j})}} \pm {F\operatorname{}{(y_{j})}}} \right\rangle$                                                                                                                                             [(49)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-     $= {\left\langle {{\hat{F}\operatorname{}{(y_{i})}} - {F\operatorname{}{(y_{i})}}},{\psi\operatorname{}{(z_{j})}} \right\rangle + \left\langle {{\hat{F}\operatorname{}{(y_{j})}} - {F\operatorname{}{(y_{j})}}},{\psi\operatorname{}{(z_{i})}} \right\rangle}$                                                                                                         [(50)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-     ${+ \left\langle {{F\operatorname{}{(y_{i})}} - {\hat{F}\operatorname{}{(y_{i})}}},{F\operatorname{}{(y_{j})}} \right\rangle} - \left\langle {\hat{F}\operatorname{}{(y_{i})}},{{\hat{F}\operatorname{}{(y_{j})}} - {F\operatorname{}{(y_{j})}}} \right\rangle$                                                                                                         [(51)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-     ${= {\left\langle {{F\operatorname{}{(y_{i})}} - {\hat{F}\operatorname{}{(y_{i})}}},{{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}} \right\rangle + \left\langle {{F\operatorname{}{(y_{j})}} - {\hat{F}\operatorname{}{(y_{j})}}},{{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}} \right\rangle}}.$                                [(52)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-:::
-
-::: {#A3.SS2.4.p3 .ltx_para .ltx_noindent}
-As we're working in the well-specified case, by definition the operator
-$F \in \mathcal{G}$, where $\mathcal{G}$ is a vector-valued RKHS (Li
-et al.,
-[2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref},
-Definition 1). This implies that for the function
-${{\lbrack{K_{x}\operatorname{}h}\rbrack}\operatorname{}{( \cdot )}} = {K\operatorname{}{( \cdot ,x)}\operatorname{}h}$
-(where $h \in \mathcal{H}_{y}$),
-
-  -- ---------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     $${\left\langle {F\operatorname{}{(x)}},h \right\rangle = \left\langle F,{K_{x}\operatorname{}h} \right\rangle_{\mathcal{G}}}.$$      [(53)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- ---------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-:::
-
-::: {#A3.SS2.5.p4 .ltx_para .ltx_noindent}
-We can now re-write the difference as
-
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     ${\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)_{i\operatorname{}j} = \left\langle {F - \hat{F}},{{K_{y_{i}}\operatorname{}\left( {{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}} \right)} + {K_{y_{j}}\operatorname{}\left( {{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}} \right)}} \right\rangle_{\mathcal{G}}}.$      [(54)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-:::
-
-::: {#A3.SS2.6.p5 .ltx_para .ltx_noindent}
-We can use the triangle inequality and then Cauchy-Schwarz to obtain
-
-  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     $\left| \left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)_{i\operatorname{}j} \right| \leq {{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {\left\| {K_{y_{i}}\operatorname{}\left( {{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}} \right)} \right\|_{\mathcal{G}} + \left\| {K_{y_{j}}\operatorname{}\left( {{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}} \right)} \right\|_{\mathcal{G}}} \right)}$      [(55)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-     $= {{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {{k\operatorname{}{(y_{i},y_{i})}\operatorname{}{\|{{F\operatorname{}{(y_{j})}} - {\psi\operatorname{}{(z_{j})}}}\|}_{\mathcal{H}_{Z}}} + {k\operatorname{}{(y_{j},y_{j})}\operatorname{}{\|{{\hat{F}\operatorname{}{(y_{i})}} - {\psi\operatorname{}{(z_{j})}}}\|}_{\mathcal{H}_{Z}}}} \right)}$                                                                                                                           [(56)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-     ${\leq {C_{1}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {C_{2} + {C_{3}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}}} \right)}},$                                                                                                                                                                                                                                                                                                                       [(57)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-
-for some positive constants $C_{1,2,3}$ (since the kernels over both $z$
-and $y$ are bounded, $F$ is bounded too and hence
-${\|\hat{F}\|} \leq {{\|{\hat{F} - F}\|} + {\| F\|}}$.
-:::
-
-::: {#A3.SS2.7.p6 .ltx_para .ltx_noindent}
-As all kernels are bounded,
-
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     $\frac{\left| {{Tr}\operatorname{}\left( {\left\lbrack {K_{X\operatorname{}X} \odot K_{Y\operatorname{}Y}} \right\rbrack\operatorname{}\left( {K_{Z\operatorname{}Z}^{c} - {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)} \right)} \right|}{B\operatorname{}{({B - 1})}} \leq {C_{1}\operatorname{}C_{4}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}\operatorname{}\left( {C_{2} + {C_{3}\operatorname{}{\|{F - \hat{F}}\|}_{\mathcal{G}}}} \right)}$      [(58)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-
-for positive constants $C_{1}$ to $C_{4}$.
-:::
-
-::: {#A3.SS2.8.p7 .ltx_para}
-Now we can use Theorem 2 of Li et al.
-([2022](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib18){.ltx_ref})
-with $\gamma = 1$ and
-$\lambda = {\Theta\operatorname{}{({1/M^{\beta + p}})}}$, which shows
-that
-
-  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     ${{P\operatorname{}\left( {{\|{F - \hat{F}}\|}_{\mathcal{G}} \leq {\tau\operatorname{}\sqrt{K}\operatorname{}M^{- \frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}}} \right)} \geq {1 - {4\operatorname{}e^{- \tau}}}},$      [(59)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-
-for some positive constant $K$, which gives us the
-$O_{p}\operatorname{}{({1/M^{\frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}})}$
-deviation. ∎
-:::
-:::
-
-::: {#A3.SS2.p1 .ltx_para}
-Now we can combine the two lemmas to prove [[Theorem]{.ltx_text
-.ltx_ref_tag} [2.7]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem7 "Theorem 2.7. ‣ 2.3 Empirical CIRCE estimate and its use as a conditional independence regularizer ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}:
-:::
-
-::: {#A3.SS2.9 .ltx_proof}
-###### Proof of [[Theorem]{.ltx_text .ltx_ref_tag} [2.7]{.ltx_text .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S2.Thmtheorem7 "Theorem 2.7. ‣ 2.3 Empirical CIRCE estimate and its use as a conditional independence regularizer ‣ 2 Efficient conditional independence regularizer ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}. {#proof-of-theorem-2.7. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
-
-::: {#A3.SS2.9.p1 .ltx_para}
-Combining [[Lemma]{.ltx_text .ltx_ref_tag} [C.2]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem2 "Lemma C.2. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
-and [[Lemma]{.ltx_text .ltx_ref_tag} [C.4]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem4 "Lemma C.4. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
-and using a union bound, we obtain the
-$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{\frac{\beta}{2\operatorname{}{({\beta + p})}}}}})}$
-rate. ∎
-:::
-:::
-
-::: {#A3.Thmtheorem5 .ltx_theorem .ltx_theorem_corollary}
-###### [[Corollary C.5]{#A3.Thmtheorem5.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem5.2.2 .ltx_text .ltx_font_bold} {#corollary-c.5. .ltx_title .ltx_runin .ltx_title_theorem}
-
-::: {#A3.Thmtheorem5.p1 .ltx_para}
-[For $B$ points and $M$ holdout points, the CIRCE
-estimator]{#A3.Thmtheorem5.p1.2.2 .ltx_text .ltx_font_italic}
-
-  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     $${{\hat{\text{𝐶𝐼𝑅𝐶𝐸}} = {\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{Tr}\operatorname{}\left( {{\overset{\sim}{K}}_{X\operatorname{}X}\operatorname{}\left( {{\overset{\sim}{K}}_{Y\operatorname{}Y} \odot {\hat{\overset{\sim}{K}}}_{Z\operatorname{}Z}^{c}} \right)} \right)}},{\overset{\sim}{A} = {A - {{diag}\operatorname{}{(A)}}}}},$$      [(60)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-
-[converges as
-$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{\frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}}})}$.]{#A3.Thmtheorem5.p1.3.1
-.ltx_text .ltx_font_italic}
-:::
-:::
-
-::: {#A3.SS2.10 .ltx_proof}
-###### Proof. {#proof.-7 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
-
-::: {#A3.SS2.10.p1 .ltx_para}
-This follows from the previous two proofs. ∎
-:::
-:::
-
-::: {#A3.Thmtheorem6 .ltx_theorem .ltx_theorem_corollary}
-###### [[Corollary C.6]{#A3.Thmtheorem6.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#A3.Thmtheorem6.2.2 .ltx_text .ltx_font_bold} {#corollary-c.6. .ltx_title .ltx_runin .ltx_title_theorem}
-
-::: {#A3.Thmtheorem6.p1 .ltx_para}
-[For $B$ points and $M$ holdout points, the CIRCE
-estimator]{#A3.Thmtheorem6.p1.2.2 .ltx_text .ltx_font_italic}
-
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-     $${\hat{\text{𝐶𝐼𝑅𝐶𝐸}} = {\frac{1}{B\operatorname{}{({B - 1})}}\operatorname{}{Tr}\operatorname{}\left( {H\operatorname{}K_{X\operatorname{}X}\operatorname{}H\operatorname{}\left( {K_{Y\operatorname{}Y} \odot {\hat{K}}_{Z\operatorname{}Z}^{c}} \right)} \right)}},{H = {I - {\frac{1}{B}\operatorname{}1_{B}\operatorname{}1_{B}^{\top}}}}$$      [(61)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
-  -- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- -----------------------------------------------------
-
-[has bias of $O\operatorname{}{({1/B})}$ and converges as
-$O_{p}\operatorname{}{({{1/\sqrt{B}} + {1/M^{\frac{\beta - 1}{2\operatorname{}{({\beta + p})}}}}})}$.]{#A3.Thmtheorem6.p1.4.2
-.ltx_text .ltx_font_italic}
-:::
-:::
-
-::: {#A3.SS2.11 .ltx_proof}
-###### Proof. {#proof.-8 .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
-
-::: {#A3.SS2.11.p1 .ltx_para}
-This follows from the previous two proofs and the fact that $K^{c}$ is a
-centered matrix, meaning that in expectation
-${H\operatorname{}K^{c}\operatorname{}H} = K^{c}$. ∎
-:::
-:::
-
-::: {#A3.SS2.p2 .ltx_para .ltx_noindent}
-This estimator can be less biased in practice, as
-${\hat{K}}_{Z\operatorname{}Z}^{c}$ is typically biased due to
-conditional expectation estimation, and
-$H\operatorname{}{\hat{K}}^{c}\operatorname{}H$ re-centers it.
 :::
 :::
 :::
-
-::: {#A4 .section .ltx_appendix}
-## [Appendix D ]{.ltx_tag .ltx_tag_appendix}Random Fourier features {#appendix-d-random-fourier-features .ltx_title .ltx_title_appendix}
-
-::: {#A4.p1 .ltx_para .ltx_noindent}
-Random Fourier features (RFF) Rahimi & Recht
-([2007](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib29){.ltx_ref})
-allow to approximate a kernel
-${k\operatorname{}{(x_{1},x_{2})}} \approx {\frac{1}{D}\operatorname{}{\sum_{i = 1}^{D}{r_{i}\operatorname{}{(x_{1})}^{\top}\operatorname{}r_{i}\operatorname{}{(x_{2})}}}}$,
-and therefore $K = {R\operatorname{}R^{\top}}$.
-:::
-
-::: {#A4.p2 .ltx_para .ltx_noindent}
-The algorithm to estimate CIRCE with RFF is provided in
-[[Algorithm]{.ltx_text .ltx_ref_tag} [2]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#alg2 "Algorithm 2 ‣ Appendix D Random Fourier features ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
-We sample $D_{0}$ points every $L$ iterations, but in every batch only
-use $D$ of them to reduce computational costs. It takes
-$O\operatorname{}{({{D_{0}\operatorname{}M^{2}} + {D_{0}^{2}\operatorname{}M}})}$
-to compute $W_{1}^{r}$ and $W_{2}^{r}$ every $L$ iterations. At each
-iteration, it takes
-$O\operatorname{}{({{B\operatorname{}D^{2}} + {B^{2}\operatorname{}D}})}$
-to compute CIRCE. Therefore, average (per iteration) cost of RFF
-estimation becomes
-$O\operatorname{}{({{\frac{D_{0}}{L}\operatorname{}M^{2}} + {\frac{D_{0}^{2}}{L}\operatorname{}M} + {B\operatorname{}D^{2}} + {B^{2}\operatorname{}D}})}$.
-:::
-
-<figure id="alg2" class="ltx_float ltx_float_algorithm ltx_framed_top">
-<div id="alg2.3" class="ltx_listing">
-<div id="alg2.l1" class="ltx_listingline">
-Holdout data <span
-class="math inline">{(<em>z</em><sub><em>i</em></sub>,<em>y</em><sub><em>i</em></sub>)}<sub><em>i</em> = 1</sub><sup><em>M</em></sup></span>,
-mini-batch <span
-class="math inline">{(<em>x</em><sub><em>i</em></sub>,<em>z</em><sub><em>i</em></sub>,<em>y</em><sub><em>i</em></sub>)}<sub><em>i</em> = 1</sub><sup><em>B</em></sup></span>
-</div>
-<div id="alg2.l2" class="ltx_listingline">
-<span id="alg2.l2.1" class="ltx_text ltx_font_bold">Holdout data</span>
-</div>
-<div id="alg2.l3" class="ltx_listingline">
-Leave-one-out (<a
-href="https://ar5iv.labs.arxiv.org/html/2212.08645#A3.E32"
-class="ltx_ref"
-title="32 ‣ Theorem C.1 (Leave-one-out for kernel mean embeddings). ‣ C.1 Estimating the conditional mean embedding ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"><span
-class="ltx_text ltx_ref_tag">Equation</span> <span
-class="ltx_text ltx_ref_tag">32</span></a>) for <span
-class="math inline"><em>λ</em></span> (ridge parameter) and <span
-class="math inline"><em>σ</em><sub><em>y</em></sub></span> (parameters
-of <span class="math inline"><em>Y</em></span> kernel):
-</div>
-<div id="alg2.l4" class="ltx_listingline">
-<span class="math inline">${\lambda,\sigma_{y}} =
-{\arg\operatorname{}\min\operatorname{}{\sum_{i = 1}^{M}\frac{\left\|
-{{\psi\operatorname{}{(z_{i})}} -
-{K_{y_{i}\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} +
-{\lambda\operatorname{}I}} \right)^{-
-1}\operatorname{}K_{Z\operatorname{} \cdot}}}
-\right\|_{\mathcal{H}_{z}}^{2}}{\left( {1 - \left(
-{K_{Y\operatorname{}Y}\operatorname{}\left( {K_{Y\operatorname{}Y} +
-{\lambda\operatorname{}I}} \right)^{- 1}} \right)_{i\operatorname{}i}}
-\right)^{2}}}}$</span>
-</div>
-<div id="alg2.l5" class="ltx_listingline">
-<span
-class="math inline"><em>W</em><sub>1</sub> = (<em>K</em><sub><em>Y</em> <em>Y</em></sub>+<em>λ</em> <em>I</em>)<sup>−1</sup>, <em>W</em><sub>2</sub> = <em>W</em><sub>1</sub> <em>K</em><sub><em>Z</em> <em>Z</em></sub> <em>W</em><sub>1</sub></span>
-</div>
-<div id="alg2.l6" class="ltx_listingline">
-<span id="alg2.l6.1" class="ltx_text ltx_font_bold">Every <span
-class="math inline"><em>L</em></span> mini-batches</span>
-</div>
-<div id="alg2.l7" class="ltx_listingline">
-Sample <span class="math inline"><em>D</em><sub>0</sub></span> RFF <span
-class="math inline"><em>R</em> (⋅)</span>
-</div>
-<div id="alg2.l8" class="ltx_listingline">
-<span
-class="math inline"><em>W</em><sub>1</sub><sup><em>r</em></sup> = <em>R</em> (<em>Y</em>)<sup>⊤</sup> <em>W</em><sub>1</sub> <em>R</em> (<em>Z</em>), <em>W</em><sub>2</sub><sup><em>r</em></sup> = <em>R</em> (<em>Z</em>)<sup>⊤</sup> <em>W</em><sub>2</sub> <em>R</em> (<em>Z</em>)</span>
-</div>
-<div id="alg2.l9" class="ltx_listingline">
-<span id="alg2.l9.1" class="ltx_text ltx_font_bold">Mini-batch</span>
-</div>
-<div id="alg2.l10" class="ltx_listingline">
-Use <span class="math inline"><em>D</em></span> random RFF out of <span
-class="math inline"><em>D</em><sub>0</sub></span>
-</div>
-<div id="alg2.l11" class="ltx_listingline">
-Compute <span
-class="math inline"><em>R</em> (<em>y</em>), <em>R</em> (<em>z</em>)</span>
-(mini-batch)
-</div>
-<div id="alg2.l12" class="ltx_listingline">
-<span
-class="math inline"><em>K̂</em><sup><em>c</em></sup> = <em>K</em><sub><em>y</em> <em>y</em></sub> ⊙ (<em>K</em><sub><em>z</em> <em>z</em></sub> − <em>R</em> (<em>y</em>) <em>W</em><sub>1</sub><sup><em>r</em></sup> <em>R</em> (<em>z</em>)<sup>⊤</sup> − (<em>R</em>(<em>y</em>)<em>W</em><sub>1</sub><sup><em>r</em></sup><em>R</em>(<em>z</em>)<sup>⊤</sup>)<sup>⊤</sup>+<em>R</em> (<em>y</em>) <em>W</em><sub>2</sub><sup><em>r</em></sup> <em>R</em> (<em>y</em>)<sup>⊤</sup>)</span>
-</div>
-<div id="alg2.l13" class="ltx_listingline">
-<span class="math inline">${{CIRCE} = {\frac{1}{B\operatorname{}{({B -
-1})}}\operatorname{}{Tr}\operatorname{}\left(
-{H\operatorname{}K_{x\operatorname{}x}\operatorname{}H\operatorname{}{\hat{K}}^{c}}
-\right)}},{H = {I -
-{\frac{1}{B}\operatorname{}1_{B}\operatorname{}1_{B}^{\top}}}}$</span>
-</div>
-</div>
-<figcaption><span class="ltx_tag ltx_tag_float"><span id="alg2.2.1.1"
-class="ltx_text ltx_font_bold">Algorithm 2</span> </span> Estimation of
-CIRCE with random Fourier features</figcaption>
-</figure>
-:::
-
-::: {#A5 .section .ltx_appendix}
-## [Appendix E ]{.ltx_tag .ltx_tag_appendix}Synthetic Data and Additional Results {#appendix-e-synthetic-data-and-additional-results .ltx_title .ltx_title_appendix}
-
-::: {#A5.p1 .ltx_para .ltx_noindent}
-We used Adam (Kingma & Ba,
-[2014](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib16){.ltx_ref})
-for optimization with batch size 256, and trained the network for 100
-epochs. For experiments on univariate datasets, the learning rate was
-1e-4 and weight decay was $0.3$; for experiments on multivariate
-datasets, the learning rate was 3e-4 and weight decay was $0.1$. We
-implemented CIRCE with random Fourier features (Rahimi & Recht,
-[2007](https://ar5iv.labs.arxiv.org/html/2212.08645#bib.bib29){.ltx_ref})
-(see [[Appendix]{.ltx_text .ltx_ref_tag} [D]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A4 "Appendix D Random Fourier features ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
-of dimension 512 for Gaussian kernels. We swept over the
-hyperparameters, including RBF scale, regularization weight for ridge
-regression, and regularization weight for the conditional independence
-regularization strength.
-:::
-
-::: {#A5.p2 .ltx_para .ltx_noindent}
-All synthetic datasets are using the same causal structure as shown in
-[[Figure]{.ltx_text .ltx_ref_tag} [1]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#S4.F1 "Figure 1 ‣ 4.1 Synthetic Data ‣ 4 Experiments ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}.
-Hyperparameters sweep is listed in [[Table]{.ltx_text
-.ltx_ref_tag} [2]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A5.T2 "Table 2 ‣ Appendix E Synthetic Data and Additional Results ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
-and it is the same for all test cases.
-:::
-
-<figure id="A5.T2" class="ltx_table">
-<table id="A5.T2.4"
-class="ltx_tabular ltx_centering ltx_guessed_headers ltx_align_middle">
-<thead class="ltx_thead">
-<tr id="A5.T2.4.5.1" class="header ltx_tr">
-<th id="A5.T2.4.5.1.1"
-class="ltx_td ltx_align_left ltx_th ltx_th_column ltx_th_row ltx_border_tt">Parameter</th>
-<th colspan="2" id="A5.T2.4.5.1.2"
-class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_tt">Values</th>
-</tr>
-<tr id="A5.T2.4.6.2" class="odd ltx_tr">
-<th id="A5.T2.4.6.2.1" class="ltx_td ltx_th ltx_th_row"></th>
-<th id="A5.T2.4.6.2.2"
-class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_t">CIRCE
-and HSCIC</th>
-<th id="A5.T2.4.6.2.3"
-class="ltx_td ltx_align_center ltx_th ltx_th_column ltx_border_t">GCM</th>
-</tr>
-</thead>
-<tbody class="ltx_tbody">
-<tr id="A5.T2.3.3" class="odd ltx_tr">
-<th id="A5.T2.1.1.1"
-class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_t">conditional
-independence <span class="math inline"><em>γ</em></span></th>
-<td id="A5.T2.2.2.2" class="ltx_td ltx_align_center ltx_border_t">log
-space between <span class="math inline">[1, 10<sup>4</sup>]</span>;</td>
-<td id="A5.T2.3.3.3" class="ltx_td ltx_align_center ltx_border_t">log
-space between <span
-class="math inline">[10<sup>−2</sup>, 10<sup>−0.5</sup>]</span></td>
-</tr>
-<tr id="A5.T2.4.4" class="even ltx_tr">
-<th id="A5.T2.4.4.1"
-class="ltx_td ltx_align_left ltx_th ltx_th_row">ridge regression <span
-class="math inline"><em>λ</em></span></th>
-<td colspan="2" id="A5.T2.4.4.2" class="ltx_td ltx_align_center">{
-0.001, 0.01, 0.1, 1 }</td>
-</tr>
-<tr id="A5.T2.4.7.1" class="odd ltx_tr">
-<th id="A5.T2.4.7.1.1"
-class="ltx_td ltx_align_left ltx_th ltx_th_row ltx_border_bb">RBF
-scale</th>
-<td colspan="2" id="A5.T2.4.7.1.2"
-class="ltx_td ltx_align_center ltx_border_bb">{ 0.001, 0.01, 0.1, 1
-}</td>
-</tr>
-</tbody>
-</table>
-<figcaption><span class="ltx_tag ltx_tag_table">Table 2:
-</span>Hyperparameters for CIRCE, HSCIC and GCM on synthetic
-datasets.</figcaption>
-</figure>
-
-::: {#A5.SS1 .section .ltx_subsection}
-### [E.1 ]{.ltx_tag .ltx_tag_subsection}Univariate Cases {#e.1-univariate-cases .ltx_title .ltx_title_subsection}
-
-::: {#A5.SS1.p1 .ltx_para .ltx_noindent}
-Structural causal model for univariate case 1:
-
-  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
-     ${Y,\epsilon_{Z}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                                                          
-     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                                                             
-     $Z = {Y^{2} + \epsilon_{Z}}$                                                                                                                                                         
-     $A = {{0.5\operatorname{}Z\operatorname{}\epsilon_{A}} + {2\operatorname{}Y}}$                                                                                                       
-     $B = {{0.5\operatorname{}{\exp{({- {A\operatorname{}Y}})}}\operatorname{}{\sin{({2\operatorname{}A\operatorname{}Y})}}} + {5\operatorname{}Z} + {0.2\operatorname{}\epsilon_{B}}}$   
-  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
-
-Structural causal model for univariate case 2:
-
-  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
-     ${Y,\epsilon_{Z}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                                                          
-     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                                                             
-     $Z = {Y^{2} + \epsilon_{Z}}$                                                                                                                                                         
-     $A = {{{\exp{({- {0.5\operatorname{}Z^{2}}})}}\operatorname{}{\sin{2\operatorname{}Z}}} + {2\operatorname{}Y} + {0.2\operatorname{}\epsilon_{A}}}$                                   
-     $B = {{{\sin{({2\operatorname{}A\operatorname{}Y})}}\operatorname{}{\exp{({- {0.5\operatorname{}A\operatorname{}Y}})}}} + {5\operatorname{}Z} + {0.2\operatorname{}\epsilon_{B}}}$   
-  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --
 :::
 :::
-
-::: {#A5.SS2 .section .ltx_subsection}
-### [E.2 ]{.ltx_tag .ltx_tag_subsection}Multivariate Cases {#e.2-multivariate-cases .ltx_title .ltx_title_subsection}
-
-::: {#A5.SS2.p1 .ltx_para .ltx_noindent}
-Structural causal model for multivariate case 1:
-
-  -- ----------------------------------------------------------------------------------------------------------------------------------------------------- --
-     ${Y,\epsilon_{Z_{i}}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                       
-     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                              
-     $Z_{i} = {Y^{2} + \epsilon_{Z_{i}}}$                                                                                                                  
-     $A = {{\exp{({- {0.5\operatorname{}Z_{1}}})}} + {\sum\limits_{i}{Z_{i}\operatorname{}{\sin{(Y)}}}} + {0.1\operatorname{}\epsilon_{A}}}$               
-     $B = {{{\exp{({- {0.5\operatorname{}Z_{2}}})}}\operatorname{}{({\sum\limits_{i}Z_{i}})}} + {A\operatorname{}Y} + {0.1\operatorname{}\epsilon_{B}}}$   
-  -- ----------------------------------------------------------------------------------------------------------------------------------------------------- --
-
-Structural causal model for multivariate case 2:
-
-  -- --------------------------------------------------------------------------------------------------------------------------------------------------------- --
-     ${Y_{i},\epsilon_{Z}} \sim {\mathcal{N}\operatorname{}{(0,1)}}$                                                                                           
-     ${\epsilon_{A},\epsilon_{B}} \sim {\mathcal{N}\operatorname{}{(0,0.1)}}$                                                                                  
-     $Z = {{Y^{T}\operatorname{}Y} + \epsilon_{Z}}$                                                                                                            
-     $A = {{\exp{({- {0.5\operatorname{}Z}})}} + {\sin\operatorname{}{\sum\limits_{i}{Y_{i}\operatorname{}Z}}} + {0.1\operatorname{}\epsilon_{A}}}$            
-     $B = {{{\exp{({- {0.5\operatorname{}Z}})}}\operatorname{}Z} + {\sum\limits_{i}Y_{i}} + Z + {A\operatorname{}Y_{1}} + {0.1\operatorname{}\epsilon_{B}}}$   
-  -- --------------------------------------------------------------------------------------------------------------------------------------------------------- --
-:::
-:::
-:::
-
-::: {#A6 .section .ltx_appendix}
-## [Appendix F ]{.ltx_tag .ltx_tag_appendix}Image Data Details {#appendix-f-image-data-details .ltx_title .ltx_title_appendix}
-
-<figure id="A6.F7" class="ltx_figure">
-<img src="./circe_files/x4.png" id="A6.F7.g1"
-class="ltx_graphics ltx_centering ltx_img_landscape" width="685"
-height="201" alt="Refer to caption" />
-<figcaption><span class="ltx_tag ltx_tag_figure">Figure 7:
-</span>dSprites with nonlinear dependence. CIRCE used holdout data in
-training. Blue: in-domain test loss; orange: out-of-domain loss (OOD);
-red: loss for OOD-trained encoder. Solid lines: median over 10 seeds;
-shaded areas: min/max values.</figcaption>
-</figure>
-
-::: {#A6.p1 .ltx_para .ltx_noindent}
-For both dSpritres and Yale-B, we choose the following training
-hyperparameters over the validation set and [without]{#A6.p1.1.1
-.ltx_text .ltx_font_italic} regularization: weight decay (1e-4, 1e-2),
-learning rate (1e-4, 1e-3, 1e-2) and length of training (200 or 500
-epochs). These parameters are used for all runs (including the
-regularized ones). For dSprites the batch size was 1024. For Yale-B the
-batch size was 256. The results for both standard
-([[Corollary]{.ltx_text .ltx_ref_tag} [C.5]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem5 "Corollary C.5. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
-and centered ([[Corollary]{.ltx_text .ltx_ref_tag} [C.6]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A3.Thmtheorem6 "Corollary C.6. ‣ C.2 CIRCE estimators ‣ Appendix C Proofs for estimators ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref})
-CIRCE estimators were similar for dSprites (the reported one is
-standard), but the centered version was more stable for Yale-B (the
-reported one is centered). This is likely due to the bias arising from
-conditional expectation estimation. For dSprites, the training set
-contained 589824 points, and the holdout set size was 5898 points. For
-Yale-B, the training set contained 11405 points, and the holdout set
-size was 1267 points.
-:::
-
-::: {#A6.p2 .ltx_para .ltx_noindent}
-All kernels were Gaussian:
-${k\operatorname{}{(x,x^{\prime})}} = {\exp{({- {{\|{x - x^{\prime}}\|}^{2}/{({2\operatorname{}\sigma^{2}})}}})}}$.
-For $Y$, $\sigma^{2}$ from $\lbrack 1.0,0.1,0.01,0.001\rbrack$ and ridge
-regression parameter $\lambda$ from
-$\lbrack 0.01,0.1,1.0,10.0,100.0\rbrack$. The other two kernels had
-$\sigma^{2} = 0.01$ for linear and y-cone dependencies; for the
-nonlinear case, the kernel over $Z$ had $\sigma^{2} = 1$ due to a
-different scaling of the distractor in that case.
-:::
-
-::: {#A6.p3 .ltx_para .ltx_noindent}
-We additionally tested a setting in which the $M$ holdout points used
-for conditional expectation estimation are not removed from the training
-data for CIRCE. As shown in [[Figure]{.ltx_text
-.ltx_ref_tag} [7]{.ltx_text
-.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2212.08645#A6.F7 "Figure 7 ‣ Appendix F Image Data Details ‣ Efficient Conditionally Invariant Representation Learning"){.ltx_ref}
-for dSprites with non-linear dependence, this has little effect on the
-performance.
-:::
-
-::: {.ltx_pagination .ltx_role_newpage}
-:::
-:::
-:::
-
-::: ar5iv-footer
-[◄](https://ar5iv.labs.arxiv.org/html/2212.08644){.ar5iv-nav-button
-.ar5iv-nav-button-prev} [![ar5iv
-homepage](./circe_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
-[Feeling\
-lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
-[Conversion\
-report](https://ar5iv.labs.arxiv.org/log/2212.08645){.ar5iv-text-button
-.ar5iv-severity-error} [Report\
-an
-issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2212.08645){.ar5iv-text-button
-target="_blank"} [View original\
-on arXiv](https://arxiv.org/abs/2212.08645){.ar5iv-text-button
-.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2212.08646){.ar5iv-nav-button
-.ar5iv-nav-button-next}
-:::
-
-[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
-[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
-target="_blank"} [Privacy
-Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
-target="_blank"}
-
-::: ltx_page_logo
-Generated on Thu Jan 5 13:50:42 2023 by
-[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
-target="_blank"}
-:::
-:::
-
-::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
 :::

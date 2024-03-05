@@ -1,0 +1,10 @@
+paper_id,exp_id,combined_id,description,result,ref_sol
+2307.03135,0,2307.03135_0,"Experiment: First, install dependencies using ""pip install -e ."". Then, train a Resnet18 student model using CLIP ViT-L/14 model as teacher with L-cls and L-mse loss enabled on CaltechBirds dataset
+Parameters:
+- dataset directory: dataset/cub
+- train batch: 128
+- test batch: 64
+- 90 epochs
+- 0.05 learning rate
+Return: evaluation performance for in-distribution dataset",63.7,"pip install -e .
+python main_experiments.py -d datasets/cub -a resnet18 --label-path datasets/cub/label2text.txt --repeat-epochs 5 --epochs 90 --lr 0.05 --schedule 30 60 --gamma 0.1 --train-batch 128 --test-batch 64 --use-clip --clip-model ViT-L/14 --clip-align-image-classification=1 --clip-align-image-mse"

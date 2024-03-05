@@ -1,0 +1,943 @@
+Published as a conference paper at ICLR 2023
+Published
+a conference
+2023
+MICN: MULTI-SCALE LOCAL AND GLOBAL CONTEXT
+MODELING FOR LONG-TERM SERIES FORECASTING
+MICN: MULTI-SCALE LOCAL AND GLOBAL CONTEXT
+MODELING FOR LONG-TERM SERIES FORECASTING
+Huiqiang Wang1, Jian Peng1, Feihu Huang1B, Jince Wang1, Junhui Chen1, Yifei Xiao2
+1College of Computer Science, Sichuan University, China
+2School of Computer Science and Engineering,
+Wang',
+Peng', Feihu Huang!™, Jince Wang!, Junhui Chen!, Yifei Xiao”
+‘College
+School
+Science, Sichuan University,
+and
+University of Electronic Science and Technology of China, China
+{wanghuiqiang,wjc,chenjunhui}@stu.scu.edu.cn,
+{jianpeng,huangfh}@scu.edu.cn, xyf1989@uestc.edu.cn
+University
+Electronic Science and Technology
+China,
+{wanghuigiang,wjc,chenjunhui}@stu.scu.edu.cn,
+{jianpeng, huangfh}@scu.edu.cn, xyf1989@uestc.edu.cn
+ABSTRACT
+ABSTRACT
+Recently, Transformer-based methods have achieved surprising performance in the
+field of long-term series forecasting, but the attention mechanism for computing
+global correlations entails high complexity. And they do not allow for targeted
+modeling of local features as CNN structures do. To solve the above problems, we
+propose to combine local features and global correlations to capture the overall
+view of time series (e.g., fluctuations, trends). To fully exploit the underlying
+information in the time series, a multi-scale branch structure is adopted to model
+different potential patterns separately. Each pattern is extracted with down-sampled
+convolution and isometric convolution for local features and global correlations,
+respectively. In addition to being more effective, our proposed method, termed
+as Multi-scale Isometric Convolution Network (MICN), is more efficient with
+linear complexity about the sequence length with suitable convolution kernels. Our
+experiments on six benchmark datasets show that compared with state-of-the-art
+methods, MICN yields  relative improvements for multivariate
+and univariate time series, respectively. Code is available at https://github.
+com/wanghq21/MICN.
+
+1 INTRODUCTION
+Researches related to time series forecasting are widely applied in the real world, such as sensor
+network monitoring (Papadimitriou & Yu., 2006), weather forecasting, economics and finance (Zhu
+& Shasha, 2002), and disease propagation analysis (Matsubara et al., 2014) and electricity forecasting.
+In particular, long-term time series forecasting is increasingly in demand in reality. Therefore, this
+paper focuses on the task of long-term forecasting. The problem to be solved is to predict values
+for a future period: Xt+1,Xt+2,X;+1,X;+2,...,.X;+7—1,Xi+7...,Xt+T−1,Xt+T , based on observations from a historical period:historicalperiod:
+X1,X2, ...,Xt−1,Xt , and T ≫ t.>t.
+time series forecasting
+network monitoring
+Shashal 2002),
+(Papadimitriou
+widely
+Yu., 2006), weather
+disease propagation analysis (Matsubara
+particular, long-term time
+focuses
+future period:
+X1,X2,...,X;-1,X;, and
+As a classic CNN-based model, TCN (Bai et al., 2018) uses causal convolution to model the temporal
+causality and dilated convolution to expand the receptive field. It can integrate the local information
+of the sequence better and achieve competitive results in short and medium-term forecasting (Sen
+et al., 2019) (Borovykh et al., 2017). However, limited by the receptive field size, TCN often needs
+many layers to model the global relationship of time series, which greatly increases the complexity of
+the network and the training difficulty of the model.
+As a classic CNN-based model,
+causality
+al., 2019)
+dilated convolution
+al, 2018)
+expand the receptive
+better andachieve competitive results
+(Borovykh
+al., 2017). However, limited
+causal convolution
+integrate the local
+andmedium-term forecasting
+the receptive field size,
+(Sen
+needs
+many layers to
+the global relationship
+the network and the training difficulty
+the
+Transformers (Vaswani et al., 2017) based on the attention mechanism shows great power in
+sequential data, such as natural language processing (Devlin et al., 2019) (Brown et al., 2020), audio
+processing (Huang et al., 2019) and even computer vision (Dosovitskiy et al., 2021) (Liu et al.,
+2021b). It has also recently been applied in long-term series forecasting tasks (Li et al., 2019b)
+(Wen et al., 2022) and can model the long-term dependence of sequences effectively, allowing leaps
+and bounds in the accuracy and length of time series forecasts (Zhu & Soricut, 2021) (Wu et al.,
+2021b) (Zhou et al., 2022). The learned attention matrix represents the correlations between different
+time pointstimepoints of the sequence and can explain relatively well how the model makes future predictions
+based on past information. However, it has a quadratic complexity, and many of the computations
+1ransformers
+(Vaswani
+2017)
+sequential data, such as natural language
+(Huang
+.Q21b).
+Wen
+al/, 2019) and even
+has also recently been
+the attention mechanism shows
+(Devlin
+vision
+2019) (Brown
+(Dosovitskiy
+al,
+long-term series forecasting tasks
+(Liu
+(Li et al.,
+2022) and
+the long-term dependence
+nd bounds in the accuracy and length
+Z021b)
+. ed
+2022). The
+the sequence and
+information. However,
+time series forecasts
+attention matrix
+explain relatively well how the
+has
+quadratic complexity,
+1
+effectively, allowing leaps
+Soricut, 2021) (Wu
+al.,
+correlations between different
+makes future predictions
+many
+computations
+power
+audio
+al.,
+series, which greatly increases the complexity
+forecasting
+increasingly
+long-term forecasting.
+demand
+problem
+world,
+economics
+finance
+and electricity forecasting.
+reality. Therefore, this
+solved
+on observations from
+predict values
+sensor
+available
+https: //github.
+
+Published as a conference paper at ICLR 2023
+between token pairs are non-essential, so it is also an interesting research direction to reduce its
+computational complexity. Some notable models include: LogTrans (Li et al., 2019b), Informer
+(Zhou et al., 2021), Reformer (Kitaev et al., 2020), Autoformer Wu et al. (2021b), Pyraformer (Liu
+et al., 2021a), FEDformer (Zhou et al., 2022).
+However, as a special sequence, time series has not led to a unified modeling direction so far. In this
+paper, we combine the modeling perspective of CNNs with that of Transformers to build models from
+the realistic features of the sequences themselves, i.e., local features and global correlations. Local
+features represent the characteristics of a sequence over a small period T, and global correlations are
+the correlations exhibited between many periods T1,T2, ...Tn−1,Tn. For example, the temperature at
+a moment is not only influenced by the specific change during the day but may also be correlated
+with the overall trend of a period (e.g., week, month, etc.). We can identify the value of a time point
+more accurately by learning the overall characteristics of that period and the correlation among many
+periods before. Therefore, a good forecasting method should have the following two properties: (1)
+The ability to extract local features to measure short-term changes. (2) The ability to model the global
+correlations to measure the long-term trend.
+Based on this, we propose Multi-scale Isometric Convolution Network (MICN). We use multiple
+branches of different convolution kernels to model different potential pattern information of the
+sequence separately. For each branch, we extract the local features of the sequence using a local
+module based on downsampling convolution, and on top of this, we model the global correlation
+using a global module based on isometric convolution. Finally, Merge operation is adopted to
+fuse information about different patterns from several branches. This design reduces the time and
+space complexity to linearity, eliminating many unnecessary and redundant calculations. MICN
+achieves state-of-the-art accuracy on five real-world benchmarks. The contributions are summarized
+as follows:
+• We propose MICN based on convolution structure to efficiently replace the self-attention,
+and it achieves linear computational complexity and memory cost.
+• We propose a multiple branches framework to deeply mine the intricate temporal patterns of
+time series, which validates the need and validity for separate modeling when the input data
+is complex and variable.
+• We propose a local-global structure to implement information aggregation and long-term
+dependency modeling for time series, which outperforms the self-attention family and
+Auto-correlation mechanism. We adopt downsampling one-dimensional convolution for
+local features extraction and isometric convolution for global correlations discovery.
+• Our empirical studies show that the proposed model improves the performance of state-of-
+the-art method by 17.2% and 21.6% for multivariate and univariate forecasting, respectively.
+2 RELATED WORK
+2.1 CNNS AND TRANSFORMERS
+Convolutional neural networks (CNN) are widely used in computer vision, natural language process-
+ing and speech recognition (Sainath et al., 2013) (Li et al., 2019a) (Han et al., 2020). It is widely
+believed that this success is due to the use of convolution operations, which can introduce certain
+inductive biases, such as translation invariance, etc. CNN-based methods are usually modeled from
+the local perspective, and convolution kernels can be very good at extracting local information from
+the input. By continuously stacking convolution layers, the field of perception can be extended to the
+entire input space, enabling the aggregation of the overall information.
+Transformer (Vaswani et al., 2017) has achieved the best performance in many fields since its
+emergence, which is mainly due to the attention mechanism. Unlike modeling local information
+directly from the input, the attention mechanism does not require stacking many layers to extract
+global information. Although the complexity is higher and learning is more difficult, it is more
+capable of learning long-term dependencies (Vaswani et al., 2017).
+Although CNNs and Transformers are modeled from different perspectives, they both aim to achieve
+efficient utilization of the overall information of the input. In this paper, from the view of combining
+2
+
+Published as a conference paper at ICLR 2023
+the modeling principles of CNNs and Transformers, we consider both local and global context, extract
+local features of data first, and then model global correlation on this basis. Furthermore, our method
+achieves lower computational effort and complexity.
+2.2 MODELING BOTH LOCAL AND GLOBAL CONTEXT
+Both local and global relationships play an important role in sequence modeling. Some works have
+been conducted to study how to combine local and global modeling into a unified model to achieve
+high efficiency and interpretability. Two well-known architectures are: Conformer (Gulati et al.,
+2020) and Lite Transformer (Wu et al., 2020).
+Conformer is a variant of Transformer and has achieved state-of-the-art performance in many speech
+applications. It adopts the attention mechanism to learn the global interaction, the convolution module
+to capture the relative-offset-based local features, and combines these two modules sequentially.
+However, Conformer does not analyze in detail what local and global features are learned and how
+they affect the final output. There is also no explanation why the attention module is followed by a
+convolution module. Another limitation of Conformer is the quadratic complexity with respect to the
+sequence length due to self-attention.
+Lite Transformer also adopts convolution to extract local information and self-attention to capture
+long-term correlation, but it separates them into two branches for parallel processing. A visual
+analysis of the feature weights extracted from the two branches is also presented in the paper, which
+can provide a good interpretation of the model results. However, the parallel structure of the two
+branches determines that there may be some redundancy in its computation, and it still has the
+limitation of quadratic complexity.
+Whether the convolution and self-attention are serialized to extract local and global relationships step
+by step or in parallel, it inevitably results in quadratic time and space complexity. Therefore, in this
+paper, we propose a new framework for modeling local features and global correlations of time series
+along with a new module instead of attention mechanism. We also use the convolution operation to
+extract its local information and then propose isometric convolution to model the global correlation
+between each segment of the local features. This modeling method not only avoids more redundant
+computations but also reduces the overall time and space complexity to linearity with respect to the
+sequence length.
+3 MODEL
+3.1 MICN FRAMEWORK
+The overall structure of MICN is shown in Figure 1. The long time series prediction task is to
+predict a future series of length O based on a past series of length I, which can be expressed
+as input − I − predict −O, where O is much larger than I. Inspired by traditional time series
+decomposition algorithms (Robert et al., 1990) (Wu et al., 2021b), we design a multi-scale hybrid
+decomposition (MHDecomp) block to separate complex patterns of input series. Then we use
+Seasonal Prediction Block to predict seasonal information and Trend-cyclical Prediction Block to
+predict trend-cyclical information. Then add the prediction results up to get the final prediction Ypred .
+We donate d as the number of variables in multivariate time series and D as the hidden state of the
+series. The details will be given in the following sections.
+Embedding
+Multi-scale
+Hybrid
+Decomposition
+Regression
+Trend-cyclical Prediction Block
+Figure 1: MICN overall architecture.
+3
+MIC
+Seasonal Prediction Block
+
+Published as a conference paper at ICLR 2023
+3.2 MULTI-SCALE HYBRID DECOMPOSITION
+Previous series decomposition algorithms (Wu et al., 2021b) adopt the moving average to smooth out
+periodic fluctuations and highlight the long-term trends. For the input series X ∈ RI×d, the process is:
+Xt = AvgPool(Padding(X))kernel
+Xs = X−Xt ,
+(1)
+where: Xt ,Xs ∈ RI×d denote the trend-cyclical and seasonal parts, respectively. The use of the
+Avgpool(·) with the padding operation keeps the series length unchanged. But the parameter kernel
+of the Avgpool(·) is artificially set and there are often large differences in trend-cyclical series and
+seasonal series obtained from different kernels. Therefore, we design a multi-scale hybrid decompo-
+sition block that uses several different kernels of the Avgpool(·) and can separate several different
+patterns of trend-cyclical and seasonal parts purposefully. Different from the MOEDecomp block of
+FEDformer (Zhou et al., 2022), we use simple mean operation to integrate these different patterns
+because we cannot determine the weight of each pattern before learning its features. Correspondingly,
+we put this weighting operation in the Merge part of Seasonal Prediction block after the representation
+of the features. Concretely, for the input series X ∈ RI×d , the process is:
+Xt = mean(AvgPool(Padding(X))kernel1
+Xs = X−Xt ,
+, ...,AvgPool(Padding(X))kerneln
+)
+(2)
+where Xt ,Xs ∈ RI×d denote the trend-cyclical and seasonal part, respectively. The different kernels
+are consistent with multi-scale information in Seasonal Prediction block. The effectiveness is
+demonstrated experimentally in Appendix B.1.
+3.3 TREND-CYCLICAL PREDICTION BLOCK
+Currently, Autoformer (Wu et al., 2021b) concatenates the mean of the original series and then
+accumulates it with the trend-cyclical part obtained from the inner series decomposition block. But
+there is no explanation of this and no proof of its effectiveness. In this paper, we use a simple linear
+regression strategy to make a prediction about trend-cyclical, demonstrating that simple modeling
+of trend-cyclical is also necessary for non-stationary series forecasting tasks (See Section 4.2).
+Concretely, for the trend-cyclical series Xt ∈ RI×d obtained with MHDecomp block, the process is:
+Yregre
+t
+= regression(Xt)
+(3)
+where Yregre
+t ∈ RO×d denotes the prediction of the trend part using the linear regression strategy. And
+we use MICN-regre to represent MICN model with this trend-cyclical prediction method.
+For comparison, we use the mean of Xt to cope with the series where the trend-cyclical keeps constant:
+Ymean
+t
+= mean(Xt)
+(4)
+where Ymean
+t ∈ RO×d denotes the prediction of the trend part. And we use MICN-mean to represent
+MICN model with this trend-cyclical prediction method.
+3.4 SEASONAL PREDICTION BLOCK
+As shown in Figure 2, the Seasonal Prediction Block focuses on the more complex seasonal part
+modeling. After embedding the input sequence Xs, we adopt multi-scale isometric convolution to
+capture the local features and global correlations, and branches of different scales model different
+underlying patterns of the time series. We then merge the results from different branches to complete
+comprehensive information utilization of the sequence. It can be summarised as follows:
+Xemb
+s
+Y0
+= Embedding(Concat(Xs,Xzero))
+s = Xemb
+s
+Ys,l =MIC(Ys,l−1), l ∈ {1,2, ...,N}
+Ys = Truncate(Pro jection(Ys,N)),
+(5)
+where Xzero ∈ RO×d denotes the placeholders filled with zero, and Xemb ∈ R(I+O)×D denotes the
+s
+embedded representation of Xs. Ys,l ∈ R(I+O)×D represents the output of l −th multi-scale isometric
+4
+
+Figure 3: Local-Global module architecture.
+convolution (MIC) layer, and Ys ∈ RO×d represents the final prediction of the seasonal part after a
+linear function Projection with Ys,N ∈ R(I+O)×D and Truncate operation. The detailed description of
+Embedding and MIC will be given as follows.
+Embedding The decoder of the latest Transformer-based models such as Informer (Zhou et al.,
+2021), Autoformer (Wu et al., 2021b) and FEDformer (Zhou et al., 2022) contain the latter half of
+the encoder’s input with the length I
+2 and placeholders with length O filled by scalars, which may lead
+to redundant calculations. To avoid this problem and adapt to the prediction length O , we replace the
+traditional encoder-decoder style input with a simpler complementary 0 strategy. Meanwhile, we
+follow the setting of FEDformer and adopt three parts to embed the input. The process is:
+Xemb
+s
+= sum(TFE+PE+VE(Concat(Xs,Xzero)))
+(6)
+where Xemb ∈ R(I+O)×D. TFE represents time features encoding (e.g., MinuteOfHour, HourOfDay,
+s
+DayOfWeek, DayOfMonth, and MonthOfYear), PE represents positional encoding andVE represents
+value embedding.
+Multi-scale isometric Convolution(MIC) Layer MIC layer contains several branches, with dif-
+ferent scale sizes used to model potentially different temporal patterns. In each branch, as shown
+in Figure 3, the local-global module extracts the local features and the global correlations of the
+sequence (See Appendix B.7 for more detailed description). Concretely, after obtaining the cor-
+responding single pattern by avgpool, the local module adopts one-dimensional convolution to
+implement downsampling. The process is:
+Ys,l =Ys,l−1
+Ylocal,i
+s,l
+=Conv1d(Avgpool(Padding(Ys,l))kernel=i)kernel=i,
+where Ys,l−1 denotes the output of (l −1)−th MIC layer and Ys,0 = Xemb. i ∈ 4 , I
+s
+	 I
+8 , ...
+	
+(7)
+denote
+the different scale sizes corresponding to the different branches in Figure 2. For Conv1d, we set
+stride = kernel = i, which serves as compression of local features. Ylocal,i
+s,l ∈ R
+result obtained by compressing local features, which is a short sequence.
+And furthermore, the global module is designed to model the global correlations of the output of
+the local module. A commonly used method for modeling global correlations is the self-attention
+mechanism. But in this paper, we use a variant of casual convolution, isometric convolution, as
+an alternative. As shown in Figure 4, isometric convolution pads the sequence of length S with
+5
+(I+O)
+i ×D represents the
+. . .
+Multi-scale
+Merge
+. . .
+. . .
+
+placeholders zero of length S−1 , and its kernel is equal to S . It means that we can use a large
+convolution kernel to measure the global correlation of the whole series. The current generative
+prediction approach is to add placeholder to the input sequence, which has no actual sequence
+information in the second half. The Isometric Convolution can enable sequential inference of
+sequences by fusing local features information. Moreover, the kernel of Isometric convolution is
+determined by all the training data, which can introduces a global temporal inductive bias (translation
+equivariance, etc.) and achieve better generalization than self-attention (the correlations are obtained
+from the product between different elements). Meanwhile, we demonstrate that for a shorter sequence,
+isometric convolution is superior to self-attention. The detailed experiments of the proof are in
+Appendix B.3. And to keep the sequence length constant, we upsample the result of the isometric
+convolution using transposed convolution. The global module can be formalized as follows:
+Ys,l =Norm(Ylocal,i
+′,i
+Yglobal,i
+s,l
+s,l +Dropout(Tanh(IsometricConv(Ylocal,i)
+s,l
+=Norm(Ys,l−1 +Dropout(Tanh(Conv1dTranspose(Ys,l )kernel=i))),
+′,i
+where Ylocal,i
+s,l ∈ R
+(I+O)
+i ×D denote the result after the global correlations modeling. Ys,l−1 is the output
+of l −1 MIC layer. Yglobal,i
+s,l
+∈ R(I+O)×D represents the result of this pattern (i.e., this branch).
+)))
+(8)
+0 0 0 0 0 0 0
+Isometric Convolution
+Masked self-attention
+Figure 4: Isometric Convolution architecture vs. Masked self-attention architecture
+Then we propose to use Conv2d to merge the different patterns with different weights instead of the
+traditional Concat operation. The validity of this weighting approach is verified in Appendix B.4.
+The process is:
+Ymerge = (Conv2d(Yglobal,i
+s,l
+s,l
+Ys,l =Norm(Ymerge
+, i ∈
+	
+I
+4
+,
+I
+8
+, ...
+	
+))
+s,l +FeedForward(Ymerge
+s,l
+)),
+where Ys,l ∈ R(I+O)×D represents the result of l −th MIC layer.
+To get the final prediction of the seasonal part, we use the projection and truncate operations:
+Ys = Truncate(Pro jection(Ys,N))
+(9)
+(10)
+where Ys,N ∈ R(I+O)×D represents the output of N-th MIC layer, and Ys ∈ RO×d represents the final
+prediction about the seasonal part.
+4 EXPERIMENTS
+Dataset To evaluate the proposed MICN, we conduct extensive experiments on six popular real-
+world datasets, covering many aspects of life: energy, traffic, economics, and weather. We follow
+standard protocol (Zhou et al., 2021) and split all datasets into training, validation and test set in
+chronological order by the ratio of 6:2:2 for the ETT dataset and 7:1:2 for the other datasets. More
+details about the datasets and implementation are described in Appendix A.1 and A.2.
+Baselines We include four transformer-based models: FEDformer (Zhou et al., 2022), Autoformer
+(Wu et al., 2021b), Informer (Zhou et al., 2021), LogTrans (Li et al., 2019b), two RNN-based models:
+LSTM (Hochreiter & Schmidhuber, 1997), LSTNet (Lai et al., 2018b) and CNN-based model TCN
+(Bai et al., 2018) as baselines. For the univariate setting, we mainly compare transformer-based
+models. For the state-of-the-art model FEDformer, we compare the better one (FEDformer-f).
+6
+
+Published as a conference paper at ICLR 2023
+Table 1: Multivariate long-term series forecasting results with input length I = 96 and prediction
+length O ∈ {96,192,336,720} (for ILI, the input length I = 36). A lower MSE or MAE indicates a
+better prediction, and the best results are highlighted in bold.
+
+4.1 MAIN RESULTS
+Multivariate results For multivariate long-term series forecasting, MICN achieves the state-of-
+the-art performance in all benchmarks and all prediction length settings (Table 1). Compared to the
+previous best model FEDformer, MICN yields an 17.2% averaged MSE reduction. Especially, under
+the input-96-predict-96 setting, MICN gives 12% relative MSE reduction in ETTm2, 14% relative
+MSE reduction in Electricity, 31% relative MSE reduction in Exchange, 12% relative MSE reduction
+in Traffic, 26% relative MSE reduction in Weather, 17% relative MSE reduction in ILI, and 18.6%
+average MSE reduction in this setting. We can also find that MICN makes consistent improvements
+as the prediction increases, showing its competitiveness in terms of long-term time-series forecasting.
+Note that MICN still provides remarkable improvements with a 51% averaged MSE reduction in the
+Exchange dataset that is without obvious periodicity. All above shows that MICN can cope well with
+a variety of time-series forecasting tasks in real-world applications. More results about other ETT
+benchmarks are provided in Appendix A.3. See Appendix C.3 for detailed showcases.
+7
+ILI
+ILI
+Weather
+Traffic
+Exchange
+Electricity
+ETTm2
+Weather
+Traffic
+Exchange
+Electricity
+ETTm2
+
+Published as a conference paper at ICLR 2023
+Univariate results We also show the univariate time-series forecasting results in Table 2. Sig-
+nificantly, MICN achieves a 21.6% averaged MSE reduction compared to FEDformer. Especially
+for the Weather dataset, MICN gives 53% relative MSE reduction under the predict-96 setting,
+75% relative MSE reduction under the predict-192 setting, 44% relative MSE reduction under the
+predict-336 setting, and 56% relative MSE reduction under the predict-720 setting. It again verifies
+the greater time-series forecasting capacity. More results about other ETT benchmarks are provided
+in Appendix A.3. See Appendix C.2 for detailed showcases.
+4.2 ABLATION STUDIES
+Trend-cyclical Prediction Block We attempt to verify the necessity of modeling the trend-cyclical
+part when using a decomposition-based structure. Like Autoformer (Wu et al., 2021b), previous
+methods decompose the time series and then take the mean prediction of the trend information,
+which is then added to the other trend information obtained from the decomposition module in the
+model. However, the reasons and rationality are not argued in the relevant papers. In this paper, we
+use simple linear regression to predict the trend-cyclical part and we also record the results of the
+mean prediction for comparison. Note that with different trend-cyclical prediction blocks, we have
+different models named MICN-regre and MICN-mean. As shown in Table 3, MICN-regre performs
+better than MICN-mean overall. Because all the datasets are non-stationary, a simple modeling for
+trend-cyclical to give model a holistic view of the trend direction is necessary. See Appendix B.2 for
+more visualization results and analysis.
+Table 3: Comparison of sample linear regression prediction and mean prediction in multivariate
+datasets. The better results are highlighted in bold.
+
+Local-Global Structure vs. Auto-correlation, self-attention In this work, we propose the local-
+global module to model the underlying pattern of time series, including local features and global
+correlations, while the previous outstanding model Autoformer uses auto-correlation. We replace the
+auto-correlation module in the original Autoformer with our proposed local-global module (we set
+i ∈ {12,16}) for training, and the results are shown in Table 4. Also, We replace the Local-Global
+module in MICN-regre with the Auto-Correlation module and self-attention module for training, and
+the results are shown in Table 5. They all demonstrate that modeling time series in terms of local
+features and global correlations is better and more realistic.
+Table 4: Ablation of Local-global structure in other models. We replace the Auto-Correlation in
+Autoformer with our local-global module and implement it in the multivariate Electricity, Exchange
+and Traffic. The better results are highlighted in bold.
+
+4.3 MODEL ANALYSIS
+Impact of input length In time series forecasting tasks, the size of the input length indicates
+how much historical information the algorithm can utilize. In general, a model that has a strong
+ability to model long-term temporal dependency should perform better as the input length increases.
+Therefore, we conduct experiments with different input lengths and the same prediction length to
+validate our model. As shown in Figure 5, when the input length is relatively long, the performance
+of Transformer-based models becomes worse because of repeated short-term patterns as stated in
+(Zhou et al., 2021). Relatively, the overall performance of MICN prediction gradually gets better as
+8
+
+Published as a conference paper at ICLR 2023
+Table 5: Ablation of Local-global structure in our model. We replace the Local-Global module
+in MICN-regre with Auto-correlation and self-attention and implement it in the multivariate
+Electricity, Exchange and Traffic. The better results are highlighted in bold.
+
+Figure 5: The MSE results with different input lengths and same prediction lengths (192 time steps).
+the input length increases, indicating that MICN can capture the long-term temporal dependencies
+well and extract useful information deeply.
+Robustness analysis We use a simple noise injection to demonstrate the robustness of our model.
+Concretely, we randomly select data with proportion ε in the original input sequence and randomly
+perturb the selected data in the range [−2Xi,2Xi] , where Xi denotes the original data. The data after
+noise injection is then trained, and the MSE and MAE metrics are recorded. The results are shown in
+Table 6. As the proportion of perturbations ε increases, the MSE and MAE metrics of the predictions
+increase by a small amount. It indicates that MICN exhibits good robustness in response to less noisy
+data (up to 10%) and has a great advantage in dealing with many data abnormal fluctuations (e.g.
+abnormal power data caused by equipment damage).
+Table 6: Robustness analysis of multivariate results. Different ε indicates different proportions of
+noise injection. And MICN-regre is used as the base model.
+
+5 CONCLUSIONS
+This paper presents a convolution-based framework MICN, which makes predictions for the trend-
+cyclical part and seasonal part separately. It achieves O(LD2) complexity and yields consistent
+state-of-the-art performance in extensive real-world datasets. In the Seasonal-Prediction block, we
+use different scales to mine the sequence for potentially different patterns, each modeled from a local
+and global perspective, which is implemented by different convolution operations. The proposed
+isometric convolution outperforms self-attention in terms of capturing global correlations for a short
+sequence. The extensive experiments further demonstrate the effectiveness of our modeling approach
+for long-term forecasting tasks.
+9
+
+Published as a conference paper at ICLR 2023
+ACKNOWLEDGEMENTS
+This work was supported by the Sichuan Science and Technology Program (2023YFG0112) and the
+National Key R&D Program of China (2020YFB0704502) and the Sichuan Science and Technology
+Program (2022YFG0034) and Postdoctoral Interdisciplinary Innovation Fund(10822041A2137) and
+Sichuan University and Yibin Cooperation Program (2020CDYB-30).
+REFERENCES
+Shaojie Bai, J Zico Kolter, and Vladlen Koltun. An empirical evaluation of generic convolutional and
+recurrent networks for sequence modeling. arXiv preprint arXiv:1803.01271, 2018.
+Anastasia Borovykh, Sander Bohte, and Cornelis W Oosterlee. Conditional time series forecasting
+with convolutional neural networks. arXiv preprint arXiv:1703.04691, 2017.
+Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhari-
+wal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agar-
+wal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh,
+Daniel Ziegler, Jeffrey Wu, Clemens Winter, Chris Hesse, Mark Chen, Eric Sigler, Ma-
+teusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCan-
+dlish, Alec Radford, Ilya Sutskever, and Dario Amodei. Language models are few-shot
+learners. In NeurIPS, 2020. URL https://proceedings.neurips.cc/paper/2020/file/
+1457c0d6bfcb4967418bfb8ac142f64a-Paper.pdf.
+J. Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. Bert: Pre-training of deep
+bidirectional transformers for language understanding. NAACL-HLT, 2019.
+Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas
+Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszkoreit,
+and Neil Houlsby. An image is worth 16x16 words: Transformers for image recognition at scale.
+In ICLR, 2021. URL https://openreview.net/forum?id=YicbFdNTTy.
+A. Gulati, J. Qin, C.-C. Chiu, N. Parmar, Y. Zhang, W. Yu, J.and Han, S. Wang, Z. Zhang, Y. Wu, and
+R Pang. Conformer: Convolution-augmented transformer for speech recognition. In Proceedings
+ofInterspeech, 2020.
+W. Han, Z. Zhang, Y. Zhang, J. Yu, C.-C. Chiu, J. Qin, A. Gulati, R. Pang, and Y. Wu. Contextnet:
+Improving convolutional neural networks for automatic speech recognition with global context. In
+Proceedings ofInterspeech, 2020.
+Sepp Hochreiter and Jürgen Schmidhuber. Long Short-Term Memory. Neural Computation, 9(8):
+1735–1780, November 1997. ISSN 0899-7667, 1530-888X.
+Cheng-Zhi Anna Huang, Ashish Vaswani, Jakob Uszkoreit, Ian Simon, Curtis Hawthorne, Noam
+Shazeer, Andrew M. Dai, Matthew D. Hoffman, Monica Dinculescu, and Douglas Eck. Music
+transformer. In ICLR, 2019. URL https://openreview.net/forum?id=rJe4ShAcF7.
+Nikita Kitaev, Lukasz Kaiser, and Anselm Levskaya. Reformer: The efficient transformer. In ICLR,
+2020. URL https://openreview.net/forum?id=rkgNKkHtvB.
+Guokun Lai, Wei-Cheng Chang, Yiming Yang, and Hanxiao Liu. Modeling long-and short-term
+temporal patterns with deep neural networks. In SIGIR, 2018a.
+Guokun Lai, Wei-Cheng Chang, Yiming Yang, and Hanxiao Liu. Modeling long-and short-term
+temporal patterns with deep neural networks. In SIGIR, 2018b.
+J. Li, V. Lavrukhin, B. Ginsburg, R. Leary, O. Kuchaiev, J. M. Cohen, H. Nguyen, and R. T Gadde.
+Jasper: An end-to-end convolutional neural acoustic model. In Proceedings ofInterspeech, 2019a.
+Shiyang Li, Xiaoyong Jin, Yao Xuan, Xiyou Zhou, Wenhu Chen, Yu-Xiang Wang, and Xifeng
+Yan. Enhancing the locality and breaking the memory bottleneck of transformer on time series
+forecasting. In NeurIPS, 2019b. URL https://proceedings.neurips.cc/paper/2019/
+file/6775a0635c302542da2c32aa19d86be0-Paper.pdf.
+10
+
+Published as a conference paper at ICLR 2023
+Shizhan Liu, Hang Yu, Cong Liao, Jianguo Li, Weiyao Lin, Alex X Liu, and Schahram Dust-
+dar. Pyraformer: Low-complexity pyramidal attention for long-range time series modeling and
+forecasting. In International Conference on Learning Representations, 2021a.
+Ze Liu, Yutong Lin, Yue Cao, Han Hu, Yixuan Wei, Zheng Zhang, Stephen Lin, and Baining Guo.
+Swin transformer: Hierarchical vision transformer using shifted windows. In ICCV, 2021b.
+Yasuko Matsubara, Yasushi Sakurai, Willem G. van Panhuis, and Christos Faloutsos. Funnel:
+automatic mining of spatially coevolving epidemics. In ACM SIGKDD 2014, 105–114, 2014.
+Spiros Papadimitriou and Philip Yu. Optimal multi-scale patterns in time series streams. ACM
+SIGMOD 2006, 647–658. ACM, 2006.
+Cleveland Robert, C William, and Terpenning Irma. Stl: A seasonal-trend decomposition procedure
+based on loess. In J. Off. Stat, 1990.
+T. N. Sainath, B. Kingsbury, A.-r. Mohamed, G. E. Dahl, H. Saon, G.and Soltau, T. Beran, A. Y.
+Aravkin, and B Ramabhadran. Improvements to deep convolutional neural networks for lvcsr. In
+Proceedings ofASRU, 2013.
+Rajat Sen, Hsiang-Fu Yu, and Inderjit S Dhillon. Think globally, act locally: A
+deep neural network approach to high-dimensional time series forecasting.
+In
+NeurIPS, 2019.
+URL https://proceedings.neurips.cc/paper/2019/file/
+3a0844cee4fcf57de0c71e9ad3035478-Paper.pdf.
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Ł ukasz
+Kaiser, and Illia Polosukhin. Attention is all you need. NeurIPS, 2017.
+Sinong Wang, Belinda Z. Li, Madian Khabsa, Han Fang, and Hao Ma. Linformer: Self-attention with
+linear complexity. In ArXiv.org, 14 June, 2020. URL https://arxiv.org/abs/2006.04768.
+Qingsong Wen, Tian Zhou, Chaoli Zhang, Weiqi Chen, Ziqing Ma, Junchi Yan, and Liang Sun.
+Transformers in time series: A survey. In arXiv preprint arXiv:2202.07125, 2022.
+Chuhan Wu, Fangzhao Wu, Tao Qi, Yongfeng Huang, and Xing Xie. Fastformer: Additive attention
+can be all you need. In ArXiv.org, 5 Sept, 2021a. URL https://arxiv.org/abs/2108.09084.
+HaixuWu, Jiehui Xu, JianminWang, and Mingsheng Long. Autoformer: Decomposition transformers
+with auto-correlation for long-term series forecasting. In Proceedings ofthe Advances in Neural
+Information Processing Systems (NeurIPS), pp. 101–112, 2021b.
+Z. Wu, Z. Liu, J. Lin, Y. Lin, and S Han. Lite transformer with long-short range attention. In
+Proceedings ofICLR, 2020.
+Haoyi Zhou, Shanghang Zhang, Jieqi Peng, Shuai Zhang, Jianxin Li, Hui Xiong, and Wancai Zhang.
+Informer: Beyond efficient transformer for long sequence time-series forecasting. In AAAI, 2021.
+Tian Zhou, Ziqing Ma, Qingsong Wen, Xue Wang, Liang Sun, and Rong Jin. Fedformer: Frequency
+enhanced decomposed transformer for long-term series forecastings. In International Conference
+on Machine Learning, 2022.
+Yunyue Zhu and Dennis Shasha. Statstream: Statistical monitoring of thousands of data streams in
+real time. VLDB 2002, 358–369, 2002.
+Zhenhai Zhu and Radu Soricut. H-transformer-1d: Fast one-dimensional hierarchical attention for
+sequences. In Proceedings of the 59th Annual Meeting of the Association for Computational
+Linguistics (ACL) 2021, Virtual Event, August 1-6, 2021, pp. 3801–3815, 2021.
+11
+
+Published as a conference paper at ICLR 2023
+A SUPPLEMENTAL EXPERIMENTS
+A.1 DATASET DETAILS
+In this work, the details of the experiment datasets are summarized as follows: (1) ETT (Zhou et al.,
+2021) dataset contains two visions of the sub-dataset: ETTh and ETTm, collected from electricity
+transformers every 15 minutes and 1 hour between July 2016 and July 2018. (2) Electricity1
+dataset contains the electricity consumption of 321 customers recorded hourly from 2012 to 2014.
+(3) Exchange (Lai et al., 2018a) dataset records daily exchange rates of eight different countries
+daily ranging from 1990 to 2016. (4) Traffic2 contains the data from California Department of
+Transportation hourly, which describes the road occupancy rates measured by different sensors on
+San Francisco Bay area freeways. (5) Weather3 contains 21 meteorological indicators, recorded every
+10 minutes for 2020 whole year. (6) ILI4 records influenza-like illness (ILI) patients data weekly from
+Centers for Disease Control and Prevention of the United States between 2002 and 2021. Table 7
+summarizes feature details (Sequence Length: Len, Dimension: Dim, Frequency: Freq) .
+Table 7: The details of datasets.
+Dataset
+ETTh
+ETTm
+17420 8
+len dim freq
+1h
+69680 8 15 min
+Electricity 26304 322 1h
+Exchange
+7588 9 1 day
+Traffic
+Weather
+ILI
+A.2 IMPLEMENTATION DETAILS
+Our method is trained with the L2 loss, using the ADAM optimizer with an initial learning rate of
+10−3. Batch size is set to 32. The training process is early stopped after three epochs if there is no
+loss degradation on the valid set. The mean square error (MSE) and mean absolute error (MAE)
+are used as metrics. All the experiments are repeated 3 times with different seeds, implemented
+in PyTorch and conducted on NVIDIA RTX A5000 24GB GPU. The hyper-parameter i is set to
+{12,16} , and the hyper-parameter sensitivity analysis can be seen in Appendix A.4 . For a fairer
+comparison, we fix the input length to 96 for all datasets (36 for ILI). MICN contains 1 MIC layer.
+We use MICN-regre and MICN-mean to represent the different strategies of trend-cyclical prediction
+block in the following.
+A.3 FULL BENCHMARK ON THE ETT DATASETS
+We build the benchmark on the four ETT datasets in Table 8 and Table 9. The ETTh1 and ETTh2
+datasets are recorded hourly, while the ETTm1 and ETTm2 datasets are recorded every 15 minutes.
+MICN achieves state-of-the-art performance in all benchmarks in general. Especially for the multi-
+variate ETTm1 dataset, MICN gives 17% relative MSE reduction under the predict-96 setting, gives
+15% relative MSE reduction under the predict-192 setting, gives 8% relative MSE reduction under
+the predict-336 setting, gives 15% relative MSE reduction under the predict-720 setting.
+A.4 HYPER-PARAMETER SENSITIVITY
+As shown in Table 10, we can verify the model robustness with respect to hyper-parameter i. Different
+values of i have slightly different results. Concretely, when i take one value, MICN performs worse
+1https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014
+2http://pems.dot.ca.gov
+3https://www.bgc-jena.mpg.de/wetter/
+4https://gis.cdc.gov/grasp/fluview/fluportaldashboard.html
+12
+17544 863 1h
+52696 22 10 min
+966 8 7 day
+
+Published as a conference paper at ICLR 2023
+Table 8: Multivariate long-term forecasting results on ETT full benchmark. The best results are
+highlighted in bold.
+
+Table 9: Univariate long-term forecasting results on ETT full benchmark. The best results are
+highlighted in bold.
+because of the lack of ability to capture complex temporal patterns of the time series. Meanwhile,
+MICN can achieve almost the same better performance when i takes two or three values, indicating
+that the multi-branch structure is effective. To be more representative, we set i to {12,16} in this
+paper.
+A.5 SELECTION OF DIFFERENT CONVOLUTION MODES
+As shown in Table 11, we also record the performance in different convolution modes: stride=kernel
+and stride = kernel
+2 . The second mode makes more comprehensive use of local information, making
+the convolution more coherent. MICN achieves similar performance in different convolution modes.
+It proves that MICN can make the most of sequence information, and the performance of the model
+depends on the structure we proposed.
+
+
+Published as a conference paper at ICLR 2023
+Table 10: Multivariate results with different parameters i in three datasets: Electricity, Exchange and
+Traffic.
+Datasets
+Prediction Length O
+< 24 >
+< 48 >
+< 12, 16 >
+< 16, 24 >
+< 12, 24 >
+< 24, 48 >
+< 6, 12, 24 >
+< 12, 24, 48 >
+Electricity
+Exchange
+Traffic
+96 192 336 720 96 192 336 720 96 192 336 720
+MSE 0.174 0.200 0.207 0.240 0.093 0.181 0.271 0.762 0.575 0.569 0.581 0.607
+MAE 0.282 0.303 0.317 0.336 0.227 0.321 0.404 0.675 0.334 0.316 0.323 0.339
+MSE 0.167 0.179 0.195 0.265 0.080 0.185 0.288 0.758 0.512 0.532 0.556 0.595
+MAE 0.278 0.287 0.303 0.361 0.204 0.316 0.412 0.671 0.296 0.304 0.315 0.330
+MSE 0.164 0.177 0.193 0.212 0.102 0.172 0.272 0.714 0.513 0.537 0.534 0.577
+MAE 0.269 0.285 0.304 0.321 0.235 0.316 0.407 0.658 0.309 0.315 0.313 0.325
+MSE 0.160 0.182 0.192 0.232 0.086 0.198 0.266 0.632 0.524 0.545 0.547 0.584
+MAE 0.267 0.291 0.299 0.341 0.210 0.334 0.388 0.639 0.300 0.310 0.317 0.329
+MSE 0.160 0.185 0.195 0.220 0.100 0.153 0.269 0.775 0.517 0.537 0.546 0.573
+MAE 0.268 0.293 0.307 0.329 0.231 0.295 0.403 0.678 0.303 0.310 0.319 0.319
+MSE 0.180 0.201 0.211 0.250 0.079 0.175 0.269 0.658 0.537 0.587 0.607 0.603
+MAE 0.288 0.306 0.316 0.344 0.203 0.310 0.401 0.634 0.307 0.324 0.329 0.340
+MSE 0.169 0.180 0.195 0.215 0.114 0.208 0.299 0.798 0.513 0.522 0.535 0.560
+MAE 0.278 0.287 0.300 0.323 0.244 0.348 0.425 0.704 0.303 0.304 0.307 0.321
+MSE 0.168 0.185 0.200 0.212 0.113 0.213 0.364 0.680 0.521 0.559 0.554 0.604
+MAE 0.274 0.293 0.305 0.320 0.247 0.354 0.462 0.655 0.305 0.317 0.317 0.336
+Table 11: MICN performance under different convolution modes. We implement it on three multi-
+variate datasets: Electricity, Exchange and Traffic.
+Datasets
+Prediction Length O
+stride = kernel
+stride = kernel
+2
+Electricity
+Exchange
+Traffic
+96 192 336 720 96 192 336 720 96 192 336 720
+MSE 0.164 0.177 0.193 0.212 0.102 0.172 0.272 0.714 0.519 0.537 0.534 0.577
+MAE 0.269 0.285 0.304 0.321 0.235 0.316 0.407 0.658 0.309 0.315 0.313 0.325
+MSE 0.158 0.177 0.198 0.221 0.081 0.173 0.305 0.706 0.509 0.534 0.545 0.563
+MAE 0.267 0.283 0.310 0.326 0.208 0.314 0.430 0.647 0.306 0.303 0.310 0.323
+B ADDITIONAL MODEL ANALYSIS
+B.1 MULTI-SCALE HYBRID DECOMPOSITION
+Autoformer harnesses the decomposition as an inner block of deep models and gets good performance.
+However, the patterns obtained by its decomposition are simple and cannot effectively deal with
+the complex and changeable properties of time series. As shown in Table 12, we replace the
+decomposition block in Autoformer with our proposed multi-scale hybrid decomposition block. For
+Exchange, we achieve a similar performance because it has no obvious temporal pattern. The result
+verifies that multi-scale hybrid decomposition structure is more in line with the complex temporal
+patterns in real-time series.
+B.2 VISUALIZATION OF LEARNED TREND-CYCLICAL PARTS
+As shown in Figure 6 and Figure 7, we plot the results of learned trend-cyclical parts. The separate
+modeling of the trend-cyclical part makes better performance and grasp of long-term progression.
+We also observe that the mean prediction is slightly better on the ETTm2 dataset. This is due to the
+complexity of the trend-cyclical information and the inability of simple linear regression, which may
+Table 12: Ablation of multi-scale decomposition (MHDecomp). Autoformer-MHDecomp adopts
+multi-scale decomposition block into Autoformer.
+
+Figure 7: Visualization ofYt and Ys in ETTm2 dataset under MICN-regre. Sample linear regression
+does not perform very well.
+require a more advanced trend prediction method. Moreover, the mean value of its trend change is
+close to constant, so mean prediction is better in this situation.
+B.3 ISOMETRIC CONVOLUTION VS. MASKED SELF-ATTENTION
+With the local module in MICN, we get a short sequence characterizing local features. On this
+basis, we propose the isometric convolution in global module to model the global correlation of
+the sequence, while previously the first choice is masked self-attention. We replace the isometric
+convolution in the global module of MICN with masked self-attention for training, and the results
+are shown in Table 13 and Table 14. It verifies that for a short sequence, isometric convolution
+outperforms masked self-attention in general.
+Table 13: Ablation of isometric convolution. We replace the Isometric convolution in MICN-regre
+with masked self-attention and implement it in the multivariate Electricity, Exchange and Traffic.
+The better results are highlighted in bold.
+
+To compare the isometric convolution and the masked self-attention further, we conduct more
+experiments on full benchmark with different kernel sizes. The results in Table 15 show that the
+isometric convolution outperforms the masked self-attention in the most cases. And we also note that
+in some cases the masked self-attention is slightly more effective. We believe that this is related to
+the corresponding datasets and that we will analyse the datasets in detail in the future. Moreover, we
+can conclude that different kernels have a relatively small impact on the final results, which indicates
+that our advanced structure instead of model parameters plays a major role in the performance.
+15
+
+Published as a conference paper at ICLR 2023
+Table 14: Comparison of Isometric convolution and masked self-attention in the univariate Electricity,
+Exchange and Traffic. We replace the Isometric convolution in MICN-regre with masked self-
+attention. The better results are highlighted in bold.
+
+B.5 EFFICIENCY ANALYSIS
+For MICN, the complexity lies in Downsampling convolution and Isometric convolution in Local-
+Global module. If we set the sequence length to L, the hidden state to D and the multi-scale
+convolution kernels to i.
+For downsampling convolution (kernel= stride), the complexity is O(i ∗D2 ∗ L
+i ) =O(LD2).
+For Isometric convolution, the sequence length and kernel are changed to L
+i , stride=1, padding=L
+i −1,
+so the complexity is O((L 2
+i ) ∗D2) =O(L2D2
+i2
+). In this paper, we set i ∈ {L
+4 , L
+8 ...} is factor of L, so the
+complexity of Isometric convolution is O(cD2), where c is a constant.
+In summary, the overall complexity is max(O(LD2),O(cD2)) =O(LD2), which is linear about the
+sequence length. The comparisons of the time complexity and memory usage in training and the
+inference steps in testing are summarized in Table 17.
+Furthermore, we compare the running memory and time among Local-Global-based, Auto-correlation-
+based and self-attention-based models during the training phase. As shown in Figure 8, the proposed
+Local-Global module shows O(LD2) complexity and achieves better long-term sequences efficiency.
+16
+
+Published as a conference paper at ICLR 2023
+Table 17: Complexity analysis of different forecasting models.
+
+Running Time Efficiency Analysis
+Figure 8: Efficiency Analysis. We place the Local-Global module in MICN with Auto-correlation
+and self-attention. Then we record the memory and running time of an epoch with fixed input length
+96 and increasing output length. Missing values of self-attention are due to out-of-memory.
+B.6 MORE ANALYSIS OF THE TREND-CYCLICAL PREDICTION BLOCK
+To further evaluate the trend-cyclical prediction, we conduct more experiments on full benchmark. As
+shown in Table 18, regre is the simple regression prediction without other modules and mean is the
+simple mean prediction without other modules. MICN-regre is our proposed method with regression
+prediction in trend-cyclical block and MICN-mean is the mean prediction in trend-cyclical block.
+FEDformer-mean is the original FEDformer using the mean prediction and FEDformer-regre uses
+regression prediction instead of mean prediction. We can conclude that simple regression and mean
+fail to capture the complex temporal correlations. But for the data Exchange without periodicity,
+simple regression makes competitive performance. This result is worth thinking about, and we
+will conduct more in-depth experiments in the future. Meanwhile, the results that MICN-regre
+outperforms FEDformer-regre and MICN-mean outperforms FEDforemr-mean prove the validity of
+our proposed model. We also find FEDformer-regre makes worse performance in most cases. This
+may be due to the more complex structure of FEDformer, and more complex regression prediction is
+needed correspondingly.
+B.7 THE DETAILED DESCRIPTION OF THE LOCAL-GLOBAL MODULE
+We show the detailed description of the Local-global module in Figure 9. For the input series, we adopt
+down-sampling convolution with different kernels to extract the local features of different temporal
+patterns and isometric convolution instead of masked self-attention to capture global correlations.
+Then we use up-sampling convolution to recover the length of the series. Finally, we merge the
+different branches to complete the modeling of different patterns.
+
+
+Published as a conference paper at ICLR 2023
+Table 18: Comparison of regression prediction and mean prediction with different models. The better
+results are highlighted in bold.
+
+Convolution(kernel=16)
+Down-sampling
+i
+Convolution(kernel=12)
+Down-samplin
+own-sampling
+'
+Isometrici
+Convolution
+|
+Isometric
+| Convolution
+'
+Up-sampling
+/
+Convolution(kernel=16)
+Up-sampling
+Convolution(kernel=12)
+Figure 9: The detail of the local-global module.
+B.8 MORE DISCUSSION ABOUT THE ISOMETRIC CONVOLUTION AND THE LINEAR
+COMPLEXITY MODEL: LINFORMER, FASTFORMER.
+Linformer Wang et al. (2020) and Fastformer Wu et al. (2021a) are other advanced self-attention
+family models with linear complexity. We conduct more comparison experiments on full benchmark
+and show the results in Table 19 and Table 20. Concretely, we replace the isometric convolution
+in MICN-regre with the different masked attention mechanisms in Linformer and Fastformer. We
+implement the experiments in multivariate and univariate datasets. We can conclude that Fastformer
+can make relatively competitive performance but our proposed model MICN performs best in general.
+These results provide further evidence of the effectiveness of MICN.
+Table 19: Comparison of different linear complexity models on the multivariate datasets. The better
+results are highlighted in bold.
+
+Table 20: Comparison of different linear complexity models on the univariate datasets. The better
+results are highlighted in bold.
+
+C SUPPLEMENTARY OF MAIN RESULTS
+C.1 MAIN RESULTS WITH STANDARD DEVIATIONS
+To get more robust experimental results, we repeat each experiment three times with different random
+seeds. For easier comparison, the results are shown in the main text when the seed is set to 2021.
+Table 21 shows the standard deviations.
+Table 21: Quantitative results with fluctuations under different prediction lengths O for multivariate
+forecasting. A lower MSE or MAE indicates a better performance.
+
+C.2 UNIVARIATE SHOWCASES
+As shown in Figure 10, Figure 11, Figure 12, Figure 13, Figure 14, and Figure 15, we plot the
+forecasting results from the test set of univariate dataset Electricity and Traffic for comparison. Our
+model gives the best performance among different models. Moreover, MICN is significantly better at
+predicting the overall change and peak in the time series than Transformer-based models.
+
+Figure 15: Prediction cases from the univariate Traffic dataset under Informer.
+C.3 MULTIVARIATE SHOWCASES
+As shown in Figure 16, Figure 17, Figure 18, Figure 19, Figure 20, and Figure 21, we also plot the
+forecasting results from the test set of multivariate datasets ETTm1 and ETTm2 for comparison. Our
+model gives the most accurate prediction. Moreover, MICN is better at predicting rising and falling
+turning points in time series and closer to ground truth.
+2
+Figure 16: Prediction cases from the multivariate ETTm1 dataset under MICN.
+
+Figure 19: Prediction cases from the multivariate ETTm2 dataset under MICN.

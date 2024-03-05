@@ -8,7 +8,6 @@ USER root
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 -y --no-install-recommends gcc &&  rm -r /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY ./run.sh run.sh
-COPY run_baseline.py .
+COPY ./run_refsol.sh .
 
-CMD ["bash", "run.sh"]
+CMD ["bash", "run_refsol.sh"]

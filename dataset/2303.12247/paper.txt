@@ -1,0 +1,2008 @@
+::: ltx_page_main
+::: ltx_page_content
+# Exploring the Benefits of Visual Prompting in Differential Privacy {#exploring-the-benefits-of-visual-prompting-in-differential-privacy .ltx_title .ltx_title_document}
+
+::: ltx_authors
+[ [ Yizhe Li ]{.ltx_personname}]{.ltx_creator .ltx_role_author}
+[  ]{.ltx_author_before}[ [Yu-Lin Tsai ]{.ltx_personname}]{.ltx_creator
+.ltx_role_author} [  ]{.ltx_author_before}[ [Xuebin Ren
+]{.ltx_personname}]{.ltx_creator .ltx_role_author}
+[  ]{.ltx_author_before}[ [Chia-Mu Yu ]{.ltx_personname}]{.ltx_creator
+.ltx_role_author} [  ]{.ltx_author_before}[ [Pin-Yu Chen
+]{.ltx_personname}]{.ltx_creator .ltx_role_author}
+:::
+
+::: ltx_abstract
+###### Abstract {#abstract .ltx_title .ltx_title_abstract}
+
+Visual Prompting (VP) is an emerging and powerful technique that allows
+sample-efficient adaptation to downstream tasks by engineering a
+well-trained frozen source model. In this work, we explore the benefits
+of VP in constructing compelling neural network classifiers with
+differential privacy (DP). We explore and integrate VP into canonical DP
+training methods and demonstrate its simplicity and efficiency. In
+particular, we discover that VP in tandem with PATE, a state-of-the-art
+DP training method that leverages the knowledge transfer from an
+ensemble of teachers, achieves the state-of-the-art privacy-utility
+trade-off with minimum expenditure of privacy budget. Moreover, we
+conduct additional experiments on cross-domain image classification with
+a sufficient domain gap to further unveil the advantage of VP in DP.
+Lastly, we also conduct extensive ablation studies to validate the
+effectiveness and contribution of VP under DP consideration.
+:::
+
+::: {#S1 .section .ltx_section}
+## [1 ]{.ltx_tag .ltx_tag_section}Introduction {#introduction .ltx_title .ltx_title_section}
+
+::: {#S1.p1 .ltx_para}
+Originating from the domain of deep learning for natural language
+processing, prompt engineering has gained significant popularity as an
+emergent technique for efficient adoption and adaptation of pre-trained
+language models for solving different downstream tasks
+\[[21](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib21){.ltx_ref}\].
+In recent years, the notion of prompting has been extended to other
+domains and data modalities, especially in computer vision and images
+\[[16](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib16){.ltx_ref},
+[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref}\].
+Specifically, the term [visual prompting]{#S1.p1.1.1 .ltx_text
+.ltx_font_italic} (VP) has been coined by
+\[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref}\],
+and the authors show competitive accuracy of VP on some downstream image
+classification tasks over linear probing (i.e., attaching a trainable
+linear head to a pre-trained model) when used with a large vision model
+such as CLIP
+\[[32](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib32){.ltx_ref}\]
+(only the image encoder). It is worth noting that VP in
+\[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref}\]
+can be viewed as a special case of [model reprogramming]{#S1.p1.1.2
+.ltx_text .ltx_font_italic} (MR)
+\[[8](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib8){.ltx_ref}\]
+on a pre-trained model. MR inserts an input transformation layer and an
+output mapping layer into a pre-trained frozen model for fine-tuning
+downstream tasks. MR is equivalent to VP in
+\[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref}\]
+when the input transformation is a trainable input perturbation and the
+output mapping is a specified source-target label correspondence or a
+set of text prompts for label inference (e.g., "a photo of \[predicted
+class\]"). Throughout this paper, for ease of elucidation, we will use
+VP and MR interchangeably.
+:::
+
+::: {#S1.p2 .ltx_para}
+VP has been extensively studied for various use cases, ranging from
+image classification
+\[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref}\],
+enhancing adversarial robustness
+\[[6](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib6){.ltx_ref}\],
+image-inpainting
+\[[4](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib4){.ltx_ref}\],
+cross-domain adaptation
+\[[35](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib35){.ltx_ref},
+[28](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib28){.ltx_ref}\],
+to name a few. In this paper, we explore yet another benefit of VP with
+pre-trained models -- deep learning with differential privacy (DP). In
+deep learning, scaling the training parameters of a neural network often
+leads to improved task performance (e.g., a classification model with
+higher accuracy)
+\[[17](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib17){.ltx_ref}\].
+However, with a DP budget, training a larger neural network usually
+means more consumption of data privacy
+\[[24](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib24){.ltx_ref}\].
+Motivated by this dilemma of the tradeoff between neural network
+capacity and DP, we aim to study the following fundamental question:
+
+[Can VP with a pre-trained model (trained on non-private data) improve
+the privacy-accuracy tradeoff in off-the-shelf DP-training
+mechanisms?]{#S1.p2.2.1 .ltx_text .ltx_font_italic}
+
+In this paper, we give an affirmative answer to this question, validated
+through a comprehensive analysis and empirical comparisons. Note that we
+purposely focus on existing DP-training mechanisms, in order to study
+the benefit of improved performance contributed by VP. Our proposed
+approach applies VP (at data inputs) to off-the-shelf DP-training
+mechanisms, together with a pre-trained model trained on non-private
+data. Particularly, when VP is used in PATE (Private Aggregation of
+Teacher Ensembles)
+\[[30](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib30){.ltx_ref}\],
+a DP training mechanism, we show that the classification accuracy under
+a privacy constraint can achieve the current state-of-the-art
+performance (over 97%) on the common benchmark of CIFAR-10
+classification task. Furthermore, we also demonstrate that the
+performance increases with minimum expenditure of privacy budget.
+Consequently, our results uncovered new benefits of VP in DP and offer
+new use cases and insights into prompt engineering.
+:::
+
+::: {#S1.p3 .ltx_para .ltx_noindent}
+[Contribution.]{#S1.p3.1.1 .ltx_text .ltx_font_bold} We highlight our
+main contributions as follows. We are the first to explore the benefits
+of VP with pre-trained models in the design of DP classifiers. By
+leveraging VP, we present Prom-PATE as a training strategy for DP
+classifiers. While sophisticated backbones are usually difficult to be
+used in DP training, Prom-PATE has great flexibility in utilizing the
+high accuracy of the backbone without compromising privacy. Overall,
+Prom-PATE enjoys the following characteristics. Prom-PATE relies on VP
+to resolve the demand for huge data from PATE, improving practicality
+and accuracy. In the design of Prom-PATE, the public pre-trained models
+are utilized [twice]{#S1.p3.1.2 .ltx_text .ltx_font_italic},
+significantly growing the accuracy. Through extensive experiments, we
+demonstrate that Prom-PATE outperforms current DP classifiers on
+CIFAR-10, showing an accuracy 97.07% under a privacy budget of
+$\epsilon = 1.019$. We also show significant accuracy gain of Prom-PATE
+in other datasets over existing methods.
+:::
+:::
+
+::: {#S2 .section .ltx_section}
+## [2 ]{.ltx_tag .ltx_tag_section}Related Work and Background {#related-work-and-background .ltx_title .ltx_title_section}
+
+::: {#S2.SS0.SSS0.Px1 .section .ltx_paragraph}
+#### Visual Prompting (VP) and Model Reprogramming (MR). {#visual-prompting-vp-and-model-reprogramming-mr. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px1.p1 .ltx_para}
+Both VP and MR focus on the problem setup of reusing a pre-trained model
+to perform a new task (either in-domain or cross-domain) without
+changing the model weights during fine-tuning (i.g., the pre-trained
+model is "frozen"). MR was first studied through the lens of adversarial
+machine learning (ML). Elsayed et al.
+\[[13](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib13){.ltx_ref}\]
+showed that an attacker can "steal" an ML model's computation resource
+to perform another task without the model owner's consent. Later on, MR
+was shown to deliver competitive image classification results in
+data-limited and cross-domain settings
+\[[35](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib35){.ltx_ref},
+[28](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib28){.ltx_ref}\],
+wherein the authors demonstrated the possibility of reusing a
+pre-trained model from a source domain (e.g., general image classifiers
+or language models) to solve challenging image classification problems
+in a target domain (e.g., bio-medical measurements). We refer the
+readers to the survey paper of MR in
+\[[8](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib8){.ltx_ref}\]
+for more details. VP through a trainable (padded) universal input
+perturbation is revisited in
+\[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref}\],
+and the authors showed competitive results on some subset of 12 image
+classification tasks over linear probing and full fine-tuning on
+pre-trained image classifiers and the CLIP model
+\[[32](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib32){.ltx_ref}\].
+Chen et al.
+\[[7](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib7){.ltx_ref}\]
+improved VP by introducing iterative label mapping during training.
+Beyond image classification, VP was extended to image inpainting tasks
+\[[4](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib4){.ltx_ref}\].
+In this paper, we note that we limit the scope of VP to input-level
+prompt engineering as studied in
+\[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref},
+[6](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib6){.ltx_ref}\],
+and we leave the broader notion of VP via injecting trainable token
+embeddings (e.g., the visual prompt tuning as in
+\[[16](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib16){.ltx_ref}\])
+to different layers of a pre-trained model as future work.
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px2 .section .ltx_paragraph}
+#### Differentially Private Classifiers. {#differentially-private-classifiers. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px2.p1 .ltx_para}
+One of the most widely used techniques to achieve DP deep learning is
+DPSGD \[[1](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib1){.ltx_ref}\],
+where DP noise is added to the clipped gradient updates during the
+training process. The definition and properties of DP are provided in
+the Supplementary Material. DPSGD suffers from information loss due to
+the fact that the gradient clipping and the noise scale are proportional
+to the norm of clipped gradient. Recent
+research \[[10](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib10){.ltx_ref},
+[27](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib27){.ltx_ref}\]
+finds that we may overestimate the privacy loss for DPSGD because the
+attacker does not have access to the gradient in each training
+iteration. One of the current trends in training a DP classifier is to
+privately fine-tune large pre-trained models such as BERT variants and
+GPT-2
+\[[40](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib40){.ltx_ref},
+[39](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib39){.ltx_ref},
+[20](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib20){.ltx_ref}\].
+This private fine-tuning strategy can also be applied to the realm of
+images \[[14](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib14){.ltx_ref},
+[24](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib24){.ltx_ref},
+[19](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib19){.ltx_ref},
+[33](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib33){.ltx_ref},
+[11](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib11){.ltx_ref},
+[5](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib5){.ltx_ref}\].
+For example, Tramèr and
+Boneh \[[33](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib33){.ltx_ref}\]
+improved the model utility by conducting private fine-tuning with SimCLR
+features \[[9](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib9){.ltx_ref}\].
+De et
+al. \[[11](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib11){.ltx_ref}\]
+also pre-trained the model with the public data. After that, they apply
+many techniques including large batch size and weight standardization to
+improve accuracy. Bu et
+al. \[[5](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib5){.ltx_ref}\]'s
+DP classifier relies on the notion of ghost clipping to calculate the
+clipped gradient required by DPSGD.
+:::
+
+::: {#S2.SS0.SSS0.Px2.p2 .ltx_para}
+PATE \[[30](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib30){.ltx_ref},
+[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref}\]
+is another approach that trains a DP classifier. In PATE, the sensitive
+dataset is first partitioned into slices, with each [teacher
+model]{#S2.SS0.SSS0.Px2.p2.1.1 .ltx_text .ltx_font_italic} trained on a
+different slice of the data (through SGD). Then, the non-sensitive
+samples labeled by the DP noisy votes from teacher models are used to
+train a [student model]{#S2.SS0.SSS0.Px2.p2.1.2 .ltx_text
+.ltx_font_italic}, which turns out to be a DP classifier. Compared to
+DPSGD, fewer research efforts are put into the improvement of PATE. For
+example,
+Private-kNN \[[41](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib41){.ltx_ref}\]
+relies on the private release of k-nearest neighbor (kNN) queries to
+avoid splitting the training set in PATE.
+:::
+:::
+
+::: {#S2.SS0.SSS0.Px3 .section .ltx_paragraph}
+#### Visual Prompting with DP. {#visual-prompting-with-dp. .ltx_title .ltx_title_paragraph}
+
+::: {#S2.SS0.SSS0.Px3.p1 .ltx_para}
+A recent work that combines VP and DP is
+Reprogrammable-FL \[[2](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib2){.ltx_ref}\].
+Reprogrammable-FL is designed for DP federated learning (FL). More
+specifically, Reprogrammable-FL considers multiple clients, each with a
+common pre-trained model in each server-client interaction. The aim is
+to learn privatized visual prompts and label mappings for each client
+using
+DPSGD \[[1](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib1){.ltx_ref}\],
+enabling DPFL with more efficient use of the privacy budget.
+Reprogrammable-FL outperforms methods that rely on private fine-tuning
+from pre-trained models, currently considered the standard for achieving
+high accuracy in DPFL. However, in each training round of
+Reprogrammable-FL, the update of visual prompts and label mapping for
+each client is still subject to clipped noisy gradient updates to ensure
+privacy. As a result, the overall performance may still degrade compared
+to the non-private setting of visual
+prompting \[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref}\],
+as will be demonstrated in this paper.
+:::
+:::
+:::
+
+::: {#S3 .section .ltx_section}
+## [3 ]{.ltx_tag .ltx_tag_section}Main Approach {#main-approach .ltx_title .ltx_title_section}
+
+::: {#S3.p1 .ltx_para}
+In this section, we aim to investigate how VP can improve the
+privacy-utility trade-off of deep learning models.
+:::
+
+::: {#S3.SS0.SSS0.Px1 .section .ltx_paragraph}
+#### Notations. {#notations. .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS0.SSS0.Px1.p1 .ltx_para}
+As VP was originally proposed for model re-utilization, we denote a
+source model $f_{S}\operatorname{}{(\theta_{S};x)}$ which is trained
+from a large, source (pubic) dataset $D_{S}:={\{{(x_{S},y_{S})}\}}$ with
+$x_{S}$, where $x_{S}$ denotes the feature and $y_{S}$ denotes the
+label, both from the source domain. We denote our target (private)
+dataset $D_{T}:={\{{(x_{T},y_{T})}\}}$ with $x_{T}$ in which we
+re-utilize model $f_{S}\operatorname{}{(\theta_{S};x)}$ to accomplish
+the task in $D_{T}$ via VP without modifying the weights $\theta_{S}$.
+:::
+:::
+
+::: {#S3.SS1 .section .ltx_subsection}
+### [3.1 ]{.ltx_tag .ltx_tag_subsection}Design Challenges for DP Classifiers {#design-challenges-for-dp-classifiers .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS1.p1 .ltx_para}
+Though PATE outperforms DPSGD because of the reduced noise scale and no
+information loss from the gradient clipping, we identify three
+challenges for designing DP classifiers based on PATE.
+
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S3.I1.i1}
+
+    ::: {#S3.I1.i1.p1 .ltx_para}
+    [(C1)]{#S3.I1.i1.p1.1.1 .ltx_text .ltx_font_bold} The performance of
+    PATE is sensitive to data partitioning. In particular, the teacher
+    models may perform badly when the sensitive data is limited in size.
+    As also shown in
+    \[[41](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib41){.ltx_ref}\],
+    each teacher model has an accuracy under 50% due to only 200 images
+    for each partition, given 250 teacher models for CIFAR-10. One might
+    leverage transfer learning (TL), as suggested in
+    \[[24](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib24){.ltx_ref}\],
+    to train teacher models in PATE. Specifically, this involves using a
+    public pre-trained model and fine-tuning it on the private dataset.
+    However, Table [[1]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.T1 "Table 1 ‣ 3.1 Design Challenges for DP Classifiers ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+    shows that this TL-based method leads to inefficient performance in
+    PATE[^1^[[^1^[1]{.ltx_tag .ltx_tag_note}The poor accuracy of the
+    TL-based method can be attributed to the over-partitioning of the
+    sensitive data. In such a case, data are insufficient for the
+    training of each teacher
+    model.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote1 .ltx_note
+    .ltx_role_footnote}.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S3.I1.i2}
+
+    ::: {#S3.I1.i2.p1 .ltx_para}
+    [(C2)]{#S3.I1.i2.p1.1.1 .ltx_text .ltx_font_bold} A current trend in
+    training a high-accuracy classifier in a DP manner is to take
+    advantage of either public labeled data or a public pre-trained
+    model. For example, De et
+    al. \[[11](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib11){.ltx_ref}\]
+    pre-train the model with ImageNet (seen as a public dataset) and
+    then fine-tune the model with CIFAR-10 (seen as a private dataset)
+    through DPSGD. De et al. achieve the predicting accuracy 94.7% under
+    $\epsilon = 1$. While many pieces of evidence show that properly
+    exploiting public datasets and models may significantly improve
+    accuracy, a natural question that arises is whether exploiting
+    public datasets and models more times in the design of DP
+    classifiers benefits accuracy.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S3.I1.i3}
+
+    ::: {#S3.I1.i3.p1 .ltx_para}
+    [(C3)]{#S3.I1.i3.p1.1.1 .ltx_text .ltx_font_bold} Privately training
+    a model pre-trained on the public dataset is a promising solution
+    for DP-classifiers. However, take ImageNet and CIFAR-10 as examples.
+    They may share a very similar distribution and thus make the above
+    training strategy doubtful in DP guarantee
+    \[[34](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib34){.ltx_ref}\].
+    :::
+:::
+
+<figure id="S3.T1" class="ltx_table">
+<div id="S3.T1.3"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:46.1pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-18.6pt,4.0pt) scale(0.853301089856811,0.853301089856811) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S3.T1.5.1.1"
+class="ltx_text" style="font-size:90%;">Table 1</span>: </span><span
+id="S3.T1.6.2" class="ltx_text" style="font-size:90%;">Comparison of
+Prom-PATE and TL-based method.</span></figcaption>
+</figure>
+
+<figure id="S3.F1" class="ltx_figure">
+<img src="./2303.12247_files/Model_Architecture_Fuse.png" id="S3.F1.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="651"
+height="338" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F1.2.1.1"
+class="ltx_text" style="font-size:90%;">Figure 1</span>: </span><span
+id="S3.F1.3.2" class="ltx_text" style="font-size:90%;">An overview of
+the proposed Prom-PATE framework. </span></figcaption>
+</figure>
+:::
+
+::: {#S3.SS2 .section .ltx_subsection}
+### [3.2 ]{.ltx_tag .ltx_tag_subsection}Prom-PATE {#prom-pate .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS2.p1 .ltx_para}
+Here, we present a new approach, Prom-PATE, which leverages VP and PATE
+for private learning. The workflow of Prom-PATE is shown in
+Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.F1 "Figure 1 ‣ 3.1 Design Challenges for DP Classifiers ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+Prom-PATE is a simple yet effective approach to training a classifier in
+a DP manner. Basically, Prom-PATE follows all of the steps in PATE
+\[[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref},
+[30](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib30){.ltx_ref}\]
+except that each teacher model in PATE is reprogrammed from a
+pre-trained source model to a [re-teacher model]{#S3.SS2.p1.1.1
+.ltx_text .ltx_font_italic}. The structure of re-teacher model is also
+shown in Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.F1 "Figure 1 ‣ 3.1 Design Challenges for DP Classifiers ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+Such simplicity of Prom-PATE also enjoys the direct inheritance of DP
+guarantee from PATE.
+:::
+
+::: {#S3.SS2.SSS0.Px1 .section .ltx_paragraph}
+#### Prom-PATE Procedures. {#prom-pate-procedures. .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS2.SSS0.Px1.p1 .ltx_para}
+Prom-PATE consists of three steps: (a) training re-teacher models, (b)
+executing private aggregation, and (c) training a student model. Step
+(a) considers a public pre-trained model as a [source
+model]{#S3.SS2.SSS0.Px1.p1.4.1 .ltx_text .ltx_font_italic} and trains
+visual prompting and label mapping on sensitive data. In particular, we
+are aimed to train only the prompting parameter $\omega$ while the
+pre-trained source model is always fixed. The prompting parameter
+$\omega$ (including trainable parameters $\omega_{1}$ and $\omega_{2}$
+in Eq. ([[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.E1 "1 ‣ Training re-teacher Models. ‣ 3.2 Prom-PATE ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref})
+and Eq. ([[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.E2 "2 ‣ Training re-teacher Models. ‣ 3.2 Prom-PATE ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}),
+respectively) and collectively called re-teacher model (see
+Figure [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.F1 "Figure 1 ‣ 3.1 Design Challenges for DP Classifiers ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}).
+We note that the re-teacher model is trained on the sensitive dataset
+through SGD, and hence does not fulfill DP. The next step contributes to
+the DP guarantee of Prom-PATE. Step (b) uses PATE to aggregate the
+predictions of the re-teacher models; i.e., when a sample is fed into
+re-teacher models, all of them have votes and use the DP noisy top-1
+outcome as the label. In step (c), a student model is trained using
+semi-supervised learning with a pre-trained classifier. In particular,
+certain unlabeled public samples with labels from the DP noisy votes are
+used to train the student model, which serves as the resulting DP
+classifier. One can easily prove that Prom-PATE satisfies DP; the proof
+can be found in the Supplementary Materials.
+:::
+:::
+
+::: {#S3.SS2.SSS0.Px2 .section .ltx_paragraph}
+#### Training re-teacher Models. {#training-re-teacher-models. .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS2.SSS0.Px2.p1 .ltx_para}
+During the training of each re-teacher model, we keep the source model
+fixed while conducting SGD to update only the label mappings and visual
+prompts. The visual prompt ${\hat{x}}_{S}$ can be expressed as
+
+  -- ------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     ${{\hat{x}}_{S} = {{M \odot \omega_{1}} + {{{({I - M})} \odot \text{ZeroPad}}\operatorname{}{(x_{T})}}}},$      [(1)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+where $\odot$ stands for Hadamard product, $\omega_{1}$ denotes the
+trainable noise parameter, and $M$ denotes the binary mask of the same
+dimension with the source data $x_{S}$ (i.e. $M \in {\{ 0,1\}}^{d_{S}}$,
+where $d_{S}$ denotes the dimension of the source domain image). On the
+other hand, upon obtaining the pre-trained model output
+${\hat{y}}_{S}:={f_{S}\operatorname{}{(\theta_{S};{\hat{x}}_{S})}}$, we
+further render it through a label mapping function
+$f_{\ell}\operatorname{}{(\omega_{2}; \cdot )}$ that maps the source
+labels to target labels and obtain the final prediction ${\hat{y}}_{T}$
+which has the following form
+
+  -- --------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     ${{\hat{y}}_{T} = {\text{softmax}\operatorname{}{({f_{\ell}\operatorname{}{(\omega_{2};{\hat{y}}_{S})}})}}}.$      [(2)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+
+<figure id="S3.F2" class="ltx_figure">
+<img src="./2303.12247_files/Label_Mapping.png" id="S3.F2.g1"
+class="ltx_graphics ltx_centering ltx_img_landscape" width="274"
+height="185" alt="Refer to caption" />
+<figcaption><span class="ltx_tag ltx_tag_figure"><span id="S3.F2.4.1.1"
+class="ltx_text" style="font-size:90%;">Figure 2</span>: </span><span
+id="S3.F2.5.2" class="ltx_text" style="font-size:90%;">Illustration of
+different strategies for label mapping. <span id="S3.F2.5.2.1"
+class="ltx_text ltx_font_italic">Left</span>: we follow the convention
+setting in VP [<a
+href="https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3"
+class="ltx_ref">3</a>] and apply randomly assigned label mapping that is
+pre-determined before training. <span id="S3.F2.5.2.2"
+class="ltx_text ltx_font_italic">Right</span>: we simply apply a
+trainable fully-connected layer for the model to learn the appropriate
+mapping as proposed in [<a
+href="https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib2"
+class="ltx_ref">2</a>] </span></figcaption>
+</figure>
+:::
+
+::: {#S3.SS2.SSS0.Px3 .section .ltx_paragraph}
+#### Algorithmic Details of Prom-PATE. {#algorithmic-details-of-prom-pate. .ltx_title .ltx_title_paragraph}
+
+::: {#S3.SS2.SSS0.Px3.p1 .ltx_para}
+Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.F2 "Figure 2 ‣ Training re-teacher Models. ‣ 3.2 Prom-PATE ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+illustrates different label mapping techniques used in Prom-PATE. To
+have a correspondence in label classes between the target and source
+domains, in the first approach, we conduct random label
+mapping \[[3](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib3){.ltx_ref},
+[35](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib35){.ltx_ref}\].
+Particularly, before training, we establish a random mapping between the
+labels of two domains and train the model according to the predetermined
+label mapping (e.g., ImageNet label $i$ $\rightarrow$ CIFAR-10 label
+$j$). In this case, $\omega_{2}$ specifies the source-target label
+correspondence in VP. For the second approach, we consider using fully
+connected (FC) layers as part of the label mapping for greater
+expressiveness, as studied in
+\[[2](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib2){.ltx_ref}\].
+This allows Prom-PATE to learn how to adapt labels from the source
+domain to the target domain. Overall, the re-teacher models in Prom-PATE
+only need to train the parameters $\omega:={\{\omega_{1},\omega_{2}\}}$
+on the private/sensitive dataset.
+:::
+
+::: {#S3.SS2.SSS0.Px3.p2 .ltx_para}
+To enforce DP in Prom-PATE, we adopt the DP aggregation from PATE by
+considering Confident-GNMax
+\[[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref},
+[30](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib30){.ltx_ref}\].
+Specifically, given an unlabelled public data sample $x$, the
+aggregation mechanism would collect the response from every re-teacher
+model, establishing votes for each $j$-th class,
+$n_{j}\operatorname{}{(x)}$. The aggregation then proceeds to determine
+whether the noisy votes are consent among re-teachers above a threshold
+$T$. Namely,
+
+  -- --------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     ${{{\max\limits_{j}{\{{n_{j}\operatorname{}{(x)}}\}}} + {\mathcal{N}\operatorname{}{(0,\sigma_{1}^{2})}}} \geq T}.$      [(3)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- --------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+
+If the inequality is met, then the aggregation would proceed to offer
+noisy votes of re-teachers model as follows.
+
+  -- ------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     ${\arg{\max\limits_{j}{\{{{n_{j}\operatorname{}{(x)}} + {\mathcal{N}\operatorname{}{(0,\sigma_{2}^{2})}}}\}}}}.$      [(4)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+Otherwise, the aggregation would output nothing.
+:::
+
+::: {#S3.SS2.SSS0.Px3.p3 .ltx_para}
+To limit the privacy budget and further enhance performance in
+Prom-PATE, we use a subset of the public training data and label it
+using the private aggregation mechanism while conducting training for
+the rest of the training data in a semi-supervised fashion. Similar to
+PATE, this approach allows us to improve the privacy-utility trade-off
+by reducing the amount of data that needs to be labeled while still
+achieving high accuracy.
+:::
+
+::: {#S3.SS2.SSS0.Px3.p4 .ltx_para}
+Since re-teacher models can adapt to the private domain under small
+sample complexity, we adopt the approach presented in
+\[[36](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib36){.ltx_ref}\]
+for our semi-supervised learning of the student model. We explain the
+details of this approach in Section [[4.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS2 "4.2 Ablation Study of Prom-PATE ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+where we compare it to other baseline settings. Using this approach, we
+can achieve a better privacy-utility trade-off and improve the overall
+performance of Prom-PATE.
+:::
+:::
+:::
+
+::: {#S3.SS3 .section .ltx_subsection}
+### [3.3 ]{.ltx_tag .ltx_tag_subsection}Why Prom-PATE is Beneficial to DP? {#why-prom-pate-is-beneficial-to-dp .ltx_title .ltx_title_subsection}
+
+::: {#S3.SS3.p1 .ltx_para}
+This section provides an explanation as to why Prom-PATE, as a
+combination of VP and PATE, can attain an improved privacy-utility
+trade-off by overcoming the design challenges
+[(C1)$\sim$(C3)]{#S3.SS3.p1.1.1 .ltx_text .ltx_font_bold}.
+:::
+
+::: {#S3.SS3.p2 .ltx_para}
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S3.I2.i1}
+
+    ::: {#S3.I2.i1.p1 .ltx_para}
+    [(C1)]{#S3.I2.i1.p1.1.1 .ltx_text .ltx_font_bold} As mentioned in
+    Section [[3.1]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.SS1 "3.1 Design Challenges for DP Classifiers ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+    though PATE is superior to DPSGD from the perspectives of noise
+    scale and information loss, it can apply only to huge datasets
+    because, otherwise, the teacher models fail to have decent accuracy,
+    leading to poor student classifier accuracy. However, VP has proven
+    to successfully transfer knowledge from large source domains to
+    small target
+    domains \[[35](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib35){.ltx_ref}\].
+    Thus, considering each partitioned slice of the sensitive dataset as
+    a small target domain enables re-teacher models in Prom-PATE to
+    avoid the problem of data insufficiency when increasing the number
+    of re-teacher models, amplifying the benefits of ensemble learning
+    in the ordinary PATE.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S3.I2.i2}
+
+    ::: {#S3.I2.i2.p1 .ltx_para}
+    [(C2)]{#S3.I2.i2.p1.1.1 .ltx_text .ltx_font_bold} Prom-PATE is
+    featured by utilizing the public data [twice]{#S3.I2.i2.p1.1.2
+    .ltx_text .ltx_font_italic}; once in training re-teacher models and
+    another one in training the student classifier. This can be
+    attributed to our finding that PATE, in essence, can easily be
+    modified to take advantage of pre-trained models (see the design of
+    Prom-PATE in Section [[3.2]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.SS2 "3.2 Prom-PATE ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}).
+    Such efficient re-use of the public data can be highly beneficial to
+    the resulting DP classifier accuracy, as shown in
+    Table [[2]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.T2 "Table 2 ‣ 3.3 Why Prom-PATE is Beneficial to DP? ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+    where Prom-PATE, Prom-PATE w/o pre-trained classifier, and PATE
+    means utilizing public data two, one, and zero times, respectively.
+    Obviously, the accuracy grows with the increased number of times for
+    utilizing public data.
+    :::
+-   [[•]{.ltx_tag .ltx_tag_item}]{#S3.I2.i3}
+
+    ::: {#S3.I2.i3.p1 .ltx_para}
+    [(C3)]{#S3.I2.i3.p1.1.1 .ltx_text .ltx_font_bold} Because of the
+    cross-domain capability of
+    VP/MR \[[35](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib35){.ltx_ref},
+    [8](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib8){.ltx_ref},
+    [37](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib37){.ltx_ref}\],
+    even if the distribution of the dataset for the source model (used
+    in training re-teacher models) is highly different from the
+    distribution of the sensitive dataset, re-teacher models can still
+    successfully attain high accuracies, which consequently improve the
+    accuracy of the resulting DP classifier. Experiment evidence can be
+    found in Section [[4.4]{.ltx_text
+    .ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS4 "4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+    :::
+:::
+
+<figure id="S3.T2" class="ltx_table">
+<div id="S3.T2.4"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:31.7pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-76.4pt,11.2pt) scale(0.586676543112005,0.586676543112005) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S3.T2.6.1.1"
+class="ltx_text" style="font-size:90%;">Table 2</span>: </span><span
+id="S3.T2.7.2" class="ltx_text" style="font-size:90%;">Effect on the
+pre-trained classifier.</span></figcaption>
+</figure>
+:::
+:::
+
+::: {#S4 .section .ltx_section}
+## [4 ]{.ltx_tag .ltx_tag_section}Experiments {#experiments .ltx_title .ltx_title_section}
+
+::: {#S4.p1 .ltx_para}
+In this section, we empirically evaluate the effectiveness of Prom-PATE
+on different datasets, with ImageNet serving as the public dataset for
+pre-training models. Additional experiments can be found in the
+Supplemental Materials.
+:::
+
+::: {#S4.SS1 .section .ltx_subsection}
+### [4.1 ]{.ltx_tag .ltx_tag_subsection}Datasets and Implementation Details {#datasets-and-implementation-details .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS1.p1 .ltx_para}
+The CIFAR-10 dataset contains 60,000 $32 \times 32$ RGB images with 10
+classes. CIFAR-10 is widely used for benchmarking in image
+classification and serves as one of the performance evaluation datasets
+in the realm of privatized ML.
+:::
+
+::: {#S4.SS1.SSS0.Px1 .section .ltx_paragraph}
+#### Cross Domain Dataset. {#cross-domain-dataset. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px1.p1 .ltx_para}
+To evaluate how Prom-PATE behaves in private domain adaptation with a
+large domain gap, we consider Blood-MNIST in our experiments. The
+Blood-MNIST
+dataset \[[38](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib38){.ltx_ref}\]
+contains images of blood cells sampled from uninfected patients, with an
+original shape of $3 \times 360 \times 363$. It contains 17,092 images
+of 8 different blood cells (11,959 of training and 3421 of testing) and
+has been processed to the size of
+$3 \times 28 \times 28$ \[[38](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib38){.ltx_ref}\].
+We note that the sample distribution of Blood-MNIST is highly different
+from the sample distribution of ImageNet because the images in
+Blood-MNIST are taken under microscopic devices and planar in sight. Due
+to the large domain gap between Blood-MNIST and ImageNet, we consider
+Blood-MNIST in our experiments to resolve the concern of
+[(C3)]{#S4.SS1.SSS0.Px1.p1.2.1 .ltx_text .ltx_font_bold}. Please see
+Section [[4.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS4 "4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+for more details.
+:::
+:::
+
+::: {#S4.SS1.SSS0.Px2 .section .ltx_paragraph}
+#### Implementation Details. {#implementation-details. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px2.p1 .ltx_para}
+All of the experiment results below are derived by averaging the results
+from three independent experiments. We use the official pre-trained
+models provided by PyTorch and set the parameters to default values for
+all pre-trained models. Regarding the training of each re-teacher model,
+since the source model is pre-trained on ImageNet, the visual prompt has
+a dimension of $224 \times 224$. When training the re-teacher model, we
+optimize the model with Adam whilst using a learning rate of $0.05$ with
+a decay rate of $70\%$, batch size of $16$, and training epoch of $10$.
+In Section [[4.7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS7 "4.7 Binary Mask in Visual Prompting ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+we also investigate the effect of the binary mask $M$ on visual prompt
+performance. For label mapping, we randomly select ten classes from the
+1,000 source classes as a one-to-one mapping. We also investigate using
+FC layers as the label mapping function in Section [[4.8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS8 "4.8 Label Mapping Techniques ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+:::
+
+::: {#S4.SS1.SSS0.Px2.p2 .ltx_para}
+For the training of the student model, similar to the setting in
+PATE \[[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref}\],
+in the case of CIFAR-10, the student has access to 9,000 samples that
+are partially labeled through the noisy aggregation mechanism (step (b)
+in Prom-PATE) in Section [[3.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.SS2 "3.2 Prom-PATE ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+The performance is evaluated on the remaining 1,000 samples in the
+testing set. Meanwhile, in the case of
+Blood-MNIST \[[38](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib38){.ltx_ref}\],
+the student has access to 2,421 samples that are as well partially
+labeled with privacy. The performance is evaluated on the remaining
+1,000 samples in the testing set.
+:::
+:::
+
+::: {#S4.SS1.SSS0.Px3 .section .ltx_paragraph}
+#### Privacy Parameter Setting. {#privacy-parameter-setting. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px3.p1 .ltx_para}
+We use Rényi DP (RDP, see the definition in the Supplementary Materials)
+privacy accountant[^2^[[^2^[2]{.ltx_tag
+.ltx_tag_note}[https://github.com/tensorflow/privacy/tree/master/research/pate_2018](https://github.com/tensorflow/privacy/tree/master/research/pate_2018){.ltx_ref
+.ltx_url .ltx_font_typewriter
+target="_blank"}]{.ltx_note_content}]{.ltx_note_outer}]{#footnote2
+.ltx_note .ltx_role_footnote} to calculate the privacy budget
+$\epsilon$. We adopt the $\delta \approx \frac{1}{n}$ convention and set
+$\delta = 10^{- 5}$.
+:::
+:::
+
+::: {#S4.SS1.SSS0.Px4 .section .ltx_paragraph}
+#### Evaluation Metrics. {#evaluation-metrics. .ltx_title .ltx_title_paragraph}
+
+::: {#S4.SS1.SSS0.Px4.p1 .ltx_para}
+As the focus in this line of research mainly lies on image
+classification, we follow the convention and use the top-1 accuracy on
+CIFAR-10 as the metric.
+:::
+:::
+:::
+
+::: {#S4.SS2 .section .ltx_subsection}
+### [4.2 ]{.ltx_tag .ltx_tag_subsection}Ablation Study of Prom-PATE {#ablation-study-of-prom-pate .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS2.p1 .ltx_para}
+We conduct an ablation study on Prom-PATE for multiple baselines that
+can arise from our setting. In Prom-PATE, two key components for
+significant improvement of accuracy are re-teacher models and the use of
+a pre-trained classifier in student training. Thus, there are two
+dimensions for the ablation study: (i) VP-based re-teacher models,
+transfer learning-based teacher models, and train-from-scratch teacher
+models and (ii) using pre-trained or train-from-scratch classifiers in
+semi-supervised learning of the student model. Note that these
+pre-trained classifiers are all trained on ImageNet. The experiment
+results are shown in Table [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T3 "Table 3 ‣ 4.2 Ablation Study of Prom-PATE ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+where the setting A corresponds to Prom-PATE while the setting F
+corresponds to the ordinary PATE.
+:::
+
+<figure id="S4.T3" class="ltx_table">
+<div id="S4.T3.8"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:93.5pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-37.6pt,16.2pt) scale(0.742371546487133,0.742371546487133) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 3: </span>Ablation
+study of Prom-PATE.</figcaption>
+</figure>
+
+::: {#S4.SS2.p2 .ltx_para}
+From Table [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T3 "Table 3 ‣ 4.2 Ablation Study of Prom-PATE ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+we can observe that by comparing A with C and B with D, VP-based
+re-teacher models in Prom-PATE indeed hold an advantage over transfer
+learning-based teacher models when adapting the target domain of meager
+data, exceeding by a maximum of 5%. Secondly, suppose we compare A with
+B, C with D, and E with F, we can also see that utilizing a public
+pre-trained classifier in student training in Prom-PATE allows us to
+gain another performance improvement, ranging from 15% to 20 %. However,
+we particularly note that simply making use of a pre-trained classifier
+is not sufficient to have a great increase in accuracy, because the
+settings A and E, both containing a pre-trained classifier in the
+student training, have a difference of approximately 40% in terms of the
+predicting accuracy. The above results support the importance of
+re-teacher models in Prom-PATE. Lastly, we note that albeit holding a
+small difference against Prom-PATE and the transfer learning baseline,
+we note that under a sufficient domain gap, the re-teacher tends to
+perform much better at these diverse private domains. We refer the
+readers to Section [[4.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS4 "4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+for more details.
+:::
+
+<figure id="S4.T4" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T4.3.1.1"
+class="ltx_text" style="font-size:90%;">Table 4</span>: </span><span
+id="S4.T4.4.2" class="ltx_text" style="font-size:90%;">Comparison
+between Prom-PATE and prior work.</span></figcaption>
+</figure>
+:::
+
+::: {#S4.SS3 .section .ltx_subsection}
+### [4.3 ]{.ltx_tag .ltx_tag_subsection}Comparison with Existing DP Classifiers {#comparison-with-existing-dp-classifiers .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS3.p1 .ltx_para}
+We further compare Prom-PATE against the existing work including
+state-of-the-art DP classifiers. Table [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T4 "Table 4 ‣ 4.2 Ablation Study of Prom-PATE ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+shows the comparison results, where the accuracies of the other methods
+are directly excerpted from the original papers except that Yu et al.'s
+experiment results are from
+\[[5](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib5){.ltx_ref}\].
+:::
+
+::: {#S4.SS3.p2 .ltx_para}
+One can observe from Table [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T4 "Table 4 ‣ 4.2 Ablation Study of Prom-PATE ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+that Prom-PATE achieves competitive performance over current existing
+works. Particularly, in the low budget regime, with
+$\epsilon \approx 1$, Prom-PATE outperforms all the other models and
+achieves the best accuracy of $97.0\%$. Furthermore, the accuracy of
+$97.1\%$ can be achieved under a much lower budget of
+$\epsilon \approx 1.5$, roughly a $33\%$ boost in privacy budget. While
+the state-of-the-art classification accuracy of CIFAR-10 (through
+ViT-H/14 \[[12](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib12){.ltx_ref}\])
+in the non-private setting is 99.5%[^3^[[^3^[3]{.ltx_tag
+.ltx_tag_note}[https://paperswithcode.com/sota/image-classification-on-cifar-10](https://paperswithcode.com/sota/image-classification-on-cifar-10){.ltx_ref
+.ltx_url .ltx_font_typewriter
+target="_blank"}]{.ltx_note_content}]{.ltx_note_outer}]{#footnote3
+.ltx_note .ltx_role_footnote}, Prom-PATE achieves a meaningful
+improvement in accuracy. We also note that, unlike the other
+approaches \[[14](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib14){.ltx_ref},
+[24](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib24){.ltx_ref},
+[19](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib19){.ltx_ref},
+[33](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib33){.ltx_ref},
+[11](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib11){.ltx_ref},
+[5](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib5){.ltx_ref}\],
+Prom-PATE enjoys great flexibility in replacing source models (in
+re-teacher models) by the latest classifiers, so as to effortlessly
+improve the accuracy.
+:::
+:::
+
+::: {#S4.SS4 .section .ltx_subsection}
+### [4.4 ]{.ltx_tag .ltx_tag_subsection}Cross-Domain Dataset Evaluation {#cross-domain-dataset-evaluation .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS4.p1 .ltx_para}
+We evaluate Prom-PATE under a cross-domain setting, where the re-teacher
+models with public pre-trained models are visually prompted toward a
+small private target domain. As mentioned in Section [[4.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS1 "4.1 Datasets and Implementation Details ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+we evaluate Prom-PATE on Blood-MNIST
+\[[38](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib38){.ltx_ref}\].
+The experiment results are shown in Table [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T5 "Table 5 ‣ 4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+where Transfer-PATE is considered to use the same backbone source model
+of Prom-PATE and performs partial fine-tuning when training the teacher
+models.
+:::
+
+<figure id="S4.T5" class="ltx_table">
+<div id="S4.T5.3"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:94.3pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-77.8pt,33.9pt) scale(0.582082632623995,0.582082632623995) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T5.5.1.1"
+class="ltx_text" style="font-size:90%;">Table 5</span>: </span><span
+id="S4.T5.6.2" class="ltx_text" style="font-size:90%;">Effect on
+cross-domain datasets.</span></figcaption>
+</figure>
+
+::: {#S4.SS4.p2 .ltx_para}
+As one can see from Table [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T5 "Table 5 ‣ 4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+when adapting to a target domain with sufficient domain gap, Prom-PATE
+is able to manage the advantage of VP and maximize the accuracy gain
+given a fixed amount of privacy budget to vote for highly accurate
+labels that are beneficial for downstream student training, exceeding
+the Transfer-PATE by roughly 8%. On the other hand, Prom-PATE is also
+compared against
+Reprogrammable-FL \[[2](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib2){.ltx_ref}\],
+because the latter improves accuracy in the context of FL. Prom-PATE
+outperforms Reprogrammable-FL by approximately 2%. This can be
+attributed to much noisy perturbation of Reprogrammable-FL as stated in
+Section [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S2 "2 Related Work and Background ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+Most importantly, due to the high discrepancy between ImageNet and
+Blood-MNIST, the high accuracy from such a train-on-ImageNet and
+test-on-Blood-MNIST setting also eliminates the suspicion
+[(C3)]{#S4.SS4.p2.1.1 .ltx_text .ltx_font_bold} from
+\[[34](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib34){.ltx_ref}\].
+:::
+:::
+
+::: {#S4.SS5 .section .ltx_subsection}
+### [4.5 ]{.ltx_tag .ltx_tag_subsection}Numbers of Re-Teacher Models {#numbers-of-re-teacher-models .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS5.p1 .ltx_para}
+In this section, we investigate the model performance under different
+numbers of re-teacher models. Table [[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T6 "Table 6 ‣ 4.5 Numbers of Re-Teacher Models ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+reports the results, where Swin
+Transformer \[[22](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib22){.ltx_ref}\]
+is used as the source model for re-teacher models. As shown in Table
+[[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T6 "Table 6 ‣ 4.5 Numbers of Re-Teacher Models ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+the best utility is achieved when using 1000 re-teacher models under a
+privacy budget of $\epsilon \approx 1$. We also note that the accuracy
+of all settings with 250, 500, and 1000 re-teacher models already exceed
+the performance of
+PATE \[[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref}\]
+under a privacy budget of $\epsilon \approx 1$.
+:::
+
+<figure id="S4.T6" class="ltx_table">
+<div id="S4.T6.7"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:100.4pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-47.1pt,21.8pt) scale(0.697199110280969,0.697199110280969) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T6.9.1.1"
+class="ltx_text" style="font-size:90%;">Table 6</span>: </span><span
+id="S4.T6.10.2" class="ltx_text" style="font-size:90%;">Effect on
+different numbers of re-teacher models.</span></figcaption>
+</figure>
+:::
+
+::: {#S4.SS6 .section .ltx_subsection}
+### [4.6 ]{.ltx_tag .ltx_tag_subsection}Different Pre-Trained Models {#different-pre-trained-models .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS6.p1 .ltx_para}
+We study the effect of different pre-trained source models on Prom-PATE.
+Table [[7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T7 "Table 7 ‣ 4.6 Different Pre-Trained Models ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+reports the results. In particular, using Swin Transformer
+\[[22](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib22){.ltx_ref}\]
+as the pre-trained source model results in the best performance of 97%
+on CIFAR-10. This is consistent with the theoretical relationship
+presented in
+\[[37](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib37){.ltx_ref}\],
+which states that the population risk on the target task of the
+reprogrammed model can be upper bounded by the source risk with an
+additional term in misalignment error. Therefore, as we can see from
+Table [[8]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T8 "Table 8 ‣ 4.6 Different Pre-Trained Models ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+which includes the accuracy of pre-trained models on the source domain
+(i.e., source risk), Swin Transformer has the least empirical risk and
+serves as a natural choice for the source model.
+:::
+
+<figure id="S4.T7" class="ltx_table">
+<div id="S4.T7.10"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:433.6pt;height:101pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-14.9pt,3.5pt) scale(0.935623509923887,0.935623509923887) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T7.12.1.1"
+class="ltx_text" style="font-size:90%;">Table 7</span>: </span><span
+id="S4.T7.13.2" class="ltx_text" style="font-size:90%;">Effect on
+different pre-trained models.</span></figcaption>
+</figure>
+
+<figure id="S4.T8" class="ltx_table">
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T8.3.1.1"
+class="ltx_text" style="font-size:90%;">Table 8</span>: </span><span
+id="S4.T8.4.2" class="ltx_text" style="font-size:90%;">Test accuracy of
+ImageNet source models.</span></figcaption>
+</figure>
+:::
+
+::: {#S4.SS7 .section .ltx_subsection}
+### [4.7 ]{.ltx_tag .ltx_tag_subsection}Binary Mask in Visual Prompting {#binary-mask-in-visual-prompting .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS7.p1 .ltx_para}
+We further study how the different visual prompting techniques affect
+classification accuracy. Specifically, we consider two settings on
+whether to apply the binary mask $M$ or not. Table [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T9 "Table 9 ‣ 4.7 Binary Mask in Visual Prompting ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+reports the results, where Swin
+transformer \[[22](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib22){.ltx_ref}\]
+as the source model with $1000$ re-teacher models is considered.
+:::
+
+<figure id="S4.T9" class="ltx_table">
+<div id="S4.T9.7"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:145.1pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-12.7pt,8.5pt) scale(0.895393683760522,0.895393683760522) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T9.9.1.1"
+class="ltx_text" style="font-size:90%;">Table 9</span>: </span><span
+id="S4.T9.10.2" class="ltx_text" style="font-size:90%;">Effect on visual
+prompting technique</span></figcaption>
+</figure>
+
+::: {#S4.SS7.p2 .ltx_para}
+One can observe from Table [[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T9 "Table 9 ‣ 4.7 Binary Mask in Visual Prompting ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+that using $M$ could enhance performance. The rationale is that by
+utilizing $M$, we can control the amount of noise placed in the visual
+prompt, hence controlling the ratio of target data $x_{T}$ and noise
+parameter $\omega_{1}$. This leads to a better trade-off between
+accuracy and the meager amount of private data each re-teacher model
+owns.
+:::
+:::
+
+::: {#S4.SS8 .section .ltx_subsection}
+### [4.8 ]{.ltx_tag .ltx_tag_subsection}Label Mapping Techniques {#label-mapping-techniques .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS8.p1 .ltx_para}
+Next, we proceed to investigate the effect of label mapping on
+Prom-PATE. Particularly, we consider the settings of using random label
+mapping (RLM), one fully-connected layer, and two fully-connected layers
+(see Figure [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.F2 "Figure 2 ‣ Training re-teacher Models. ‣ 3.2 Prom-PATE ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}).
+Table [[10]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T10 "Table 10 ‣ 4.8 Label Mapping Techniques ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+shows the experiment results, where Swin
+transformer \[[22](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib22){.ltx_ref}\]
+as the source model with $1000$ re-teacher models is considered. In
+particular, using one FC layer allows Prom-PATE to achieve the best
+performance. Furthermore, we note that randomly selecting ten classes
+for mapping would disrupt the behavior of the pre-trained model, as the
+mapping relations among source and target labels are randomly given but
+other remaining source classes might contain valuable information for
+the prediction. Such an explanation can be confirmed by the accuracy
+(i.e., noisy label accuracy) of RLM, which is only $22.9\%$,
+demonstrating that even with a high consensus of the re-teacher models,
+the ensemble prediction is likely to be wrong as well. On the other
+hand, while using two FC layers allows for more expressiveness, the
+number of training parameters is increased as well, leading to a slight
+degradation in accuracy with limited training data for each re-teacher
+model.
+:::
+
+<figure id="S4.T10" class="ltx_table">
+<div id="S4.T10.6"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:133.9pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-22.8pt,14.1pt) scale(0.826465922675205,0.826465922675205) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S4.T10.8.1.1"
+class="ltx_text" style="font-size:90%;">Table 10</span>: </span><span
+id="S4.T10.9.2" class="ltx_text" style="font-size:90%;">Effect on label
+mapping techniques.</span></figcaption>
+</figure>
+:::
+
+::: {#S4.SS9 .section .ltx_subsection}
+### [4.9 ]{.ltx_tag .ltx_tag_subsection}Rescale Ratio in Visual Prompting {#rescale-ratio-in-visual-prompting .ltx_title .ltx_title_subsection}
+
+::: {#S4.SS9.p1 .ltx_para}
+Usually, in VP/MR, the image from the target domain needs to be rescaled
+and surrounded by trainable noises, as shown in Eq. ([[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S3.E1 "1 ‣ Training re-teacher Models. ‣ 3.2 Prom-PATE ‣ 3 Main Approach ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}).
+The resulting ${\hat{x}}_{S}$ can then be fed into the source model. A
+higher rescale ratio generally leads to better performance. The
+rationale is that a higher rescale ratio provides more information from
+the target domain, which enables the re-teacher model to generate better
+visual prompts that can more effectively guide the source model in
+learning the relevant features of the target domain. However, a too-high
+rescale ratio could potentially result in overfitting to the target
+domain, leading to poor generalization performance. Hence, one strikes a
+balance between providing sufficient information from the target domain
+and avoiding overfitting. In our experiments, a rescale ratio of $0.6$
+achieves the best performance.
+:::
+
+<figure id="S4.T11" class="ltx_table">
+<div id="S4.T11.15"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:102.2pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-6.2pt,2.9pt) scale(0.945940584040349,0.945940584040349) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table">Table 11: </span>Effect
+on the rescale ratio of target Data. The number of queries is 1000 in
+all of the settings. AQ, AA, and T denote answered queries, answered
+accuracy (%), and threshold, respectively.</figcaption>
+</figure>
+
+::: {#S4.SS9.p2 .ltx_para}
+As observed from Table [[11]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T11 "Table 11 ‣ 4.9 Rescale Ratio in Visual Prompting ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+rescaling $x_{T}$ to $192 \times 192$ for visual prompting achieved the
+highest utility. As explained in Section [[4.7]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS7 "4.7 Binary Mask in Visual Prompting ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+the rescale size provides a ratio between the trainable parameter
+$\omega_{1}$ and target data $x_{T}$. Too many noise parameters and a
+small target image might degrade performance due to the quality of the
+target image and insufficient data. Conversely, a larger target image
+and fewer parameters of $\omega_{1}$ might cause sub-optimal input
+transformation from target to source, leading to a poor prompt.
+:::
+:::
+:::
+
+::: {#S5 .section .ltx_section}
+## [5 ]{.ltx_tag .ltx_tag_section}Conclusion {#conclusion .ltx_title .ltx_title_section}
+
+::: {#S5.p1 .ltx_para}
+In this paper, we conducted a comprehensive study and discovered a new
+benefit of VP in DP. In particular, we propose Prom-PATE, a new
+VP-empowered training method for constructing DP classifiers. Prom-PATE
+leverages VP to assist in the adaptation of pre-trained models in a more
+efficient way without losing privacy. Empirical evaluations show that
+Prom-PATE provides state-of-the-art performance compared to several
+baselines and existing works. We also find that Prom-PATE achieves an
+even better accuracy gain when the target task has a sufficient domain
+gap against the pre-trained model (i.e., the ImageNet to Blood-MNIST
+setting), demonstrating the generality of Prom-PATE. Our findings
+suggest that VP is a promising approach to facilitating further research
+in building DP classifiers that improve or even extinguish the
+privacy-utility trade-off.
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+:::
+
+::: {#bib .section .ltx_bibliography}
+## References {#references .ltx_title .ltx_title_bibliography style="font-size:90%;"}
+
+-   [[\[1\]]{.ltx_tag .ltx_tag_bibitem} [[ Martin Abadi, Andy Chu, Ian
+    Goodfellow, H. Brendan McMahan, Ilya Mironov, Kunal Talwar, and Li
+    Zhang. ]{#bib.bib1.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Deep learning with differential privacy.
+    ]{#bib.bib1.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib1.3.1 .ltx_text style="font-size:90%;"}[ACM
+    Conference on Computer and Communications Security
+    (CCS)]{#bib.bib1.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2016. ]{#bib.bib1.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib1}
+-   [[\[2\]]{.ltx_tag .ltx_tag_bibitem} [[ Huzaifa Arif, Alex Gittens,
+    and Pin-Yu Chen. ]{#bib.bib2.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Reprogrammable-fl: Improving utility-privacy
+    tradeoff in federated learning via model reprogramming.
+    ]{#bib.bib2.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib2.3.1 .ltx_text style="font-size:90%;"}[First IEEE
+    Conference on Secure and Trustworthy Machine Learning]{#bib.bib2.4.2
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[. ]{#bib.bib2.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib2}
+-   [[\[3\]]{.ltx_tag .ltx_tag_bibitem} [[ Hyojin Bahng, Ali Jahanian,
+    Swami Sankaranarayanan, and Phillip Isola. ]{#bib.bib3.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Visual prompting:
+    Modifying pixel space to adapt pre-trained models. ]{#bib.bib3.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2203.17274]{#bib.bib3.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib3.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib3}
+-   [[\[4\]]{.ltx_tag .ltx_tag_bibitem} [[ Amir Bar, Yossi Gandelsman,
+    Trevor Darrell, Amir Globerson, and Alexei A Efros. ]{#bib.bib4.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Visual
+    prompting via image inpainting. ]{#bib.bib4.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib4.3.1
+    .ltx_text style="font-size:90%;"}[Conference on Neural Information
+    Processing Systems (NeurIPS)]{#bib.bib4.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib4.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib4}
+-   [[\[5\]]{.ltx_tag .ltx_tag_bibitem} [[ Zhiqi Bu, Jialin Mao, and
+    Shiyun Xu. ]{#bib.bib5.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Scalable and efficient training of large
+    convolutional neural networks with differential privacy.
+    ]{#bib.bib5.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib5.3.1 .ltx_text style="font-size:90%;"}[Advances in
+    Neural Information Processing Systems (NeurIPS)]{#bib.bib5.4.2
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib5.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib5}
+-   [[\[6\]]{.ltx_tag .ltx_tag_bibitem} [[ Aochuan Chen, Peter Lorenz,
+    Yuguang Yao, Pin-Yu Chen, and Sijia Liu. ]{#bib.bib6.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Visual prompting for
+    adversarial robustness. ]{#bib.bib6.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2210.06284]{#bib.bib6.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib6.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib6}
+-   [[\[7\]]{.ltx_tag .ltx_tag_bibitem} [[ Aochuan Chen, Yuguang Yao,
+    Pin-Yu Chen, Yihua Zhang, and Sijia Liu. ]{#bib.bib7.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Understanding and
+    improving visual prompting: A label-mapping perspective.
+    ]{#bib.bib7.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib7.3.1 .ltx_text style="font-size:90%;"}[Proceedings
+    of the IEEE conference on computer vision and pattern
+    recognition]{#bib.bib7.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2023. ]{#bib.bib7.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib7}
+-   [[\[8\]]{.ltx_tag .ltx_tag_bibitem} [[ Pin-Yu Chen. ]{#bib.bib8.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Model
+    reprogramming: Resource-efficient cross-domain machine
+    ]{#bib.bib8.2.1 .ltx_text style="font-size:90%;"}[learning.
+    ]{#bib.bib8.3.2 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv preprint arXiv:2202.10629]{#bib.bib8.4.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib8.5.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib8}
+-   [[\[9\]]{.ltx_tag .ltx_tag_bibitem} [[ Ting Chen, Simon Kornblith,
+    Mohammad Norouzi, and Geoffrey Hinton. ]{#bib.bib9.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[A simple framework for
+    contrastive learning of visual representations. ]{#bib.bib9.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib9.3.1 .ltx_text style="font-size:90%;"}[International
+    Conference on Machine Learning (ICML)]{#bib.bib9.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2020. ]{#bib.bib9.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib9}
+-   [[\[10\]]{.ltx_tag .ltx_tag_bibitem} [[ R. Chourasia, Jiayuan Ye,
+    and R. Shokri. ]{#bib.bib10.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Differential privacy dynamics of langevin
+    diffusion and noisy gradient descent. ]{#bib.bib10.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Conference on Neural
+    Information Processing Systems (NeurIPS)]{#bib.bib10.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib10.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib10}
+-   [[\[11\]]{.ltx_tag .ltx_tag_bibitem} [[ Soham De, Leonard Berrada,
+    Jamie Hayes, Samuel L Smith, and Borja Balle. ]{#bib.bib11.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Unlocking
+    high-accuracy differentially private image classification through
+    scale. ]{#bib.bib11.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[arXiv preprint arXiv:2204.13650]{#bib.bib11.3.1
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib11.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib11}
+-   [[\[12\]]{.ltx_tag .ltx_tag_bibitem} [[ Alexey Dosovitskiy, Lucas
+    Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas
+    Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg
+    ]{#bib.bib12.1.1 .ltx_text style="font-size:90%;"}[Heigold, Sylvain
+    Gelly, Jakob Uszkoreit, and Neil Houlsby. ]{#bib.bib12.2.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[An image is worth 16x16
+    words: Transformers for image recognition at scale. ]{#bib.bib12.3.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib12.4.1 .ltx_text style="font-size:90%;"}[International
+    Conference on Learning Representations (ICLR)]{#bib.bib12.5.2
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2021.
+    ]{#bib.bib12.6.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib12}
+-   [[\[13\]]{.ltx_tag .ltx_tag_bibitem} [[ Gamaleldin F. Elsayed, Ian
+    Goodfellow, and Jascha Sohl-Dickstein. ]{#bib.bib13.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Adversarial reprogramming
+    of neural networks. ]{#bib.bib13.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib13.3.1
+    .ltx_text style="font-size:90%;"}[International Conference on
+    Learning Representations]{#bib.bib13.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2019. ]{#bib.bib13.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib13}
+-   [[\[14\]]{.ltx_tag .ltx_tag_bibitem} [[ Aditya Golatkar, Alessandro
+    Achille, Yu-Xiang Wang, Aaron Roth, Michael Kearns, and Stefano
+    Soatto. ]{#bib.bib14.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Mixed differential privacy in computer vision.
+    ]{#bib.bib14.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib14.3.1 .ltx_text style="font-size:90%;"}[The IEEE/CVF
+    Computer Vision and Pattern Recognition Conference
+    (CVPR)]{#bib.bib14.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib14.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib14}
+-   [[\[15\]]{.ltx_tag .ltx_tag_bibitem} [[ Patrick Helber, Benjamin
+    Bischke, Andreas Dengel, and Damian Borth. ]{#bib.bib15.1.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[Eurosat: A
+    novel dataset and deep learning benchmark for land use and land
+    cover classification. ]{#bib.bib15.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[IEEE Journal of Selected
+    Topics in Applied Earth Observations and Remote
+    Sensing]{#bib.bib15.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 12(7):2217--2226, 2019. ]{#bib.bib15.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib15}
+-   [[\[16\]]{.ltx_tag .ltx_tag_bibitem} [[ Menglin Jia, Luming Tang,
+    Bor-Chun Chen, Claire Cardie, Serge Belongie, Bharath Hariharan, and
+    Ser-Nam Lim. ]{#bib.bib16.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Visual prompt tuning. ]{#bib.bib16.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib16.3.1
+    .ltx_text style="font-size:90%;"}[Computer Vision--ECCV 2022: 17th
+    European Conference, Tel Aviv, Israel, October 23--27, 2022,
+    Proceedings, Part XXXIII]{#bib.bib16.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 709--727. Springer, 2022.
+    ]{#bib.bib16.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib16}
+-   [[\[17\]]{.ltx_tag .ltx_tag_bibitem} [[ Jared Kaplan, Sam
+    McCandlish, Tom Henighan, Tom B Brown, Benjamin Chess, Rewon Child,
+    Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei.
+    ]{#bib.bib17.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Scaling laws for neural language models. ]{#bib.bib17.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[arXiv preprint
+    arXiv:2001.08361]{#bib.bib17.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2020. ]{#bib.bib17.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib17}
+-   [[\[18\]]{.ltx_tag .ltx_tag_bibitem} [[ Tero Karras, Samuli Laine,
+    and Timo Aila. ]{#bib.bib18.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[A style-based generator architecture for
+    generative adversarial networks. ]{#bib.bib18.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib18.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the IEEE/CVF
+    conference on computer vision and pattern
+    recognition]{#bib.bib18.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 4401--4410, 2019. ]{#bib.bib18.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib18}
+-   [[\[19\]]{.ltx_tag .ltx_tag_bibitem} [[ Helena Klause, Alexander
+    Ziller, Daniel Rueckert, Kerstin Hammernik, and Georgios Kaissis.
+    ]{#bib.bib19.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Differentially private training of residual networks with scale
+    ]{#bib.bib19.2.1 .ltx_text style="font-size:90%;"}[normalisation.
+    ]{#bib.bib19.3.2 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib19.4.1 .ltx_text style="font-size:90%;"}[Theory and
+    Practice of Differential Privacy (TPDP)]{#bib.bib19.5.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib19.6.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib19}
+-   [[\[20\]]{.ltx_tag .ltx_tag_bibitem} [[ Xuechen Li, Florian Tramèr,
+    Percy Liang, and Tatsunori Hashimoto. ]{#bib.bib20.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Large language models can
+    be strong differentially private learners. ]{#bib.bib20.2.1
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock} [[In
+    ]{#bib.bib20.3.1 .ltx_text style="font-size:90%;"}[International
+    Conference on Learning Representations (ICLR)]{#bib.bib20.4.2
+    .ltx_text .ltx_font_italic style="font-size:90%;"}[, 2022.
+    ]{#bib.bib20.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib20}
+-   [[\[21\]]{.ltx_tag .ltx_tag_bibitem} [[ Pengfei Liu, Weizhe Yuan,
+    Jinlan Fu, Zhengbao Jiang, Hiroaki Hayashi, and Graham Neubig.
+    ]{#bib.bib21.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Pre-train, prompt, and predict: A systematic survey of prompting
+    methods in natural language processing. ]{#bib.bib21.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[ACM Computing
+    Surveys]{#bib.bib21.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 55(9):1--35, 2023. ]{#bib.bib21.4.2
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib21}
+-   [[\[22\]]{.ltx_tag .ltx_tag_bibitem} [[ Ze Liu, Yutong Lin, Yue Cao,
+    Han Hu, Yixuan Wei, Zheng Zhang, Stephen Lin, and Baining Guo.
+    ]{#bib.bib22.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Swin transformer: Hierarchical vision transformer using shifted
+    windows. ]{#bib.bib22.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib22.3.1 .ltx_text
+    style="font-size:90%;"}[Proceedings of the IEEE/CVF international
+    conference on computer vision]{#bib.bib22.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 10012--10022, 2021.
+    ]{#bib.bib22.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib22}
+-   [[\[23\]]{.ltx_tag .ltx_tag_bibitem} [[ ]{#bib.bib23.1.1 .ltx_text
+    style="font-size:90%;"}[Ziwei Liu, Ping Luo, Xiaogang Wang, and
+    Xiaoou Tang. ]{#bib.bib23.2.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Large-scale celebfaces attributes (celeba)
+    dataset. ]{#bib.bib23.3.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Retrieved August]{#bib.bib23.4.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 15(2018):11, 2018.
+    ]{#bib.bib23.5.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib23}
+-   [[\[24\]]{.ltx_tag .ltx_tag_bibitem} [[ Zelun Luo, Daniel J Wu,
+    Ehsan Adeli, and Li Fei-Fei. ]{#bib.bib24.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Scalable differential
+    privacy with sparse network finetuning. ]{#bib.bib24.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib24.3.1
+    .ltx_text style="font-size:90%;"}[IEEE/CVF Conference on Computer
+    Vision and Pattern Recognition]{#bib.bib24.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 5059--5068, 2021.
+    ]{#bib.bib24.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib24}
+-   [[\[25\]]{.ltx_tag .ltx_tag_bibitem} [[ Ilya Mironov.
+    ]{#bib.bib25.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Rényi differential privacy. ]{#bib.bib25.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[2017 IEEE 30th Computer
+    Security Foundations Symposium (CSF)]{#bib.bib25.3.1 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 263--275, 2017.
+    ]{#bib.bib25.4.2 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib25}
+-   [[\[26\]]{.ltx_tag .ltx_tag_bibitem} [[ Ilya Mironov.
+    ]{#bib.bib26.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Rényi differential privacy. ]{#bib.bib26.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib26.3.1
+    .ltx_text style="font-size:90%;"}[2017 IEEE 30th computer security
+    foundations symposium (CSF)]{#bib.bib26.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, pages 263--275.
+    IEEE, 2017. ]{#bib.bib26.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib26}
+-   [[\[27\]]{.ltx_tag .ltx_tag_bibitem} [[ Milad Nasr, Shuang Songi,
+    Abhradeep Thakurta, Nicolas Papernot, and Nicholas Carlin.
+    ]{#bib.bib27.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Adversary instantiation: Lower bounds for differentially private
+    machine learning. ]{#bib.bib27.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib27.3.1 .ltx_text
+    style="font-size:90%;"}[2021 IEEE Symposium on Security and Privacy
+    (SP)]{#bib.bib27.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib27.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib27}
+-   [[\[28\]]{.ltx_tag .ltx_tag_bibitem} [[ Paarth Neekhara, Shehzeen
+    Hussain, Jinglong Du, Shlomo Dubnov, Farinaz Koushanfar, and Julian
+    McAuley. ]{#bib.bib28.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Cross-modal adversarial reprogramming.
+    ]{#bib.bib28.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib28.3.1 .ltx_text style="font-size:90%;"}[Proceedings
+    of the IEEE/CVF Winter Conference on Applications of Computer
+    Vision]{#bib.bib28.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 2427--2435, 2022. ]{#bib.bib28.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib28}
+-   [[\[29\]]{.ltx_tag .ltx_tag_bibitem} [[ Yuval Netzer, Tao Wang, Adam
+    Coates, Alessandro Bissacco, Bo Wu, and Andrew Y Ng.
+    ]{#bib.bib29.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Reading digits in natural images with unsupervised feature
+    learning. ]{#bib.bib29.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[2011. ]{#bib.bib29.3.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib29}
+-   [[\[30\]]{.ltx_tag .ltx_tag_bibitem} [[ Nicolas Papernot, Martín
+    Abadi, Úlfar Erlingsson, Ian Goodfellow, and Kunal Talwar.
+    ]{#bib.bib30.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Semi-supervised knowledge transfer for deep learning from private
+    training data. ]{#bib.bib30.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib30.3.1 .ltx_text
+    style="font-size:90%;"}[International Conference on Learning
+    Representations (ICLR)]{#bib.bib30.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2017. ]{#bib.bib30.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib30}
+-   [[\[31\]]{.ltx_tag .ltx_tag_bibitem} [[ Nicolas Papernot, Shuang
+    Song, Ilya Mironov, Ananth Raghunathan, Kunal Talwar, and Úlfar
+    Erlingsson. ]{#bib.bib31.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Scalable private learning with pate.
+    ]{#bib.bib31.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib31.3.1 .ltx_text
+    style="font-size:90%;"}[International Conference on Learning
+    Representations (ICLR)]{#bib.bib31.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2017. ]{#bib.bib31.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib31}
+-   [[\[32\]]{.ltx_tag .ltx_tag_bibitem} [[ Alec Radford, Jong Wook Kim,
+    Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish
+    Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, et al.
+    ]{#bib.bib32.1.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Learning transferable visual models from natural language
+    supervision. ]{#bib.bib32.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib32.3.1 .ltx_text
+    style="font-size:90%;"}[International conference on machine
+    learning]{#bib.bib32.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 8748--8763. PMLR, 2021.
+    ]{#bib.bib32.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib32}
+-   [[\[33\]]{.ltx_tag .ltx_tag_bibitem} [[ Florian Tramèr and Dan
+    Boneh. ]{#bib.bib33.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Differentially private learning needs better
+    features (or much more data). ]{#bib.bib33.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib33.3.1
+    .ltx_text style="font-size:90%;"}[International Conference on
+    Learning Representations (ICLR)]{#bib.bib33.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2021. ]{#bib.bib33.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib33}
+-   [[\[34\]]{.ltx_tag .ltx_tag_bibitem} [[ Florian Tramèr, Gautam
+    Kamath, and Nicholas Carlini. ]{#bib.bib34.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Considerations for
+    differentially private learning with large-scale public pretraining.
+    ]{#bib.bib34.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[arXiv:2212.06470]{#bib.bib34.3.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2022. ]{#bib.bib34.4.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib34}
+-   [[\[35\]]{.ltx_tag .ltx_tag_bibitem} [[ Yun-Yun Tsai, Pin-Yu Chen,
+    and Tsung-Yi Ho. ]{#bib.bib35.1.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[Transfer learning without knowing: Reprogramming
+    black-box machine learning models with scarce data and limited
+    resources. ]{#bib.bib35.2.1 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock} [[In ]{#bib.bib35.3.1 .ltx_text
+    style="font-size:90%;"}[International Conference on Machine Learning
+    (ICML)]{#bib.bib35.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2020. ]{#bib.bib35.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib35}
+-   [[\[36\]]{.ltx_tag .ltx_tag_bibitem} [[ Yidong Wang, Hao Chen, Yue
+    Fan, Wang Sun, Ran Tao, Wenxin Hou, Renjie Wang, Linyi Yang, Zhi
+    Zhou, Lan-Zhe Guo, et al. ]{#bib.bib36.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Usb: A unified
+    semi-supervised learning benchmark. ]{#bib.bib36.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib36.3.1
+    .ltx_text style="font-size:90%;"}[Conference on Neural Information
+    Processing Systems (NeurIPS)]{#bib.bib36.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib36.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib36}
+-   [[\[37\]]{.ltx_tag .ltx_tag_bibitem} [[ Chao-Han Huck Yang, Yun-Yun
+    Tsai, and Pin-Yu Chen. ]{#bib.bib37.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Voice2series:
+    Reprogramming acoustic models for time series classification.
+    ]{#bib.bib37.2.1 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[In ]{#bib.bib37.3.1 .ltx_text
+    style="font-size:90%;"}[International Conference on Machine
+    Learning]{#bib.bib37.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 11808--11819. PMLR, 2021.
+    ]{#bib.bib37.5.3 .ltx_text style="font-size:90%;"}
+    ]{.ltx_bibblock}]{#bib.bib37}
+-   [[\[38\]]{.ltx_tag .ltx_tag_bibitem} [[ ]{#bib.bib38.1.1 .ltx_text
+    style="font-size:90%;"}[Jiancheng Yang, Rui Shi, Donglai Wei, Zequan
+    Liu, Lin Zhao, Bilian Ke, Hanspeter Pfister, and Bingbing Ni.
+    ]{#bib.bib38.2.2 .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}
+    [[Medmnist v2-a large-scale lightweight benchmark for 2d and 3d
+    biomedical image classification. ]{#bib.bib38.3.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Scientific
+    Data]{#bib.bib38.4.1 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 10(1):41, 2023. ]{#bib.bib38.5.2 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib38}
+-   [[\[39\]]{.ltx_tag .ltx_tag_bibitem} [[ Da Yu, Saurabh Naik, Arturs
+    Backurs, Sivakanth Gopi, Huseyin A Inan, Gautam Kamath, Janardhan
+    Kulkarni, Yin Tat Lee, Andre Manoel, Lukas Wutschitz, Sergey
+    Yekhanin, and Huishuai Zhang. ]{#bib.bib39.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Differentially private
+    fine-tuning of language models. ]{#bib.bib39.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib39.3.1
+    .ltx_text style="font-size:90%;"}[International Conference on
+    Learning Representations (ICLR)]{#bib.bib39.4.2 .ltx_text
+    .ltx_font_italic style="font-size:90%;"}[, 2022. ]{#bib.bib39.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib39}
+-   [[\[40\]]{.ltx_tag .ltx_tag_bibitem} [[ Da Yu, Huishuai Zhang, Wei
+    Chen, Jian Yin, and Tie-Yan Liu. ]{#bib.bib40.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Large scale private
+    learning via low-rank reparametrization. ]{#bib.bib40.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib40.3.1
+    .ltx_text style="font-size:90%;"}[International Conference on
+    Machine Learning (ICML)]{#bib.bib40.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, 2021. ]{#bib.bib40.5.3 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib40}
+-   [[\[41\]]{.ltx_tag .ltx_tag_bibitem} [[ Yuqing Zhu, Xiang Yu,
+    Manmohan Chandraker, and Yu-Xiang Wang. ]{#bib.bib41.1.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[Private-knn: Practical
+    differential privacy for computer vision. ]{#bib.bib41.2.1 .ltx_text
+    style="font-size:90%;"} ]{.ltx_bibblock} [[In ]{#bib.bib41.3.1
+    .ltx_text style="font-size:90%;"}[Proceedings of the IEEE/CVF
+    Conference on Computer Vision and Pattern
+    Recognition]{#bib.bib41.4.2 .ltx_text .ltx_font_italic
+    style="font-size:90%;"}[, pages 11854--11862, 2020. ]{#bib.bib41.5.3
+    .ltx_text style="font-size:90%;"} ]{.ltx_bibblock}]{#bib.bib41}
+:::
+
+::: {.ltx_pagination .ltx_role_newpage}
+:::
+
+::: {#S6 .section .ltx_section}
+## [6 ]{.ltx_tag .ltx_tag_section}Supplementary Material {#supplementary-material .ltx_title .ltx_title_section}
+
+::: {#S6.p1 .ltx_para}
+The supplementary material has two parts; the privacy analysis of
+Prom-PATE in Section [[6.1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.SS1 "6.1 Privacy Analysis of Prom-PATE ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+and the additional experiment results in Section [[6.2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.SS2 "6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+:::
+
+::: {#S6.SS1 .section .ltx_subsection}
+### [6.1 ]{.ltx_tag .ltx_tag_subsection}Privacy Analysis of Prom-PATE {#privacy-analysis-of-prom-pate .ltx_title .ltx_title_subsection}
+
+::: {#S6.SS1.p1 .ltx_para}
+Here, we first present the definitions for
+$(\epsilon,\delta)$-differential privacy ($(\epsilon,\delta)$-DP) and
+its variant, Rènyi Differential Privacy (RDP). After that, we prove that
+Prom-PATE satisfies $(\epsilon,\delta)$-DP.
+:::
+
+::: {#Thmdefinition1 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 1]{#Thmdefinition1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmdefinition1.2.2 .ltx_text .ltx_font_bold}(Differential Privacy, DP)[.]{#Thmdefinition1.3.3 .ltx_text .ltx_font_bold} {#definition-1-differential-privacy-dp. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmdefinition1.p1 .ltx_para}
+[A randomized algorithm $\mathcal{M}$ is $(\varepsilon,\delta)$-DP if
+for all
+$\mathcal{S} \subseteq {\text{𝑅𝑎𝑛𝑔𝑒}\operatorname{}{(\mathcal{M})}}$ and
+for any neighboring datasets $\mathcal{D}$ and
+$\mathcal{D}^{\prime}$,]{#Thmdefinition1.p1.5.5 .ltx_text
+.ltx_font_italic}
+
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+     ${{\text{𝑃𝑟}\operatorname{}{\lbrack{{\mathcal{M}\operatorname{}{(\mathcal{D})}} \in \mathcal{S}}\rbrack}} \leq {{e^{\varepsilon}\operatorname{}\text{𝑃𝑟}\operatorname{}{\lbrack{{\mathcal{M}\operatorname{}{(\mathcal{D}^{\prime})}} \in \mathcal{S}}\rbrack}} + \delta}}.$      [(5)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -- ----------------------------------------------------
+:::
+:::
+
+::: {#S6.SS1.p2 .ltx_para}
+In Definition [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.EGx5 "Definition 1 (Differential Privacy, DP). ‣ 6.1 Privacy Analysis of Prom-PATE ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+$\mathcal{D}$ and $\mathcal{D}^{\prime}$ are neighboring if
+$\mathcal{D}$ can be obtained by adding or removing one sample from
+$\mathcal{D}^{\prime}$
+:::
+
+::: {#Thmdefinition2 .ltx_theorem .ltx_theorem_definition}
+###### [[Definition 2]{#Thmdefinition2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmdefinition2.2.2 .ltx_text .ltx_font_bold}(Rènyi Differential Privacy, RDP)[.]{#Thmdefinition2.3.3 .ltx_text .ltx_font_bold} {#definition-2-rènyi-differential-privacy-rdp. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmdefinition2.p1 .ltx_para}
+[A randomized algorithm $\mathcal{M}$ is
+$(\alpha,{\epsilon\operatorname{}{(\alpha)}})$-RDP with $\alpha > 1$ if
+for any neighboring datasets $\mathcal{D}$ and $\mathcal{D}^{\prime}$,
+[]{#Thmdefinition2.p1.5.5.1 .ltx_text
+style="font-size:70%;"}]{#Thmdefinition2.p1.5.5 .ltx_text
+.ltx_font_italic}
+
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+     $D_{\alpha}\left( \mathcal{M}(\mathcal{D}) \middle| \middle| \mathcal{M}\left( \mathcal{D}^{\prime} \right) \right) = \frac{1}{\alpha - 1}\log{\mathbb{E}}_{x \sim {\mathcal{M}\operatorname{}{(\mathcal{D}^{\prime})}}}\left\lbrack \left( \frac{\text{𝑃𝑟}\operatorname{}\left\lbrack {(\mathcal{D}) = x} \right\rbrack}{\text{𝑃𝑟}\operatorname{}\left\lbrack {\left( \mathcal{D}^{\prime} \right) = x} \right\rbrack} \right)^{\alpha - 1} \right\rbrack \leq \epsilon(\alpha),$      [(6)]{.ltx_tag .ltx_tag_equation .ltx_align_right}
+  -- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ -- ----------------------------------------------------
+
+[where $D_{\alpha}$ is the Rényi divergence of order
+$\alpha$.]{#Thmdefinition2.p1.7.2 .ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#Thmtheorem1 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 1]{#Thmtheorem1.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmtheorem1.2.2 .ltx_text .ltx_font_bold}(Sequential Composition on RDP \[[25](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib25){.ltx_ref}\])[.]{#Thmtheorem1.3.3 .ltx_text .ltx_font_bold} {#theorem-1-sequential-composition-on-rdp-25. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmtheorem1.p1 .ltx_para}
+[If the mechanism $\mathcal{M}_{1}$ satisfies
+$(\alpha,\epsilon_{1})$-RDP and the mechanism $\mathcal{M}_{2}$
+satisfies $(\alpha,\epsilon_{2})$-RDP, then
+$\mathcal{M}_{2} \circ \mathcal{M}_{1}$ satisfies
+$(\alpha,{\epsilon_{1} + \epsilon_{2}})$-RDP.]{#Thmtheorem1.p1.6.6
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#Thmtheorem2 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 2]{#Thmtheorem2.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[ ]{#Thmtheorem2.2.2 .ltx_text .ltx_font_bold}(Translation of RDP \[[26](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib26){.ltx_ref}\])[.]{#Thmtheorem2.3.3 .ltx_text .ltx_font_bold} {#theorem-2-translation-of-rdp-26. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmtheorem2.p1 .ltx_para}
+[If a mechanism $\mathcal{M}$ satisfies $(\alpha,\epsilon)$-RDP, then
+$\mathcal{M}$ satisfies
+$({\epsilon + \frac{\log{({1/\delta})}}{\alpha - 1}},\delta)$-DP for any
+$\delta \in {(0,1)}$.]{#Thmtheorem2.p1.5.5 .ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#S6.SS1.p3 .ltx_para}
+With the above definition and results, in Theorem [[3]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#Thmtheorem3 "Theorem 3. ‣ 6.1 Privacy Analysis of Prom-PATE ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+we prove that Prom-PATE satisfies $(\epsilon,\delta)$-DP.
+:::
+
+::: {#Thmtheorem3 .ltx_theorem .ltx_theorem_theorem}
+###### [[Theorem 3]{#Thmtheorem3.1.1.1 .ltx_text .ltx_font_bold}]{.ltx_tag .ltx_tag_theorem}[.]{#Thmtheorem3.2.2 .ltx_text .ltx_font_bold} {#theorem-3. .ltx_title .ltx_runin .ltx_title_theorem}
+
+::: {#Thmtheorem3.p1 .ltx_para}
+[Prom-PATE satisfies $(\epsilon,\delta)$-DP.]{#Thmtheorem3.p1.1.1
+.ltx_text .ltx_font_italic}
+:::
+:::
+
+::: {#S6.SS1.1 .ltx_proof}
+###### Proof. {#proof. .ltx_title .ltx_runin .ltx_font_italic .ltx_title_proof}
+
+::: {#S6.SS1.1.p1 .ltx_para}
+Basically, Prom-PATE follows the framework of PATE. One can find that
+the re-teacher models will not be released according to the design of
+PATE. Therefore, the only step that Prom-PATE "touches" the sensitive
+dataset is when the student model queries the re-teacher ensemble for
+labeling the unlabelled samples. Hence, by leveraging proposition $8$ in
+\[[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref}\],
+we know that the Confident-GNMax fulfills
+$(\alpha,\frac{\alpha}{2\operatorname{}\sigma^{2}})$-RDP guarantee.
+Here, consider the case where Prom-PATE has $T$ unlabeled samples that
+need to be labeled by the Confident-GNMax result before the training of
+the student model. According to Theorem [[1]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#Thmtheorem1 "Theorem 1 (Sequential Composition on RDP [25]). ‣ 6.1 Privacy Analysis of Prom-PATE ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+Prom-PATE satisfies
+$(\alpha,{T \cdot \frac{\alpha}{2\operatorname{}\sigma^{2}}})$-RDP.
+Hence, equivalently, Prom-PATE satisfies $(\epsilon,\delta)$-DP for any
+$\delta \in {(0,1)}$, where
+$\epsilon = {{T \cdot \frac{\alpha}{2\operatorname{}\sigma^{2}}} + \frac{\log{({1/\delta})}}{\alpha - 1}}$
+according to Theorem [[2]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#Thmtheorem2 "Theorem 2 (Translation of RDP [26]). ‣ 6.1 Privacy Analysis of Prom-PATE ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+∎
+:::
+:::
+:::
+
+::: {#S6.SS2 .section .ltx_subsection}
+### [6.2 ]{.ltx_tag .ltx_tag_subsection}Additional Experiments {#additional-experiments .ltx_title .ltx_title_subsection}
+
+::: {#S6.SS2.p1 .ltx_para}
+We start by presenting the characteristics and settings of the datasets
+used in our experiments in Table [[12]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T12 "Table 12 ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}.
+Then, we present additional experiment results for the cross-domain
+tasks and high-resolution images.
+:::
+
+<figure id="S6.T12" class="ltx_table">
+<div id="S6.T12.2"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:433.6pt;height:106pt;vertical-align:-0.7pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-116.6pt,28.3pt) scale(0.650185022452173,0.650185022452173) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T12.3.1.1"
+class="ltx_text" style="font-size:90%;">Table 12</span>: </span><span
+id="S6.T12.4.2" class="ltx_text" style="font-size:90%;">Characteristics
+and experiment settings of different datasets.</span></figcaption>
+</figure>
+
+::: {#S6.SS2.SSS0.Px1 .section .ltx_paragraph}
+#### Additional Experiment Results for Cross-Domain Tasks. {#additional-experiment-results-for-cross-domain-tasks. .ltx_title .ltx_title_paragraph}
+
+::: {#S6.SS2.SSS0.Px1.p1 .ltx_para}
+As the source model is trained on ImageNet, we evaluate in
+Section [[4.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS4 "4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+the performance of Prom-PATE on Blood-MNIST to demonstrate the
+superiority of Prom-PATE under a cross-domain setting. Here, we provide
+more experiment results (Tables [[13]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T13 "Table 13 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}$\sim$ [[17]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T17 "Table 17 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref})
+on different datasets. In Tables [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T5 "Table 5 ‣ 4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+[[6]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T6 "Table 6 ‣ 4.5 Numbers of Re-Teacher Models ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+[[9]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T9 "Table 9 ‣ 4.7 Binary Mask in Visual Prompting ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+[[10]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T10 "Table 10 ‣ 4.8 Label Mapping Techniques ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+[[13]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T13 "Table 13 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}$\sim$ [[17]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T17 "Table 17 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+the row [Rescale Ratio]{#S6.SS2.SSS0.Px1.p1.5.1 .ltx_text
+.ltx_font_italic} means that the image from the target task is rescaled
+to a specific size. The row [Queries]{#S6.SS2.SSS0.Px1.p1.5.2 .ltx_text
+.ltx_font_italic} denotes the number of unlabeled samples that asks for
+the labels from the noisy aggregation result. Because Prom-PATE follows
+the design from
+\[[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref}\],
+Confident- GNMax does not always return a label. Thus, the row [Answered
+Queries]{#S6.SS2.SSS0.Px1.p1.5.3 .ltx_text .ltx_font_italic} shows the
+actual number of labels returned by the noisy aggregation result. The
+row [Answer Accuracy]{#S6.SS2.SSS0.Px1.p1.5.4 .ltx_text
+.ltx_font_italic} corresponds to the accuracy of the noisy label. The
+rows Threshold $T$, $\sigma_{1}$, and $\sigma_{2}$ are the parameters in
+Confident-
+GNMax \[[31](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib31){.ltx_ref}\]
+that determines when a noisy label will be returned.
+:::
+
+::: {#S6.SS2.SSS0.Px1.p2 .ltx_para}
+In our experiments, we considered image datasets
+SVHN \[[18](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib18){.ltx_ref}\],
+EuroSAT \[[15](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib15){.ltx_ref}\],
+PathMNIST \[[38](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib38){.ltx_ref}\],
+TissueMNIST \[[38](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib38){.ltx_ref}\],
+and
+DermaMNIST \[[38](https://ar5iv.labs.arxiv.org/html/2303.12247#bib.bib38){.ltx_ref}\]
+as our cross-domain tasks. SVHN contains the street-view house numbers.
+EuroSAT contains the Sentinel-2 satellite images for land use and land
+cover classification. PathMNIST, TissueMNIST, and DermaMNIST are
+collections of standardized biomedical images. In Table [[13]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T13 "Table 13 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}$\sim$Table [[17]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T17 "Table 17 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+we compare Prom-PATE with Transfer-PATE (see Section [[4.4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.SS4 "4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+for the setting of Transfer-PATE) to show the superiority of Prom-PATE.
+In particular, depending on the different characteristics of datasets,
+Prom-PATE reaches different accuracies. However, one can see that
+Transfer-PATE goes worse than Pro-PATE because the cross-domain task
+requires more fine-tuning and thus more samples in Transfer-PATE.
+:::
+
+<figure id="S6.T13" class="ltx_table">
+<div id="S6.T13.8"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:189.6pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-15.1pt,13.2pt) scale(0.877969068046023,0.877969068046023) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T13.10.1.1"
+class="ltx_text" style="font-size:90%;">Table 13</span>: </span><span
+id="S6.T13.11.2" class="ltx_text" style="font-size:90%;">SVHN
+Performance</span></figcaption>
+</figure>
+
+<figure id="S6.T14" class="ltx_table">
+<div id="S6.T14.7"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:172.3pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-27.5pt,21.8pt) scale(0.7977458306997,0.7977458306997) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T14.9.1.1"
+class="ltx_text" style="font-size:90%;">Table 14</span>: </span><span
+id="S6.T14.10.2" class="ltx_text" style="font-size:90%;">EuroSAT
+Performance.</span></figcaption>
+</figure>
+
+<figure id="S6.T15" class="ltx_table">
+<div id="S6.T15.7"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:159.8pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-38.1pt,28.1pt) scale(0.739753975884897,0.739753975884897) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T15.9.1.1"
+class="ltx_text" style="font-size:90%;">Table 15</span>: </span><span
+id="S6.T15.10.2" class="ltx_text" style="font-size:90%;">PathMNIST
+Performance.</span></figcaption>
+</figure>
+
+<figure id="S6.T16" class="ltx_table">
+<div id="S6.T16.6"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:157.9pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-39.9pt,29.1pt) scale(0.730818813166122,0.730818813166122) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T16.8.1.1"
+class="ltx_text" style="font-size:90%;">Table 16</span>: </span><span
+id="S6.T16.9.2" class="ltx_text" style="font-size:90%;">TissueMNIST
+Performance.</span></figcaption>
+</figure>
+
+<figure id="S6.T17" class="ltx_table">
+<div id="S6.T17.7"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:216.8pt;height:157.1pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-40.7pt,29.5pt) scale(0.727277696851761,0.727277696851761) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T17.9.1.1"
+class="ltx_text" style="font-size:90%;">Table 17</span>: </span><span
+id="S6.T17.10.2" class="ltx_text" style="font-size:90%;">DermaMNIST
+Performance.</span></figcaption>
+</figure>
+
+<figure id="S6.T18" class="ltx_table">
+<div id="S6.T18.20"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:433.6pt;height:217.7pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-16.2pt,8.1pt) scale(0.930521409505295,0.930521409505295) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T18.22.1.1"
+class="ltx_text" style="font-size:90%;">Table 18</span>: </span><span
+id="S6.T18.23.2" class="ltx_text" style="font-size:90%;">CelebA-Gender
+Performance.</span></figcaption>
+</figure>
+
+<figure id="S6.T19" class="ltx_table">
+<div id="S6.T19.18"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:433.6pt;height:222.6pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="transform:translate(-11.1pt,5.7pt) scale(0.951318957913513,0.951318957913513) ;">
+</span>
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T19.20.1.1"
+class="ltx_text" style="font-size:90%;">Table 19</span>: </span><span
+id="S6.T19.21.2" class="ltx_text" style="font-size:90%;">CelebA-Hair
+Performance.</span></figcaption>
+</figure>
+
+<figure id="S6.T20" class="ltx_table">
+<div id="S6.T20.20"
+class="ltx_inline-block ltx_align_center ltx_transformed_outer"
+style="width:433.6pt;height:213.3pt;vertical-align:-0.0pt;">
+<span class="ltx_transformed_inner"
+style="tran
+</div>
+<figcaption><span class="ltx_tag ltx_tag_table"><span id="S6.T20.22.1.1"
+class="ltx_text" style="font-size:90%;">Table 20</span>: </span><span
+id="S6.T20.23.2" class="ltx_text" style="font-size:90%;">FFHQ-Gender
+Performance.</span></figcaption>
+</figure>
+:::
+
+::: {#S6.SS2.SSS0.Px2 .section .ltx_paragraph}
+#### Additional Experiment Results for High-Resolution Images. {#additional-experiment-results-for-high-resolution-images. .ltx_title .ltx_title_paragraph}
+
+::: {#S6.SS2.SSS0.Px2.p1 .ltx_para}
+Here, we present additional experiment results for high-resolution
+images. CelebA is a popular dataset that contains colorful celebrity
+images of different sizes. All of CelebA images were rescaled into
+$64 \times 64$ colorful images in our experiments. Based on CelebA, we
+consider CelebA-Gender and CelebA-Hair. In particular, CelebA-Gender is
+for binary classification with gender as the label. CelebA-Hair is for
+the three-class classification with hair color (black/blonde/brown) as
+the label. On the other hand, FFHQ contains 70000 $128 \times 128$
+colorful facial images with gender as labels.
+:::
+
+::: {#S6.SS2.SSS0.Px2.p2 .ltx_para}
+With the comparison between Table [[4]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T4 "Table 4 ‣ 4.2 Ablation Study of Prom-PATE ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+and Tables [[18]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T18 "Table 18 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}$\sim$ [[20]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T20 "Table 20 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+we can see that when images of higher resolutions are considered,
+Prom-PATE reaches a lower accuracy. A potential explanation is that
+because the images from the target task will be rescaled, certain
+features in the images from the target task will disappear and
+consequently have a negative impact on the resulting accuracy.
+:::
+
+::: {#S6.SS2.SSS0.Px2.p3 .ltx_para}
+With the comparison among Tables [[18]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T18 "Table 18 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+[[19]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T19 "Table 19 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+and  [[20]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T20 "Table 20 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+we can see that Prom-PATE outperforms Transfer-PATE in nearly all cases.
+Nonetheless, we can also find in Table [[18]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T18 "Table 18 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+that Prom-PATE only slightly outperforms Transfer-PATE. Such a minor
+victory of Prom-PATE comes from the fact that the number of labels
+returned by the noisy aggregation in Prom-PATE does not have a
+significant increase compared to that in Transfer-PATE (e.g., see the
+row [Answered Queries]{#S6.SS2.SSS0.Px2.p3.1.1 .ltx_text
+.ltx_font_italic} in Table [[18]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T18 "Table 18 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}).
+The similarity between the numbers of labels returned by the noisy
+aggregation in Prom-PATE and Transfer-PATE can be attributed to the
+similar training result of the teacher models. A potential explanation
+for such a phenomenon is that the CelebA-Gender is a binary
+classification task, which is easy for both Prom-PATE and Transfer-PATE.
+By comparing Table [[18]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T18 "Table 18 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+and Table [[19]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T19 "Table 19 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+we can see that the accuracy difference between Prom-PATE and
+Transfer-PATE is becoming clear because CelebA-Hair is a three-class
+classification task. When considering Table [[5]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S4.T5 "Table 5 ‣ 4.4 Cross-Domain Dataset Evaluation ‣ 4 Experiments ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+and Table [[19]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T19 "Table 19 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+despite the different context in CIFAR-10 and CelebA-Hair, we can use
+them as evidence for claiming that Prom-PATE works especially better
+than Transfer-PATE in the multi-class classification task.
+:::
+
+::: {#S6.SS2.SSS0.Px2.p4 .ltx_para}
+Tables [[18]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T18 "Table 18 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+[[19]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T19 "Table 19 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref},
+and  [[20]{.ltx_text
+.ltx_ref_tag}](https://ar5iv.labs.arxiv.org/html/2303.12247#S6.T20 "Table 20 ‣ Additional Experiment Results for Cross-Domain Tasks. ‣ 6.2 Additional Experiments ‣ 6 Supplementary Material ‣ Exploring the Benefits of Visual Prompting in Differential Privacy"){.ltx_ref}
+also report the accuracies when two different semi-supervised learning
+methods, FixMatch[^4^[[^4^[4]{.ltx_tag .ltx_tag_note}Kihyuk Sohn, David
+Berthelot, Nicholas Carlini, Zizhao Zhang, Han Zhang, Colin A. Raffel,
+Ekin Dogus Cubuk, Alexey Kurakin, Chun-Liang Li. FixMatch: Simplifying
+Semi-Supervised Learning with Consistency and Confidence. [Advances in
+Neural Information Processing Systems (NeurIPS)]{#footnote4.1 .ltx_text
+.ltx_font_italic},
+2020.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote4 .ltx_note
+.ltx_role_footnote} and FreeMatch[^5^[[^5^[5]{.ltx_tag
+.ltx_tag_note}Yidong Wang, Hao Chen, Qiang Heng, Wenxin Hou, Yue Fan,
+Zhen Wu, Jindong Wang, Marios Savvides, Takahiro Shinozaki, Bhiksha Raj,
+Bernt Schiele, Xing Xie. FreeMatch: Self-adaptive Thresholding for
+Semi-supervised Learning. [International Conference on Learning
+Representations (ICLR)]{#footnote5.1 .ltx_text .ltx_font_italic},
+2023.]{.ltx_note_content}]{.ltx_note_outer}]{#footnote5 .ltx_note
+.ltx_role_footnote}, are used. We can only see the minor difference
+between using two state-of-the-art semi-supervised learning methods.
+:::
+:::
+:::
+:::
+:::
+
+::: ar5iv-footer
+[◄](https://ar5iv.labs.arxiv.org/html/2303.12246){.ar5iv-nav-button
+.ar5iv-nav-button-prev} [![ar5iv
+homepage](./2303.12247_files/ar5iv.png){height="40"}](https://ar5iv.labs.arxiv.org/){.ar5iv-home-button}
+[Feeling\
+lucky?](https://ar5iv.labs.arxiv.org/feeling_lucky){.ar5iv-text-button}
+[Conversion\
+report](https://ar5iv.labs.arxiv.org/log/2303.12247){.ar5iv-text-button
+.ar5iv-severity-warning} [Report\
+an
+issue](https://github.com/dginev/ar5iv/issues/new?template=improve-article--arxiv-id-.md&title=Improve+article+2303.12247){.ar5iv-text-button
+target="_blank"} [View original\
+on arXiv](https://arxiv.org/abs/2303.12247){.ar5iv-text-button
+.arxiv-ui-theme}[►](https://ar5iv.labs.arxiv.org/html/2303.12248){.ar5iv-nav-button
+.ar5iv-nav-button-next}
+:::
+
+[[]{.color-scheme-icon}](javascript:toggleColorScheme() "Toggle ar5iv color scheme"){.ar5iv-toggle-color-scheme}
+[Copyright](https://arxiv.org/help/license){.ar5iv-footer-button
+target="_blank"} [Privacy
+Policy](https://arxiv.org/help/policies/privacy_policy){.ar5iv-footer-button
+target="_blank"}
+
+::: ltx_page_logo
+Generated on Wed Apr 5 15:26:42 2023 by
+[[L[A]{style="font-size:70%;position:relative; bottom:2.2pt;"}T[E]{style="position:relative; bottom:-0.4ex;"}]{style="letter-spacing:-0.2em; margin-right:0.1em;"}[xml]{.ltx_font_smallcaps}![\[LOGO\]](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAOCAYAAAD5YeaVAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wKExQZLWTEaOUAAAAddEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIFRoZSBHSU1Q72QlbgAAAdpJREFUKM9tkL+L2nAARz9fPZNCKFapUn8kyI0e4iRHSR1Kb8ng0lJw6FYHFwv2LwhOpcWxTjeUunYqOmqd6hEoRDhtDWdA8ApRYsSUCDHNt5ul13vz4w0vWCgUnnEc975arX6ORqN3VqtVZbfbTQC4uEHANM3jSqXymFI6yWazP2KxWAXAL9zCUa1Wy2tXVxheKA9YNoR8Pt+aTqe4FVVVvz05O6MBhqUIBGk8Hn8HAOVy+T+XLJfLS4ZhTiRJgqIoVBRFIoric47jPnmeB1mW/9rr9ZpSSn3Lsmir1fJZlqWlUonKsvwWwD8ymc/nXwVBeLjf7xEKhdBut9Hr9WgmkyGEkJwsy5eHG5vN5g0AKIoCAEgkEkin0wQAfN9/cXPdheu6P33fBwB4ngcAcByHJpPJl+fn54mD3Gg0NrquXxeLRQAAwzAYj8cwTZPwPH9/sVg8PXweDAauqqr2cDjEer1GJBLBZDJBs9mE4zjwfZ85lAGg2+06hmGgXq+j3+/DsixYlgVN03a9Xu8jgCNCyIegIAgx13Vfd7vdu+FweG8YRkjXdWy329+dTgeSJD3ieZ7RNO0VAXAPwDEAO5VKndi2fWrb9jWl9Esul6PZbDY9Go1OZ7PZ9z/lyuD3OozU2wAAAABJRU5ErkJggg==)](http://dlmf.nist.gov/LaTeXML/){.ltx_LaTeXML_logo
+target="_blank"}
+:::
+:::
+
+::: {#simplifyJobsContainer style="position: absolute; top: 0px; left: 0px; width: 0px; height: 0px; overflow: visible; z-index: 2147483647;"}
+
+::: {#simplifyJobsPortals}
+:::
+:::
