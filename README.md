@@ -8,6 +8,7 @@ First, set up base docker image:
 cd baselines
 docker build -t base_image .
 ```
+Then, run the following:
 ```
 python main.py --baseline MLAgentBench --mode FC --local
 ```
