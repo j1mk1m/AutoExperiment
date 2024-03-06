@@ -38,14 +38,13 @@ class Agent:
 
     def __init__(self, args, env):        
         self.args = args
-        print(args)
-        self.valid_format_entires = ["Action", "Action Input"]
+        self.valid_format_entries = ["Action", "Action Input"]
         self.log_dir = os.path.join(args.log_dir, "agent_log")
 
         self.action_infos = env.action_infos
         tool_names = list(env.action_infos.keys())
         self.all_tool_names = copy.deepcopy(tool_names)
-        actions_remove_from_prompt = ["Read File", "Write File", "Append File", "Retrieval from Research Log", "Append Summary to Research Log", "Python REPL", "Edit Script Segment (AI)"]
+        actions_remove_from_prompt = ["Read File", "Write File", "Append File", "Retrieval from Research Log", "Append Summary to Research Log", "Python REPL", "Edit Script Segment (AI)", "Undo Edit Script", "Copy File", "Reflection"]
         actions_remove_from_prompt.extend(args.actions_remove_from_prompt)
         for t in actions_remove_from_prompt:
             # remove tool name but in case of missing tool name, don't crash
@@ -64,7 +63,7 @@ class Agent:
         high_level_actions.EDIT_SCRIPT_MAX_TOKENS = args.edit_script_llm_max_tokens
         self.tools_prompt = self.construct_tools_prompt(tool_names, env.action_infos)
 
-        self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entires]))       
+        self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entries]))       
 
         self.history_steps = []
 
@@ -75,7 +74,6 @@ class Agent:
             latest_file = max(list_of_files, key=os.path.getctime)
             print("Restoring agent from {}".format(latest_file))
             self.restore(latest_file)
-
 
     def run(self, env):
         """ Run the agent on the environment. """
@@ -213,9 +211,9 @@ class Agent:
 
 
     @staticmethod
-    def print_action(entries, valid_format_entires):
+    def print_action(entries, valid_format_entries):
         """ Print the action in a readable format."""
-        return "".join([ k + ": " + entries[k] for k in  valid_format_entires])
+        return "".join([ k + ": " + entries[k] for k in  valid_format_entries])
 
 
     @staticmethod
@@ -256,7 +254,7 @@ class SimpleActionAgent(Agent):
             prompt += "\nNow let's start!\n\n"
 
             for idx in range(max(0, curr_step - last_steps), curr_step):
-                action_string = self.print_action(self.history_steps[idx]["action"], self.valid_format_entires)
+                action_string = self.print_action(self.history_steps[idx]["action"], self.valid_format_entries)
                 prompt += anthropic.AI_PROMPT + "\n"+ action_string + "\nObservation:"
                 prompt += "\n```\n" + self.history_steps[idx]["observation"] + "\n```\n\n"
 
@@ -271,7 +269,7 @@ class SimpleActionAgent(Agent):
                 completion = complete_text(prompt, log_file, self.args.llm_name)
 
                 try:
-                    entries = self.parse_entries(completion, self.valid_format_entires)
+                    entries = self.parse_entries(completion, self.valid_format_entries)
                     assert entries["Action"].strip() in self.all_tool_names
                     valid_response = True
                 except:
@@ -302,7 +300,7 @@ class SimpleActionAgent(Agent):
 
             with open(os.path.join(self.log_dir , "main_log"), "a", 1) as f:
                 f.write("Step " + str(curr_step) + ":\n")
-                f.write(anthropic.AI_PROMPT + "\n" + self.print_action(entries, self.valid_format_entires) + "\nObservation:\n")
+                f.write(anthropic.AI_PROMPT + "\n" + self.print_action(entries, self.valid_format_entries) + "\nObservation:\n")
 
 
             ########################################
@@ -331,6 +329,6 @@ class ReasoningActionAgent(SimpleActionAgent):
 
     def __init__(self, args, env):        
         super().__init__(args, env)
-        self.valid_format_entires = ["Thought", "Action", "Action Input"]
-        self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entires]))
+        self.valid_format_entries = ["Thought", "Action", "Action Input"]
+        self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entries]))
     

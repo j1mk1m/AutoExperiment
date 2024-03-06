@@ -9,9 +9,9 @@ from .schema import ActionInfo, EnvException
 from .LLM import complete_text_fast, complete_text
 
 
-def reflection( things_to_reflect_on, work_dir = ".", research_problem = "", **kwargs):
+def reflection( things_to_reflect_on, cur_dir = ".", research_problem = "", **kwargs):
 
-    research_log_content = read_file("research_log.log", work_dir = work_dir,  **kwargs)
+    research_log_content = read_file("research_log.log", work_dir = cur_dir,  **kwargs)
 
     prompt = f"""We are trying to solve this research problem: {research_problem}
     Your current research log:
@@ -25,9 +25,9 @@ def reflection( things_to_reflect_on, work_dir = ".", research_problem = "", **k
     return f"Reflection: {reflection}\n"
 
 
-def understand_file( file_name, things_to_look_for, work_dir = ".", **kwargs):
+def understand_file( file_name, things_to_look_for, cur_dir = ".", **kwargs):
 
-    lines = read_file(file_name, work_dir = work_dir, **kwargs).split("\n")
+    lines = read_file(file_name, cur_dir = cur_dir, **kwargs).split("\n")
     # group lines to blocks so that each block has at most 10000 characters
     counter = 0
     blocks = []
@@ -75,33 +75,33 @@ def understand_file( file_name, things_to_look_for, work_dir = ".", **kwargs):
 
 EDIT_SCRIPT_MODEL = "claude-v1"
 EDIT_SCRIPT_MAX_TOKENS = 4000
-def edit_script(script_name, edit_instruction, save_name, work_dir = ".", **kwargs):
+def edit_script(script_name, edit_instruction, save_name, cur_dir = ".", **kwargs):
     #TODO: handle long file editing
     try:
-        content = read_file(script_name, work_dir = work_dir, **kwargs)
+        content = read_file(script_name, cur_dir = cur_dir, **kwargs)
     except:
-        write_file(script_name, "", work_dir = work_dir, **kwargs)
+        write_file(script_name, "", cur_dir = cur_dir, **kwargs)
         content = ""
         
-    prompt = f"""Given this python script:
-    ```python 
+    prompt = f"""Given this script:
+    ```
     {content}
     ```
     Edit the script by following the instruction:
     {edit_instruction}
-    Provide the full code after the edit, making no other changes. Start the python code with "```python". 
+    Provide the full code after the edit, making no other changes. Provide only the code. 
 
     """
 
     completion = complete_text(prompt, log_file=kwargs["log_file"], model=EDIT_SCRIPT_MODEL, max_tokens_to_sample=EDIT_SCRIPT_MAX_TOKENS)
 
-    new_content = completion.split("```python")[1].split("```")[0].strip()
+    new_content = completion.strip()
 
     # backup all old file with prefix script_name
     #backup_name = os.path.join(work_dir,"backup", f"{script_name[:-3]}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
     #shutil.copyfile(os.path.join(work_dir,script_name), backup_name)
 
-    write_file(save_name, new_content, work_dir = work_dir, **kwargs)
+    write_file(save_name, new_content, cur_dir = cur_dir, **kwargs)
 
     diff = list(difflib.unified_diff(content.splitlines(keepends=True), new_content.splitlines(keepends=True)))
     diff = "".join(diff)
@@ -109,12 +109,12 @@ def edit_script(script_name, edit_instruction, save_name, work_dir = ".", **kwar
     return f"The edited file is saved to {save_name}. Here is the diff, please check if the edit is correct and desirable:\n\n" + diff
 
 
-def append_to_research_log( content, work_dir = ".", **kwargs):
-    append_file("research_log.log", content+"\n", work_dir = work_dir, **kwargs)
+def append_to_research_log( content, cur_dir = ".", **kwargs):
+    append_file("research_log.log", content+"\n", cur_dir = cur_dir, **kwargs)
 
     return "Successfully appended to research log"
 
-def edit_script_lines( script_name, start_line_number, end_line_number,edit_instruction, save_name, work_dir = ".", **kwargs):
+def edit_script_lines( script_name, start_line_number, end_line_number,edit_instruction, save_name, cur_dir = ".", **kwargs):
     try:
         start_line_number = int(start_line_number)
         end_line_number = int(end_line_number)
@@ -122,9 +122,9 @@ def edit_script_lines( script_name, start_line_number, end_line_number,edit_inst
         raise EnvException("start_line_number and end_line_number must be integers")
     
     try:
-        orig_content = read_file(script_name, work_dir = work_dir, **kwargs)
+        orig_content = read_file(script_name, cur_dir = cur_dir, **kwargs)
     except:
-        write_file(script_name, "", work_dir = work_dir, **kwargs)
+        write_file(script_name, "", cur_dir = cur_dir, **kwargs)
         orig_content = ""
     lines = orig_content.split("\n")
     content = "\n".join(lines[max(int(start_line_number)-1, 0):int(end_line_number)])
@@ -147,7 +147,7 @@ def edit_script_lines( script_name, start_line_number, end_line_number,edit_inst
     #backup_name = os.path.join(work_dir,"backup", f"{script_name}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
     #shutil.copyfile(os.path.join(work_dir,script_name), backup_name)
 
-    write_file(save_name, new_content, work_dir = work_dir, **kwargs)
+    write_file(save_name, new_content, cur_dir = cur_dir, **kwargs)
 
     diff = list(difflib.unified_diff(content.splitlines(keepends=True), new_content.splitlines(keepends=True)))
     diff = "".join(diff)
@@ -155,7 +155,7 @@ def edit_script_lines( script_name, start_line_number, end_line_number,edit_inst
     return f"The edited file is saved to {save_name}. Here is the diff, please check if the edit is correct and desirable:\n\n" + diff
 
 
-def inspect_script_lines( script_name, start_line_number, end_line_number, work_dir = ".", **kwargs):
+def inspect_script_lines( script_name, start_line_number, end_line_number, cur_dir = ".", **kwargs):
     try:
         start_line_number = int(start_line_number)
         end_line_number = int(end_line_number)
@@ -166,18 +166,18 @@ def inspect_script_lines( script_name, start_line_number, end_line_number, work_
     try:
         
         # lines = open(os.path.join(work_dir,script_name)).readlines()
-        lines = read_file(script_name, work_dir = work_dir, **kwargs).split("\n")
+        lines = read_file(script_name, cur_dir = cur_dir, **kwargs).split("\n")
     except:
         raise EnvException(f"cannot find script {script_name}")
 
     content = "\n".join(lines[max(int(start_line_number)-1, 0):int(end_line_number)])
     return f"Here are the lines (the file ends at line {len(lines)}):\n\n" + content
 
-def retrieval_from_research_log(current_plan, work_dir = ".", **kwargs):
+def retrieval_from_research_log(current_plan, cur_dir = ".", **kwargs):
 
     research_problem = kwargs["research_problem"]
 
-    research_log_content = read_file("research_log.log", work_dir = work_dir, **kwargs)
+    research_log_content = read_file("research_log.log", cur_dir = cur_dir, **kwargs)
     
     prompt = f"""We are trying to solve this research problem: {research_problem}
 Your current Research Plan and Status

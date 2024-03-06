@@ -8,13 +8,13 @@ import subprocess
 this_path = os.path.dirname(__file__)
 
 class AutoExperimentDataset():
-    def __init__(self, mode, experiment_csv="experiments.csv", workspace="../workspace"):
+    def __init__(self, mode, experiment_csv="experiments-light.csv", workspace="../workspace"):
         self.mode = mode
         self.dataset_dir = os.path.dirname(__file__)
         self.workspace = workspace
 
         self.dataset = []
-        with open(os.path.join(self.dataset_dir, experiment_csv), "r") as exp_file:
+        with open(os.path.join(self.dataset_dir, "experiment_csvs", experiment_csv), "r") as exp_file:
             reader = csv.DictReader(exp_file)
             for row in reader:
                 self.dataset.append(row)
@@ -31,7 +31,7 @@ class AutoExperimentDataset():
         return workspace_dir, float(experiment["result"])
 
     def generate_ref_sol(self, experiment):
-        if os.path.isfile(os.path.join(this_path, "refsols", experiment["paper_id"] + "_" + experiment["exp_id"] + ".sh")):
+        if os.path.isfile(os.path.join(this_path, "refsols", experiment["paper_id"] + "_" + experiment["exp_id"] + ".sh")) or "ref_sol" not in experiment:
             return
         with open(os.path.join(this_path, "refsols", experiment["paper_id"] + "_" + experiment["exp_id"] + ".sh"), "w") as bash_file:
             bash_file.write("cd code\n")
