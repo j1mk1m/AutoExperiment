@@ -46,7 +46,6 @@ class Environment:
         self._args = args
         self._log_dir = os.path.join(args.log_dir, "env_log")
         self._setup_log_dir()
-        self.func_call = args.func_call
 
         if not args.interactive:
             self._benchmark_folder_name, self._research_problem = get_task_info(args.task)
@@ -54,7 +53,6 @@ class Environment:
             self._root_dir = self._work_dir
             self._read_only_files = []
             self._initialize_task_env() # set up work dir and log dir
-
         else:
             self._research_problem = input("What is the task: ")
             log_file = os.path.join(self.log_dir, "create_benchmark_folder_name.log")
@@ -167,6 +165,10 @@ class Environment:
         # copy the benchmarks folder to work_dir
         if os.path.exists(os.path.join(benchmark_dir, "env" )):
             shutil.copytree(os.path.join(benchmark_dir, "env"), work_dir, symlinks=True)
+
+        with open(os.path.join(work_dir, "experiment.txt"), 'r') as f:
+            exp_detail = f.read()
+            self._research_problem += exp_detail
 
         # find all read only files
         if os.path.exists(os.path.join(benchmark_dir, "scripts", "read_only_files.txt")):
@@ -302,7 +304,7 @@ class Environment:
         action_name = action.name
         action_input = action.args
 
-        if action_name == "Final Answer" or "final_answer":
+        if action_name == "Final Answer":
             observation = "end"
 
         elif self.is_final():
@@ -326,7 +328,7 @@ class Environment:
                     print(f"Executing action: {action_name}")
                     if action_name == "Change Directory":
                         self._work_dir = os.path.join(self.work_dir, action_input["dir_path"])
-                        observation = "Directory successfully changed\n"
+                        observation = f"Directory successfully changed to {self.work_dir}\n"
                     else:
                         observation = self.action_infos[action_name].function(**action_input, log_file=log_file, trace=trace, cur_dir=self.work_dir, **self.static_kwargs_for_tools)
                 except TooLongPromptError:
@@ -336,19 +338,13 @@ class Environment:
                 except EnvException as e:
                     observation = "EnvError: " + e.message
                 except TypeError as e:
-                    print("Step: ", curr_step, file=sys.stderr)
-                    print(e, file=sys.stderr)
-                    print(action_input, file=sys.stderr)
                     observation = "EnvError: " + invalid_action_error
                 except TimeoutException as e:
                     raise e
                 except Exception as e:
-                    # should not happen
-                    print("Step: ", curr_step, file=sys.stderr)
-                    print(e, file=sys.stderr)
                     if "Connection aborted." in str(e):
                         raise Exception("Connection aborted for crfm")
-                    observation = f"EnvError: Error executing {action_name}."
+                    observation = f"EnvError: While executing {action_name}, got error {e}"
             else:
                 observation = invalid_action_error
 

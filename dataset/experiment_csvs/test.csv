@@ -1,0 +1,9 @@
+paper_id,exp_id,combined_id,description,result,ref_sol
+2209.12288,0,2209.12288_0,"Experiment: run experiment training a GNN model for finding the feasibility of LP instances
+Parameters: 
+- feasibility model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type fea --data 500 --embSize 6"

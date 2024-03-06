@@ -160,7 +160,7 @@ def execute_bash(script_name, cur_dir=".", **kwargs):
 
 def command_line(command, cur_dir=".", **kwargs):
     try:
-        print(command)
+        print(f"Executing: {command}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=cur_dir)
         
         stdout_lines = []
@@ -216,7 +216,6 @@ def command_line(command, cur_dir=".", **kwargs):
 @record_low_level_step
 def read_file(file_name, cur_dir= '.', **kwargs):
     try:
-        print(file_name)
         observation = open(os.path.join(cur_dir,file_name)).read()
         return observation
     except:
@@ -499,4 +498,14 @@ LOW_LEVEL_ACTIONS = [
         function=execute_bash,
         is_primitive=True
     ), 
+    ActionInfo(
+        name="Command Line",
+        description="Use this to run any command line command",
+        usage={
+            "command": "a valid command line command to execute"
+        },
+        return_value="The observation will be the output of the command",
+        function=command_line,
+        is_primitive=True
+    ),
 ]

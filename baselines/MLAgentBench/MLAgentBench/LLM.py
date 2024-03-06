@@ -20,7 +20,6 @@ try:
     service = RemoteService("https://crfm-models.stanford.edu")
     account: Account = service.get_account(auth)
 except Exception as e:
-    print(e)
     print("Could not load CRFM API key crfm_api_key.txt.")
 
 try:   
@@ -140,7 +139,7 @@ def function_calling_openai(messages, tools, model):
         )
         return response
     except Exception as e:
-        print(e)
+        print(f"OpenAI error while using function calling api: {e}")
 
 def complete_text_openai(prompt, stop_sequences=[], model="gpt-4", max_tokens_to_sample=1500, temperature=0.2, log_file=None, **kwargs):
     """ Call the OpenAI API to complete a prompt."""
@@ -151,21 +150,12 @@ def complete_text_openai(prompt, stop_sequences=[], model="gpt-4", max_tokens_to
           "stop": stop_sequences or None,  # API doesn't like empty list
           **kwargs
     }
-    success = False
-    while not success:
-        try:
-            if model.startswith("gpt-3.5") or model.startswith("gpt-4"):
-                messages = [{"role": "user", "content": prompt}]
-                response = client.chat.completions.create(**{"messages": messages,**raw_request})
-                completion = response.choices[0].message.content
-            else:
-                response = client.completions.create(**{"prompt": prompt,**raw_request})
-                completion = response.choices[0].text
-            success = True
-        except Exception as e:
-            print(f"Error occurred: {e}. Trying again in 30 seconds")
-            time.sleep(30)
-            success = False
+    try:
+        response = client.chat.completions.create(**{"messages": [{"role": "system", "content": prompt}],**raw_request})
+        completion = response.choices[0].message.content
+    except Exception as e:
+        print(f"Error occurred: {e}.")
+        completion = f"Error occurred during request to OpenAI: {e}."
     if log_file is not None:
         log_to_file(log_file, prompt, completion, model, max_tokens_to_sample)
     return completion

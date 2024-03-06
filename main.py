@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import argparse
 from dataset.dataset import AutoExperimentDataset
 from baselines.run_baseline import run_baseline
@@ -11,11 +12,19 @@ def calculate_loss(pred, y, loss="abs"):
         return (y - pred)**2
 
 def run(exp_file, baseline="MLAgentBench", mode="FC", local=False):
+    # Create DataLoader
     dataset = AutoExperimentDataset(mode, exp_file, os.path.join(this_path, "workspace"))
+
+    # Set up log directory for this run
+    datetime_string = datetime.now().strftime("%m_%d_%H_%M")
+    log_dir = os.path.join(this_path, "baselines", "logs", baseline, datetime_string) 
+    os.mkdir(log_dir)
+
+    # Run 
     losses = []
     logs = []
     for path, y in dataset:
-        pred = run_baseline(baseline, path, local)
+        pred = run_baseline(baseline, path, local, log_dir)
         loss = calculate_loss(pred, y, "abs")
         losses.append(loss)
         logs.append((path, y, pred))

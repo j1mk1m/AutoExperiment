@@ -4,11 +4,10 @@ import json
 import sys
 import anthropic
 import tiktoken
+import json
 from MLAgentBench.LLM import complete_text_fast, complete_text, function_calling_openai
 from MLAgentBench.schema import Action
 from .agent import Agent
-
-FUNC_CALL = True
 
 enc = tiktoken.get_encoding("cl100k_base")
 
@@ -32,13 +31,23 @@ Follow these instructions and do not forget them:
 
 Always respond in this format exactly:
 {format_prompt}
-Observation: 
-```
-the result of the action
-```
-
 """
 
+function_call_prompt = """You are a helpful research assistant. 
+
+Research Problem: {task_description}
+
+Follow these instructions and do not forget them:
+- First, come up with a high level plan based on your understanding of the problem and available tools and record it in the Research Plan and Status. You can revise the plan later.
+- Research Plan and Status should well organized and succinctly keep track of 1) high level plan (can be revised), 2) what steps have been done and what steps are in progress, 3) short results and conclusions of each step after it has been performed. 
+- Performance numbers and estimates can only be confirmed and included in the status by running the code and observing the output.
+- In your response, always pick exactly one tool call. The tools allow you to view, modify, and execute files in the environment.
+- If you believe you have solved the problem, you can use the Final Answer action to submit your answer. You can only submit once, so double check that you have achieved the goal before submitting.
+"""
+
+response_prompt="""Always respond in this format exactly along with a tool call:
+{format_prompt}
+"""
 
 format_prompt_dict = {
     "Reflection": "What does the observation mean? If there is an error, what caused the error and how to debug?",
@@ -197,7 +206,23 @@ tools = [
                 }
             },
         }
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "command_line",
+            "description": "Use this to run any linux command line command",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "valid linux command line command"
+                    }
+                }
+            }
+        }
+    },
 ]
 
 func_to_name_map = {
@@ -208,7 +233,8 @@ func_to_name_map = {
     "final_answer": "Final Answer",
     "execute_bash": "Execute Shell Script",
     "execute_script": "Execute Script",
-    "list_files": "List Files"
+    "list_files": "List Files",
+    "command_line": "Command Line",
 }   
 
 class ResearchAgent(Agent):
@@ -216,10 +242,16 @@ class ResearchAgent(Agent):
 
     def __init__(self, args, env):
         super().__init__(args, env)
-        self.valid_format_entires = ["Reflection",  "Research Plan and Status","Fact Check", "Thought", "Action", "Action Input"] # use all entries by default
-        if args.valid_format_entires:
-            self.valid_format_entires = args.valid_format_entires
-        self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entires]))
+        self.func_call = "gpt" in args.llm_name # if OpenAI model, use function calling API
+        self.func_call = False
+        self.valid_format_entries = ["Reflection",  "Research Plan and Status","Fact Check", "Thought"] # use all entries by default
+        self.action_entries = ["Action", "Action Input"]
+        if self.func_call:
+            self.initial_prompt  = function_call_prompt.format(task_description=env.research_problem)
+            self.response_prompt = response_prompt.format(format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entries]))
+        else:
+            self.valid_format_entries += self.action_entries
+            self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entries]))
 
     def run(self, env):
         last_steps = self.args.max_steps_in_context
@@ -240,7 +272,7 @@ class ResearchAgent(Agent):
 
             prompt = self.initial_prompt
             messages = [{"role" : "system", "content" : self.initial_prompt }]
-            if curr_step > last_steps:
+            if curr_step > 0:
                 if not self.args.no_retrieval:
 
                     # retrieval action
@@ -259,7 +291,7 @@ class ResearchAgent(Agent):
 
             for idx in range(max(curr_step - last_steps, 0), curr_step):
                 action_string = ""
-                action_string = self.print_action(self.history_steps[idx]["action"], self.valid_format_entires)
+                action_string = self.print_action(self.history_steps[idx]["action"], self.valid_format_entries)
 
                 history = anthropic.AI_PROMPT + "\n"+ action_string + "\nObservation:"
                 prompt += anthropic.AI_PROMPT + "\n"+ action_string + "\nObservation:"
@@ -268,11 +300,13 @@ class ResearchAgent(Agent):
                 else:
                     try:
                         prompt += "\n```\n" + self.history_steps[idx]["observation"] + "\n```\n\n"
-                        messages.append({"role" : "system", "content" : anthropic.AI_PROMPT + "\n"+ action_string + "\nObservation:" + "\n```\n" + self.history_steps[idx]["observation"] + "\n```\n\n"})
+                        messages.append({"role" : "system", "content" : "Here is a past action you have done and its corresponding output:\n"+ action_string + "\nObservation:" + "\n```\n" + self.history_steps[idx]["observation"] + "\n```\n\n"})
                     except:
                         import pdb; pdb.set_trace()
-                
 
+            if self.func_call:
+                messages.append({"role": "system", "content": self.response_prompt})
+                
             ###############################################
             #     call LLM until the response is valid    #
             ###############################################
@@ -282,40 +316,39 @@ class ResearchAgent(Agent):
             for _ in range(self.args.max_retries):
                 log_file = os.path.join(self.log_dir , f"step_{curr_step}_log.log")
                 #print("Prompting ResearchAgent: ", prompt)
-                if FUNC_CALL:
+                if self.func_call:
+                   # print(f"Prompting LLM: {messages}")
                     response = function_calling_openai(messages, tools, self.args.llm_name)
 
                     try:
                         response = response.choices[0].message
                         print(response)
 
-                        if len(response.tool_calls) > 0:
+                        if response.tool_calls and len(response.tool_calls) > 0:
                             # Check that tool is called
                             tool_call = response.tool_calls[0].function
-                            print(tool_call)
-                            valid_response = True
 
-                            entries = self.parse_entries(response.content, self.valid_format_entires)
+                            entries = self.parse_entries(response.content, self.valid_format_entries)
                             entries["Action"] = func_to_name_map[tool_call.name]
                             entries["Action Input"] = json.loads(tool_call.arguments)
-                            print(entries)
+                            valid_response = True
                     except Exception as e:
-                        print("Im here")
-                        print(e, file=sys.stderr)
-                        messages.append("Your response was in incorrect format. Please provide a valid response with all entries: " + ", ".join(self.valid_format_entires))
+                        print(f"Error processing LLM response {e}", file=sys.stderr)
+                        messages.append({"role": "system", "content": "Your response was in incorrect format. Please provide a valid response with a tool call and all of the following entries in text as content: " + ", ".join(self.valid_format_entries)})
+                    else:
+                        break
                 else:
-                    print("Prompt Tokens: ", len(enc.encode(prompt)))
-                    completion = complete_text(prompt, log_file, self.args.llm_name, fc_messages=messages)
+                    completion = complete_text(prompt, log_file, self.args.llm_name)
 
                     try:
-                        entries = self.parse_entries(completion, self.valid_format_entires)
+                        entries = self.parse_entries(completion, self.valid_format_entries)
                         assert entries["Action"].strip() in self.all_tool_names
                         valid_response = True
                     except:
                         print("Step", curr_step, file=sys.stderr)
                         print(anthropic.AI_PROMPT + "\n" + completion + "\nObservation:\n", file=sys.stderr)
                         print("Response is invalid and discarded", file=sys.stderr)
-                        prompt += "\n\n Your response was in incorrect format. Please provide a valid response with all entries: " + ", ".join(self.valid_format_entires) + "\n\n"
+                        prompt += "\n\n Your response was in incorrect format. Please provide a valid response with all entries: " + ", ".join(self.valid_format_entries) + "\n\n"
                     else:
                         break
             if not valid_response:
@@ -327,16 +360,18 @@ class ResearchAgent(Agent):
 
             rg = entries["Research Plan and Status"]
             action = entries["Action"].strip()
-            raw_action_input = entries["Action Input"]
-            action_input = entries["Action Input"]
+            if not self.func_call:
+                raw_action_input = entries["Action Input"]
+            else:
+                action_input = entries["Action Input"]
+                entries["Action Input"] = json.dumps(entries["Action Input"])
 
             new_research_plan_content = rg.strip("```") + "\n\n" 
             entries["Research Plan and Status"] = new_research_plan_content
             entries["Research Plan and Status"]= new_research_plan_content.replace("**", "")
-
-            
+ 
             # parse the action input if we can ; other wise just return the original input and wait env to throw back an error
-            if not FUNC_CALL:
+            if not self.func_call:
                 parsing_error = ""
                 try:
                     action_input = self.parse_action_input(raw_action_input, self.action_infos[action])
@@ -347,7 +382,7 @@ class ResearchAgent(Agent):
 
             with open(os.path.join(self.log_dir , "main_log"), "a", 1) as f:
                 f.write("Step " + str(curr_step) + ":\n")
-                f.write(anthropic.AI_PROMPT + "\n" + self.print_action(entries, self.valid_format_entires) + "\nObservation:\n")
+                f.write(anthropic.AI_PROMPT + "\n" + self.print_action(entries, self.valid_format_entries) + "\nObservation:\n")
 
 
             ########################################
@@ -376,7 +411,7 @@ class ResearchAgent(Agent):
                 log_file = os.path.join(self.log_dir , f"step_{curr_step}_summarize_observation_log.log")
 
                 print("Observation is too long. Summarizing...", file=sys.stderr)
-                observation = self.summarize_observation(self.print_action(entries, self.valid_format_entires), observation, log_file)
+                observation = self.summarize_observation(self.print_action(entries, self.valid_format_entries), observation, log_file)
 
             self.history_steps.append({"step_idx": len(env.trace.steps), "action": entries, "observation": observation})
 
@@ -396,7 +431,7 @@ class ResearchAgent(Agent):
                 for _ in range(self.args.max_retries):
                     try:
                         log_file = os.path.join(self.log_dir , f"step_{curr_step}_summary_log.log")
-                        summary_of_last_step = self.summarize_action_and_observation(self.print_action(self.history_steps[-1]["action"], self.valid_format_entires), self.history_steps[-1]["observation"], log_file = log_file)
+                        summary_of_last_step = self.summarize_action_and_observation(self.print_action(self.history_steps[-1]["action"], self.valid_format_entries), self.history_steps[-1]["observation"], log_file = log_file)
                         break
                     except Exception as e:
                         print(e)
