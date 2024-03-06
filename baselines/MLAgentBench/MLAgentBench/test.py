@@ -23,39 +23,22 @@ def run(agent_cls, args):
         print("Read only files: ", env.read_only_files, file=sys.stderr)
         print("=====================================")  
 
-        observation = env.execute(Action("List Files", {"dir_path" : "."}))
-        print(observation)
-        observation = env.execute(Action("Change Directory", {"dir_path" : "exp"}))
-        print(observation)
-        observation = env.execute(Action("List Files", {"dir_path" : "."}))
-        print(observation)
-        observation = env.execute(Action("List Files", {"dir_path" : ".."}))
-        print(observation)
-        observation = env.execute(Action("Change Directory", {"dir_path" : "../"}))
-        print(observation)
-        observation = env.execute(Action("List Files", {"dir_path" : "."}))
-        print(observation)
 
-        observation = env.execute(Action("Execute Shell Script", {"script_name" : "scripts/ETTm.sh"}))
-        print(observation)
-
-
-        # agent = agent_cls(args, env)
-        # final_message = agent.run(env)
+        agent = agent_cls(args, env)
+        final_message = agent.run(env)
         # with open(os.path.join(this_dir, "output.txt"), 'w') as output_file:
         #    output_file.write(final_message)
-        #print("=====================================")
-        #print("Final message: ", final_message)
+        print("=====================================")
+        print("Final message: ", final_message)
 
-    env.save("final")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, default="debug", help="task name")
     parser.add_argument("--log-dir", type=str, default=os.path.join(this_dir, "../", "logs"), help="log dir")
     parser.add_argument("--work-dir", type=str, default=os.path.join(this_dir, "../", "workspace"), help="work dir")
-    parser.add_argument("--max-steps", type=int, default=50, help="number of steps")
-    parser.add_argument("--max-time", type=int, default=5* 60 * 60, help="max time")
+    parser.add_argument("--max-steps", type=int, default=150, help="number of steps")
+    parser.add_argument("--max-time", type=int, default=20* 60 * 60, help="max time")
     parser.add_argument("--device", type=int, default=0, help="device id")
     parser.add_argument("--python", type=str, default="python", help="python command")
     parser.add_argument("--interactive", action="store_true", help="interactive mode")
@@ -64,9 +47,9 @@ if __name__ == "__main__":
 
     # general agent configs
     parser.add_argument("--agent-type", type=str, default="ResearchAgent", help="agent type")
-    parser.add_argument("--llm-name", type=str, default="claude-v1", help="llm name")
-    parser.add_argument("--fast-llm-name", type=str, default="claude-v1", help="llm name")
-    parser.add_argument("--edit-script-llm-name", type=str, default="claude-v1", help="llm name")
+    parser.add_argument("--llm-name", type=str, default="gpt-4-1106-preview", help="llm name")
+    parser.add_argument("--fast-llm-name", type=str, default="gpt-4-1106-preview", help="llm name")
+    parser.add_argument("--edit-script-llm-name", type=str, default="gpt-3.5-turbo-1106", help="llm name")
     parser.add_argument("--edit-script-llm-max-tokens", type=int, default=4000, help="llm max tokens")
     parser.add_argument("--agent-max-steps", type=int, default=50, help="max iterations for agent")
 
