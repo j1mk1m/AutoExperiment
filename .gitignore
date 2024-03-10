@@ -4,3 +4,5 @@ baselines/__pycache__/*
 dataset/__pycache__/*
 baselines/archive/*
 baselines/logs/*
+baselines/tmp/*
+dataset/refsols/*
