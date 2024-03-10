@@ -9,8 +9,8 @@ pip install -r requirements.txt
 
 # Run MLAgentBench
 python -u MLAgentBench/runner.py --task task --log-dir logs --work-dir workspace \
-	--max-steps 150 \
-	--agent-max-steps 50 \
+	--max-steps 100 \
+	--agent-max-steps 30 \
 	--max-time 72000 \
 	--llm-name gpt-4-1106-preview \
 	--edit-script-llm-name gpt-4-1106-preview \
