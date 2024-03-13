@@ -30,7 +30,10 @@ def run(agent_cls, args):
 
         print("Actions enabled: ", agent.prompt_tool_names)
         print("=====================================")  
-        final_message = agent.run(env)
+        try:
+            final_message = agent.run(env)
+        except Exception as e:
+            final_message = f"Got error during agent run: {e}"
         with open(os.path.join(this_dir, "output.txt"), 'w') as output_file:
             output_file.write(final_message)
         print("=====================================")
