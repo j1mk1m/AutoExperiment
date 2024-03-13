@@ -96,6 +96,8 @@ def edit_script(script_name, edit_instruction, save_name, cur_dir = ".", **kwarg
     completion = complete_text(prompt, log_file=kwargs["log_file"], model=EDIT_SCRIPT_MODEL, max_tokens_to_sample=EDIT_SCRIPT_MAX_TOKENS)
 
     new_content = completion.strip()
+    if "```python" in new_content:
+        new_content = new_content.split("```python")[1].split("```")[0].strip()
 
     # backup all old file with prefix script_name
     #backup_name = os.path.join(work_dir,"backup", f"{script_name[:-3]}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
