@@ -6,10 +6,7 @@ import time
 from dataset import AutoExperimentDataset
 this_path = os.path.dirname(__file__)
 
-
-
 if __name__=="__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", default="experiments.csv", help="experiment file name")
     parser.add_argument("--workspace", default="/home/gyeongwk/workspace")
