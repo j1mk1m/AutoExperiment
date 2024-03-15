@@ -1,8 +1,8 @@
 workspace/*
-baselines/openai_api_key.txt
-baselines/__pycache__/*
+agents/openai_api_key.txt
+agents/__pycache__/*
+agents/archive/*
+agents/logs/*
+agents/tmp/*
 dataset/__pycache__/*
-baselines/archive/*
-baselines/logs/*
-baselines/tmp/*
 dataset/refsols/*

@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 import argparse
 from dataset.dataset import AutoExperimentDataset
-from baselines.run_baseline import run_baseline
+from agents.run_agent import run_agent 
 this_path = os.path.dirname(__file__) 
 
 def calculate_loss(pred, y, loss="abs"):
@@ -24,7 +24,7 @@ def run(exp_file, baseline="MLAgentBench", mode="FC", local=False):
     losses = []
     logs = []
     for path, y in dataset:
-        pred = run_baseline(baseline, path, local, log_dir)
+        pred = run_agent(baseline, path, local, log_dir)
         loss = calculate_loss(pred, y, "abs")
         losses.append(loss)
         logs.append((path, y, pred))
