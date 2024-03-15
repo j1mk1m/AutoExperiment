@@ -1,4 +1,5 @@
 import argparse
+import wandb
 import os
 import shutil
 import subprocess
@@ -69,15 +70,15 @@ def run_MLAgentBench(paper_id, exp_id, mode, source, local, log_dir):
             answer = sub_file.readline().strip()
     return answer
 
-def run_baseline(baseline="MLAgentBench", path="../workspace", local=False, log_dir=os.path.join(this_path, "logs", "tmp")):
+def run_agent(agent="MLAgentBench", path="../workspace", local=False, log_dir=os.path.join(this_path, "logs", "tmp")):
     dirs = path.split(os.sep)
     mode, paper_id, exp_id = dirs[-3], dirs[-2], dirs[-1]
-    print(f"Running {baseline} with {mode} on paper {paper_id} experiment {exp_id}")
+    print(f"Running {agent} with {mode} on paper {paper_id} experiment {exp_id}")
 
-    if baseline=="MLAgentBench":
+    if agent=="MLAgentBench":
         res = run_MLAgentBench(paper_id, exp_id, mode, path, local, log_dir)
     else:
-        print(f"Baseline {baseline} not supported, returning 0.0")
+        print(f"Agent {agent} not supported, returning 0.0")
         return 0.0
 
     # parse result to extract numerical value
@@ -95,11 +96,11 @@ def run_baseline(baseline="MLAgentBench", path="../workspace", local=False, log_
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--baseline", type=str, default="MLAgentBench", help="baseline")
+    parser.add_argument("--agent", type=str, default="MLAgentBench", help="baseline")
     parser.add_argument("--source", type=str, default="../workspace", help="path to source directory") 
     parser.add_argument("--local", action="store_true")
 
     args = parser.parse_args()
-    run_baseline(args.baseline, args.source, args.local)
+    run_agent(args.agent, args.source, args.local)
 
 
