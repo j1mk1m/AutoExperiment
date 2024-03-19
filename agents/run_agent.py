@@ -16,7 +16,7 @@ def prepare_MLAgentBench(paper_id, exp_id, mode, source):
     # Pipeline for MLAgentBench
     mla_dir = os.path.join(this_path, "MLAgentBench")
     prompt_file = os.path.join(mla_dir, "prompts", f"prompt_{mode}.txt")
-    benchmark_dir = os.path.join(mla_dir, "MLAgentBench", "benchmarks", "task", f"{paper_id}_{exp_id}")
+    benchmark_dir = os.path.join(mla_dir, "MLAgentBench", "benchmarks", f"{paper_id}_{exp_id}")
     if os.path.exists(benchmark_dir):
         shutil.rmtree(benchmark_dir)
     os.makedirs(benchmark_dir)

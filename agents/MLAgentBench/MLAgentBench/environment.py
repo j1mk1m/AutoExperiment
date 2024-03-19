@@ -353,7 +353,7 @@ class Environment:
 
         trace.steps.append(Step(action, observation, step_time))
 
-        self.save(curr_step)
+        # self.save(curr_step)
         return observation
 
     def save(self, curr_step):
