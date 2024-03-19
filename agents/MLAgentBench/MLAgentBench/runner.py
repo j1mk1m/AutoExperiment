@@ -86,6 +86,7 @@ def main(combined_id):
     args = argparse.Namespace(**args)
     args.log_dir = os.path.join(this_dir, args.log_dir, combined_id)
     args.work_dir = os.path.join(this_dir, args.work_dir, combined_id)
+    args.task = combined_id
     print(args, file=sys.stderr)
     if args.no_retrieval or args.agent_type != "ResearchAgent":
         # should not use these actions when there is no retrieval
