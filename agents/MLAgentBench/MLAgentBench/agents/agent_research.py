@@ -2,6 +2,7 @@
 import os
 import json
 import sys
+import wandb
 import anthropic
 import tiktoken
 import json
@@ -378,7 +379,7 @@ class ResearchAgent(Agent):
                     action_input = raw_action_input
                     parsing_error = str(e)
                 
-
+            
             with open(os.path.join(self.log_dir , "main_log"), "a", 1) as f:
                 f.write("Step " + str(curr_step) + ":\n")
                 f.write(anthropic.AI_PROMPT + "\n" + self.print_action(entries, self.valid_format_entries) + "\nObservation:\n")
@@ -416,6 +417,9 @@ class ResearchAgent(Agent):
                 observation = self.summarize_observation(self.print_action(entries, self.valid_format_entries), observation, log_file)
 
             self.history_steps.append({"step_idx": len(env.trace.steps), "action": entries, "observation": observation})
+
+            # wandb logging
+            wandb.log({"step": curr_step, "prompt": prompt, "response": entries, "observation": observation})
 
             ## filter out ActionInputParsingError if last step is not action input parsing error
             if not observation.startswith("ActionInputParsingError"):

@@ -1,0 +1,1 @@
+Got error during agent run: You must call wandb.init() before wandb.log()

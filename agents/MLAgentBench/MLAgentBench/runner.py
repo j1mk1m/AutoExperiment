@@ -4,6 +4,8 @@ This file is the entry point for MLAgentBench.
 import os
 import argparse
 import sys
+import yaml
+import wandb
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 from MLAgentBench import LLM
@@ -38,12 +40,15 @@ def run(agent_cls, args):
             output_file.write(final_message)
         print("=====================================")
         print("Final message: ", final_message)
+        wandb.log({"final": final_message})
 
     env.save("final")
 
 
-
-if __name__ == "__main__":
+def main(combined_id):
+    with open(os.path.join(this_dir, "config.yml"), "r") as yml_file:
+        args = yaml.safe_load(yml_file)["parameters"]
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, default="debug", help="task name")
     parser.add_argument("--log-dir", type=str, default=os.path.join(this_dir, "../", "logs"), help="log dir")
@@ -76,7 +81,11 @@ if __name__ == "__main__":
     parser.add_argument("--langchain-agent", type=str, default="zero-shot-react-description", help="langchain agent")
 
     args = parser.parse_args()
+    """
 
+    args = argparse.Namespace(**args)
+    args.log_dir = os.path.join(this_dir, args.log_dir, combined_id)
+    args.work_dir = os.path.join(this_dir, args.work_dir, combined_id)
     print(args, file=sys.stderr)
     if args.no_retrieval or args.agent_type != "ResearchAgent":
         # should not use these actions when there is no retrieval
@@ -84,3 +93,6 @@ if __name__ == "__main__":
     LLM.FAST_MODEL = args.fast_llm_name
     run(getattr(sys.modules[__name__], args.agent_type), args)
     
+if __name__=="__main__":
+    combined_id = sys.argv[1]
+    main(combined_id)
