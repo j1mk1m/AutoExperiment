@@ -35,29 +35,39 @@ class AutoExperimentDataset():
                 loader = ExperimentLoader(self.mode, self.workspace, experiment, self.v)
                 return loader.get()
         return None
+
+    def get_conda_env_by_id(self, combined_id):
+        paper_id, _ = combined_id.split("_")
+        for experiment in self.dataset:
+            if experiment["paper_id"] == paper_id:
+                return experiment["environment"]
             
+    def remove_workspace(self, path):
+        shutil.rmtree(path)
+        print(f"Successfully deleted workspace {path}")
+
 class ExperimentLoader:
     def __init__(self, mode, workspace, experiment, verbose=False):
         self.mode = mode
         self.experiment = experiment
         self.dataset_dir = this_dir
-        self.workspace = worksapce
+        self.workspace = workspace 
         self.v = verbose
 
     def get(self):
         paper_id, exp_id = self.experiment["paper_id"], self.experiment["exp_id"]
         workspace_dir = self.prepare_workspace()
-        self.generate_ref_sol()
+        self.generate_ref_sol(workspace_dir)
         return workspace_dir, float(self.experiment["result"])
 
     """ If ref_sol is included for this experiment, create ref_sol bash file """
-    def generate_ref_sol(self):
+    def generate_ref_sol(self, path):
         combined_id = self.experiment["paper_id"] + "_" + self.experiment["exp_id"]
         if os.path.isfile(os.path.join(this_dir, "refsols", combined_id + ".sh")) or "ref_sol" not in self.experiment:
             return
-        with open(os.path.join(this_dir, "refsols", experiment["paper_id"] + "_" + experiment["exp_id"] + ".sh"), "w") as bash_file:
-            bash_file.write("cd code\n")
-            bash_file.write(experiment["ref_sol"])
+        with open(os.path.join(this_dir, "refsols", combined_id + ".sh"), "w") as bash_file:
+            bash_file.write(f"cd {os.path.join(path, 'code')}\n")
+            bash_file.write(self.experiment["ref_sol"])
 
     """ Set up workspace directory for paper_id, exp_id and returns path to workspace """
     def prepare_workspace(self):
@@ -95,10 +105,6 @@ class ExperimentLoader:
         if self.v:
             print(f"Workspace {workspace_dir} prepared")
         return workspace_dir
-
-    def remove_workspace(self, path):
-        shutil.rmtree(path)
-        print(f"Successfully deleted workspace {path}")
 
     def copy_code_partial(self, dataset_dir, workspace_dir, proportion=1):
         # TODO
