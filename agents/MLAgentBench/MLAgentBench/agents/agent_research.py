@@ -17,20 +17,9 @@ initial_prompt = """You are a helpful research assistant. You have access to the
 
 Research Problem: {task_description}
 
-You do not know anything about this problem so far. 
+"""
 
-Follow these instructions and do not forget them:
-- First, come up with a high level plan based on your understanding of the problem and available tools and record it in the Research Plan and Status. You can revise the plan later.
-- Research Plan and Status should well organized and succinctly keep track of 1) high level plan (can be revised), 2) what steps have been done and what steps are in progress, 3) short results and conclusions of each step after it has been performed. 
-- Research Plan and Status must only include progress that has been made by previous steps. It should not include results not directly confirmed by the previous observation. 
-- Performance numbers and estimates can only be confirmed and included in the status by running the code and observing the output.
-- You should come up with a good experiment design that addresses the problem, and whenever applicable, define and measure the baseline performance of the relevant system or model before attempting any improvements.
-- Follow the plan and try to achieve the goal as straightforwardly as possible.
-- Highlight the supporting experiment results and reasoning before drawing any conclusions. 
-- Do not try installing any new packages or libraries.
-- If you believe you have solved the problem, you can use the Final Answer action to submit your answer. You can only submit once, so double check that you have achieved the goal before submitting.
-
-Always respond in this format exactly:
+response_prompt = """Always respond in this format exactly:
 {format_prompt}
 """
 
@@ -44,10 +33,6 @@ Follow these instructions and do not forget them:
 - Performance numbers and estimates can only be confirmed and included in the status by running the code and observing the output.
 - In your response, always pick exactly one tool call. The tools allow you to view, modify, and execute files in the environment.
 - If you believe you have solved the problem, you can use the Final Answer action to submit your answer. You can only submit once, so double check that you have achieved the goal before submitting.
-"""
-
-response_prompt="""Always respond in this format exactly along with a tool call:
-{format_prompt}
 """
 
 format_prompt_dict = {
@@ -249,10 +234,10 @@ class ResearchAgent(Agent):
         self.action_entries = ["Action", "Action Input"]
         if self.func_call:
             self.initial_prompt  = function_call_prompt.format(task_description=env.research_problem)
-            self.response_prompt = response_prompt.format(format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entries]))
         else:
             self.valid_format_entries += self.action_entries
-            self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem, format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entries]))
+            self.initial_prompt = initial_prompt.format(tools_prompt=self.tools_prompt, tool_names=self.prompt_tool_names,  task_description=env.research_problem)
+        self.response_prompt = response_prompt.format(format_prompt="\n".join([f"{k}: {format_prompt_dict[k]}" for k in self.valid_format_entries]))
 
     def run(self, env):
         last_steps = self.args.max_steps_in_context
@@ -308,6 +293,8 @@ class ResearchAgent(Agent):
 
             if self.func_call:
                 messages.append({"role": "system", "content": self.response_prompt})
+            else:
+                prompt += self.response_prompt
                 
             ###############################################
             #     call LLM until the response is valid    #
@@ -345,6 +332,7 @@ class ResearchAgent(Agent):
                     try:
                         entries = self.parse_entries(completion, self.valid_format_entries)
                         assert entries["Action"].strip() in self.all_tool_names
+                        assert "Action Input" in entries.keys()
                         valid_response = True
                     except:
                         print("Response is invalid and discarded", file=sys.stderr)
