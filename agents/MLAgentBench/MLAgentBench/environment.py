@@ -327,8 +327,12 @@ class Environment:
                 try:
                     print(f"Executing action: {action_name}")
                     if action_name == "Change Directory":
-                        self._work_dir = os.path.normpath(os.path.join(self.work_dir, action_input["dir_path"]))
-                        observation = f"Directory successfully changed to {self.work_dir}\n"
+                        new_dir = os.path.normpath(os.path.join(self.work_dir, action_input["dir_path"]))
+                        if not os.path.isdir(new_dir):
+                            observation = f"Directory {new_dir} does not exist"
+                        else:
+                            self._work_dir = new_dir
+                            observation = f"Directory successfully changed to {self.work_dir}\n"
                     else:
                         observation = self.action_infos[action_name].function(**action_input, log_file=log_file, trace=trace, cur_dir=self.work_dir, **self.static_kwargs_for_tools)
                 except TooLongPromptError:

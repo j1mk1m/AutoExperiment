@@ -1,9 +1,0 @@
-You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by executing the scripts given. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
-Helpful tips:
-- the code has a nested structure with multiple layers of directories. Getting a file not found error is good indication that you are in the wrong directory. Make use of "List Files" action to list the files in the currnet directory and use "Change Directory" action to change the directory if needed.
-- Since we want to keep our code general, use command line arguments to specify the parameters used for a specific experiment rather than setting a constant variable in the script.
-- inspect python scripts before executing to check the format and name of parameters and flags
-- some scripts should be run in a specific directory. If you get a relative import error, you could be running the script in the wrong place. 
-- submit as final answer only the number and make sure it is the correct return value.
-
-Here is the exact experiment:

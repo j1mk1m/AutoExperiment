@@ -94,6 +94,8 @@ def list_files( dir_path, cur_dir = ".", **kwargs):
     except:
         raise EnvException(f"Cannot list file in the {dir_path} directory")
 
+@check_file_in_work_dir(["dir_path"])
+@record_low_level_step
 def change_directory(dir_path, cur_dir= ".", **kwargs):
     try:
         print("Should not be here")

@@ -3,8 +3,15 @@ import shutil
 import subprocess
 import argparse
 import time
-from dataset import AutoExperimentDataset
+import sys
+
 this_path = os.path.dirname(__file__)
+sys.path.append(os.path.join(this_path, ".."))
+from dataset.dataset import AutoExperimentDataset
+
+def run_refsol(paper_id, exp_id, mode, path):
+    refsol = os.path.abspath(os.path.join(this_path, "refsols", f"{paper_id}_{exp_id}.sh"))
+    subprocess.run(["bash", refsol])
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()

@@ -1,9 +1,11 @@
 import argparse
 import os
 import subprocess
-from dataset.dataset import AutoExperimentDataset
 
 this_path = os.path.dirname(__file__) 
+import sys
+sys.path.append(os.path.join(this_path, ".."))
+from dataset.dataset import AutoExperimentDataset
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
@@ -15,8 +17,6 @@ if __name__=="__main__":
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
-    dataset = AutoExperimentDataset(args.mode, args.file, os.path.join(this_path, "workspace"), args.verbose)
-    env = dataset.get_conda_env_by_id(args.combined_id)
-    print(env)
-    os.environ["conda_env"] = env
-    #subprocess.run(["export", f"conda_env={env}"], shell=True)
+    dataset = AutoExperimentDataset(args.mode, args.file, os.path.join(this_path, "..", "workspace"), args.verbose)
+    path,_ = dataset.get_item_by_id(args.combined_id)
+    print(os.path.abspath(os.path.join(path, "environment.yml")))
