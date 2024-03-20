@@ -14,8 +14,8 @@ parameters:
   max_steps_in_context: 3
   max_observation_steps_in_context: 3
   max_time: 72000
-  llm_name: gpt-4-1106-preview
-  edit_script_llm_name: gpt-4-1106-preview
+  llm_name: gpt-3.5-turbo-1106
+  edit_script_llm_name: gpt-3.5-turbo-1106
   fast_llm_name: gpt-3.5-turbo-1106
 
   edit_script_llm_max_tokens: 4000

@@ -1,0 +1,10 @@
+rm -rf workspace/FC
+rm -rf */__pycache__
+rm -rf */*/__pycache__
+rm -rf */*/*/__pycache__
+rm -rf */*/*/*/__pycache__
+rm -rf agents/MLAgentBench/MLAgentBench/workspace
+rm -rf agents/MLAgentBench/MLAgentBench/logs
+rm -rf agents/MLAgentBench/MLAgentBench/benchmarks/*
+rm -rf dataset/refsols/*
+rm -rf wandb
