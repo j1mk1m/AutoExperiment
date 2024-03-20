@@ -57,16 +57,16 @@ class ExperimentLoader:
     def get(self):
         paper_id, exp_id = self.experiment["paper_id"], self.experiment["exp_id"]
         workspace_dir = self.prepare_workspace()
-        self.generate_ref_sol()
+        self.generate_ref_sol(workspace_dir)
         return workspace_dir, float(self.experiment["result"])
 
     """ If ref_sol is included for this experiment, create ref_sol bash file """
-    def generate_ref_sol(self):
+    def generate_ref_sol(self, path):
         combined_id = self.experiment["paper_id"] + "_" + self.experiment["exp_id"]
         if os.path.isfile(os.path.join(this_dir, "refsols", combined_id + ".sh")) or "ref_sol" not in self.experiment:
             return
         with open(os.path.join(this_dir, "refsols", combined_id + ".sh"), "w") as bash_file:
-            bash_file.write("cd code\n")
+            bash_file.write(f"cd {os.path.join(path, 'code')}\n")
             bash_file.write(self.experiment["ref_sol"])
 
     """ Set up workspace directory for paper_id, exp_id and returns path to workspace """

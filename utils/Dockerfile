@@ -8,7 +8,5 @@ USER root
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 -y --no-install-recommends gcc &&  rm -r /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY ./run.sh run.sh
-COPY run_baseline.py .
 
-CMD ["bash", "run.sh"]
+CMD ["wandb", "agent", "TODO"]]
