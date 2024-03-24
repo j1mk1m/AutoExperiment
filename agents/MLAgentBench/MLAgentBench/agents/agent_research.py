@@ -228,8 +228,7 @@ class ResearchAgent(Agent):
 
     def __init__(self, args, env):
         super().__init__(args, env)
-        self.func_call = "gpt" in args.llm_name # if OpenAI model, use function calling API
-        self.func_call = False
+        self.func_call = False and "gpt" in args.llm_name # if OpenAI model, use function calling API
         self.valid_format_entries = ["Reflection",  "Research Plan and Status","Fact Check", "Thought"] # use all entries by default
         self.action_entries = ["Action", "Action Input"]
         if self.func_call:
@@ -308,16 +307,15 @@ class ResearchAgent(Agent):
                 if self.func_call:
                    # print(f"Prompting LLM: {messages}")
                     response = function_calling_openai(messages, tools, self.args.llm_name)
-
                     try:
                         response = response.choices[0].message
-                        print(response)
 
                         if response.tool_calls and len(response.tool_calls) > 0:
                             # Check that tool is called
                             tool_call = response.tool_calls[0].function
 
-                            entries = self.parse_entries(response.content, self.valid_format_entries)
+                            content = response.content if response.content else ""
+                            entries = self.parse_entries(content, self.valid_format_entries)
                             entries["Action"] = func_to_name_map[tool_call.name]
                             entries["Action Input"] = json.loads(tool_call.arguments)
                             valid_response = True
@@ -331,8 +329,8 @@ class ResearchAgent(Agent):
 
                     try:
                         entries = self.parse_entries(completion, self.valid_format_entries)
-                        assert entries["Action"].strip() in self.all_tool_names
-                        assert "Action Input" in entries.keys()
+                        #assert entries["Action"].strip() in self.all_tool_names
+                        #assert "Action Input" in entries.keys()
                         valid_response = True
                     except:
                         print("Response is invalid and discarded", file=sys.stderr)
@@ -346,6 +344,10 @@ class ResearchAgent(Agent):
             #     postprocess LLM output and parse to env actions  #
             ########################################################
 
+            for e in self.valid_format_entries:
+                if e not in entries:
+                    entries[e] = ""
+
             rg = entries["Research Plan and Status"]
             action = entries["Action"].strip()
             if not self.func_call:
@@ -356,7 +358,7 @@ class ResearchAgent(Agent):
 
             new_research_plan_content = rg.strip("```") + "\n\n" 
             entries["Research Plan and Status"] = new_research_plan_content
-            entries["Research Plan and Status"]= new_research_plan_content.replace("**", "")
+            entries["Research Plan and Status"] = new_research_plan_content.replace("**", "")
  
             # parse the action input if we can ; other wise just return the original input and wait env to throw back an error
             if not self.func_call:

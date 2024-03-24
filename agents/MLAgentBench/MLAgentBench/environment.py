@@ -330,6 +330,8 @@ class Environment:
                         new_dir = os.path.normpath(os.path.join(self.work_dir, action_input["dir_path"]))
                         if not os.path.isdir(new_dir):
                             observation = f"Directory {new_dir} does not exist"
+                        elif not os.path.abspath(new_dir).startswith(os.path.abspath(self.work_dir)):
+                            observation = f"Directory {new_dir} not in working directory"
                         else:
                             self._work_dir = new_dir
                             observation = f"Directory successfully changed to {self.work_dir}\n"

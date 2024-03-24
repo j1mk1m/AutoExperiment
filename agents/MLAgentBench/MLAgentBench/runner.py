@@ -36,21 +36,21 @@ def run(agent_cls, args):
             final_message = agent.run(env)
         except Exception as e:
             final_message = f"Got error during agent run: {e}"
-        with open(os.path.join(this_dir, "output.txt"), 'w') as output_file:
-            output_file.write(final_message)
+
+        #with open(os.path.join(this_dir, "output.txt"), 'w') as output_file:
+        #    output_file.write(final_message)
         print("=====================================")
         print("Final message: ", final_message)
         wandb.log({"final": final_message})
+        return final_message
 
-    env.save("final")
 
-
-def main(combined_id):
+def main(combined_id, model):
     with open(os.path.join(this_dir, "config.yml"), "r") as yml_file:
         args = yaml.safe_load(yml_file)["parameters"]
 
     args = argparse.Namespace(**args)
-    args.log_dir = os.path.join(this_dir, args.log_dir, combined_id)
+    args.log_dir = os.path.join(this_dir, args.log_dir, model, combined_id)
     args.work_dir = os.path.join(this_dir, args.work_dir)
     args.task = combined_id
     print(args, file=sys.stderr)
@@ -58,7 +58,8 @@ def main(combined_id):
         # should not use these actions when there is no retrieval
         args.actions_remove_from_prompt.extend(["Retrieval from Research Log", "Append Summary to Research Log", "Reflection"])
     LLM.FAST_MODEL = args.fast_llm_name
-    run(getattr(sys.modules[__name__], args.agent_type), args)
+    args.llm_name = model
+    return run(getattr(sys.modules[__name__], args.agent_type), args)
     
 if __name__=="__main__":
     combined_id = sys.argv[1]
