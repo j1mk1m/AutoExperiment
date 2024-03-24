@@ -14,6 +14,7 @@ if __name__=="__main__":
     parser.add_argument("--mode", type=str, default="FC", choices=["FC", "NC", "PC"], help="FC, NC, PC")
     parser.add_argument("--file", type=str, default="experiments-light.csv", help="name of file to search for experiment")
     parser.add_argument("--combined_id", type=str, default="0000.00000_0", help="combined_id = paper_id + exp_id (e.g. paper_id = 0000.00000 and exp_id = 0 => combined_id = 0000.00000_0")
+    parser.add_argument("--model")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 

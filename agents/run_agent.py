@@ -11,14 +11,14 @@ from agents.MLAgentBench.run import run_MLAgentBench
 openai_api_key = open(os.path.join(this_path, "openai_api_key.txt")).read().strip()
 # os.environ["OPENAI_API_KEY"] = openai_api_key
 
-def run_agent(agent="MLAgentBench", path="../workspace", verbose=False):
+def run_agent(agent="MLAgentBench", path="../workspace", verbose=False, model="gpt-3.5-turbo-1106"):
     dirs = path.split(os.sep)
     mode, paper_id, exp_id = dirs[-3], dirs[-2], dirs[-1]
     if verbose:
         print(f"Running {agent} with {mode} on paper {paper_id} experiment {exp_id}")
 
     if agent=="MLAgentBench":
-        res = run_MLAgentBench(paper_id, exp_id, mode, path)
+        res = run_MLAgentBench(paper_id, exp_id, mode, path, model)
     elif agent=="refsol":
         res = run_refsol(paper_id, exp_id, mode, path)
     else:
