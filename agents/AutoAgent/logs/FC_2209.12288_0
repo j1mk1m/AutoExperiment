@@ -1,0 +1,28 @@
+Logs 
+
+Step 0 
+Research plan:  **Goal**: The goal of the research is to evaluate the feasibility of LP instances using a Graph Neural Network (GNN) model.
+   
+2. **Experiment**:
+   - **Model Selection**: We will train a "feasibility model" using a GNN architecture to classify the feasibility of LP instances.
+   - **Data Points**: Generate 500 LP instances as data points for training and testing.
+   - **Model Configuration**: Set the embedding size to 6 for the GNN model.
+   - **Training**: Train the model for 10,000 epochs.
+   
+3. **Implementation**:
+   - **Code Inspection**: Review the provided code to understand the experiment setup and parameters.
+   - **Parameterization**: Use command-line arguments to specify the model, number of data points, embedding size, and epochs.
+   - **Execution**: Follow the instructions provided in the README to run the experiment in the correct directory.
+   
+4. **Observation**:
+   - Record the training error rate generated at the end of the experiment.
+   
+5. **Analysis**:
+   - Evaluate the training error rate to determine the model's performance in classifying the feasibility of LP instances.
+
+6. **Conclusion**:
+   - Conclude based on the training error rate whether the GNN model is effective in predicting the feasibility of LP instances.
+
+7. **Documentation**:
+   - Summarize the research findings in the scientific paper.
+

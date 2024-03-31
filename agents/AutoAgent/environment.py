@@ -21,13 +21,15 @@ class Environment:
         self.action_to_function_mapper = {
             "final_answer": self.final_answer,
             "read_file": self.read_file,
-            "create_file": self.create_file,
             "write_file": self.write_file,
             "edit_file": self.edit_file,
             "understand_file": self.understand_file,
             "inspect_file_lines": self.inspect_file_lines,
             "list_files": self.list_files,
-            "change_directory": self.change_directory
+            "change_directory": self.change_directory,
+            "execute_python_script": self.execute_python_script,
+            "execute_bash_script": self.execute_bash_script,
+            "command_line": self.command_line
         }
 
     def setup_workspace(self, source):
@@ -38,28 +40,34 @@ class Environment:
         shutil.copytree(source, self.workspace_root, symlinks=True)
 
     def get_exp_description(self):
-        with open(os.path.join(self.source, "experiments.txt"), 'r') as file: 
+        with open(os.path.join(self.source, "experiment.txt"), 'r') as file: 
             return file.read()
 
     def execute(self, action, inputs):
         if action not in self.action_to_function_mapper:
             return f"Tool {action} not supported"
-        return self.action_to_function_mapper[action](**inputs)
+        try:
+            observation = self.action_to_function_mapper[action](**inputs)
+        except Exception as e:
+            observation = f"Execution of {action} resulted in error {e}"
+        return observation
 
     # Actions
-    def final_answer(self, final_answer):
+    def final_answer(self, final_answer, **kwargs):
         return f"Final answer submitted: {final_answer}"
 
     # File Manipulation
-    def read_file(self, file_name):
+    def read_file(self, file_name, **kwargs):
         try:
             observation = open(os.path.join(self.cur_dir, file_name)).read()
             return observation
         except:
-            return f"cannot read file {file_name}"
+            return f"Cannot find file {file_name}"
 
-    def understand_file(self, file_name, things_to_look_for):
+    def understand_file(self, file_name, things_to_look_for, **kwargs):
         lines = self.read_file(file_name).split("\n")
+        if lines[0] == f"Cannot find file {file_name}":
+            return lines[0]
         # group lines to blocks so that each block has at most 10000 characters
         counter = 0
         blocks = []
@@ -105,15 +113,15 @@ class Environment:
         completion = call_llm(messages, None, self.model).content
         return completion
 
-    def inspect_file_lines(self, file_name, start_line_number, end_line_number):
+    def inspect_file_lines(self, file_name, start_line_number, end_line_number, **kwargs):
         lines = self.read_file(file_name)
         return "\n".join(lines[start_line_number:end_line_number])
 
-    def write_file(self, file_name, contents):
+    def write_file(self, file_name, contents, **kwargs):
         with open(os.path.join(self.cur_dir, file_name), 'w') as file:
             file.write(contents)
 
-    def edit_file(self, file_name, edit_instruction, save_name):
+    def edit_file(self, file_name, edit_instruction, save_name, **kwargs):
         try:
             content = self.read_file(file_name)
         except:
@@ -142,19 +150,19 @@ class Environment:
         return f"The edited file is saved to {save_name}. Here is the diff, please check if the edit is correct and desirable:\n\n" + diff
 
     # Execution
-    def execute_python_script(self, file_name):
+    def execute_python_script(self, file_name, **kwargs):
         file_name = file_name.strip()
         if not os.path.exists(os.path.join(self.cur_dir,file_name.split()[0])):
             return f"The file {file_name.split()[0]} does not exist."
         return self.command_line(f"python -u {file_name}")
 
-    def execute_bash_script(self, file_name):
+    def execute_bash_script(self, file_name, **kwargs):
         file_name = file_name.strip()
         if not os.path.exists(os.path.join(self.cur_dir,file_name.split()[0])):
             return f"The file {file_name.split()[0]} does not exist."
         return self.command_line(f"bash -u {file_name}")
 
-    def command_line(self, command):
+    def command_line(self, command, **kwargs):
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=self.cur_dir)
 
@@ -205,9 +213,6 @@ class Environment:
             return f"Something went wrong in executing {command}: {e}."
 
     # Directory 
-    def cur_dir(self):
-        return self.cur_dir
-
     def list_files(self, directory):
         try:
             return subprocess.check_output(["ls", "-F", os.path.abspath(os.path.join(self.cur_dir, directory))]).decode("utf-8")
@@ -216,7 +221,7 @@ class Environment:
 
     def change_directory(self, directory):
         root = os.path.abspath(self.workspace_root)
-        directory = os.path.abspath(directory)
+        directory = os.path.abspath(os.path.join(self.cur_dir, directory))
         if directory.startswith(root):
             self.cur_dir = os.path.normpath(directory)
             return f"Directory successfully changed to {self.cur_dir}"

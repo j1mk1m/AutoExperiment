@@ -39,7 +39,7 @@ class History:
                 file.write(f"Research plan: {self.research_plans[i]}")
                 file.write("\n\n")
                 if (i >= len(self.actions)): break
-                file.write(f"Action: {self.actions[i].action} \n Action Inputs: {self.actions[i].arguments}")
+                file.write(f"Action: {self.actions[i]["action"]} \n Action Inputs: {self.actions[i]["arguments"]}")
                 file.write("\n\n")
                 if (i >= len(self.observations)): break
                 file.write(f"Observation: {self.observations[i]}")
