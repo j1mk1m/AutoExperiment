@@ -404,7 +404,10 @@ class ResearchAgent(Agent):
                 log_file = os.path.join(self.log_dir , f"step_{curr_step}_summarize_observation_log.log")
 
                 print("Observation is too long. Summarizing...", file=sys.stderr)
-                observation = self.summarize_observation(self.print_action(entries, self.valid_format_entries), observation, log_file)
+                if action == "Execute Script" or action == "Execute Bash Script":
+                    observation = "Output of script is too long, the last outputs are: " + observation[-5000:]
+                else:
+                    observation = self.summarize_observation(self.print_action(entries, self.valid_format_entries), observation, log_file)
 
             self.history_steps.append({"step_idx": len(env.trace.steps), "action": entries, "observation": observation})
 
@@ -475,7 +478,7 @@ Do not include any result that is guessed rather than directly confirmed by the 
         if len(descriptions) == 1:
             completion = descriptions[0]
         else:
-            descriptions = "\n\n".join(["Segment {idx}: \n\n" + s for s in descriptions])
+            descriptions = "\n\n".join(["Segment {idx}: \n\n" + s for s in descriptions])[-bs:]
             prompt = f"""
 {action}
 
