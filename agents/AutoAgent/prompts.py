@@ -9,6 +9,7 @@ IMPORTANT:
 - Before executing any python script, inspect the script to check the format and name of parameters and flags. Make sure to inspect all arguments to verify that you are using the correct parameter.
 - Before submitting the final answer, verify that it is the correct return value that the experiment asks for
 - Experiment results should only come from the observation after running scripts. Do not include any numbers that are made up.
+- You should verify that files exist before using them.
 
 Here is the exact experiment:
 """
