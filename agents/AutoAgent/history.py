@@ -4,11 +4,12 @@ import os
 this_path = os.path.dirname(__file__)
 
 class History:
-    def __init__(self) -> None:
+    def __init__(self, tags) -> None:
         self.research_plans = []
         self.actions = []
         self.observations = []
         self.memories = []
+        self.tags = tags 
 
     def append_research_plan(self, rp):
         wandb.log({"research_plan": rp})
@@ -32,14 +33,14 @@ class History:
                    "observations": self.observations,
                    "memories": self.memories})
 
-        with open(os.path.join(this_path, "logs", f"{mode}_{paper_id}_{exp_id}"), 'w') as file:
+        with open(os.path.join(this_path, "logs", f"{mode}_{paper_id}_{exp_id}_{'_'.join(self.tags)}"), 'w') as file:
             file.write("Logs \n\n")
             for i in range(len(self.research_plans)):
                 file.write(f"Step {i} \n")
                 file.write(f"Research plan: {self.research_plans[i]}")
                 file.write("\n\n")
                 if (i >= len(self.actions)): break
-                file.write(f"Action: {self.actions[i]["action"]} \n Action Inputs: {self.actions[i]["arguments"]}")
+                file.write(f"Action: {self.actions[i]['action']} \n Action Inputs: {self.actions[i]['arguments']} \nReasoning: {self.actions[i]['reasoning']}")
                 file.write("\n\n")
                 if (i >= len(self.observations)): break
                 file.write(f"Observation: {self.observations[i]}")

@@ -1,17 +1,33 @@
 base_prompt = """
 You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by executing the scripts given. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
-IMPORTANT:
-- The code has a nested structure with multiple layers of directories. Getting a file not found error is good indication that you are in the wrong directory. Make use of "Change Directory" action to change the directory if needed.
-- Some scripts should be run in a specific directory. If you get a relative import error, you could be running the script in the wrong place. Check the README to verify which directory to run the script.
-- Since we want to keep our code general, use command line arguments to specify the parameters used for a specific experiment rather than setting a constant variable in the script.
-- Avoid editing files unless it is necessary. Most experiments can be reproduced without editing files.
-- Observations will be summarized if it is too long. If you would like exact observations, consider reducing the length of output.
-- Before executing any python script, inspect the script to check the format and name of parameters and flags. Make sure to inspect all arguments to verify that you are using the correct parameter.
-- Before submitting the final answer, verify that it is the correct return value that the experiment asks for
-- Experiment results should only come from the observation after running scripts. Do not include any numbers that are made up.
-- You should verify that files exist before using them.
-
 Here is the exact experiment:
+"""
+v2_rp_prompt = """
+Generate a new research plan with current status and confirmed results of each step briefly annotated.
+Tip: refer to README.md on how to run scripts
+"""
+rp_prompt = """
+Current research plan: {research_plan}
+Current Facts: {memory}. 
+Given this, generate a new research plan, with current status and confirmed results of each step briefly annotated.
+"""
+
+tc_prompt = """
+Current research plan: {research_plan}
+Current Facts: {memory} 
+Given this, select the next function to call. Also, include a brief reasoning for why you chose this function.
+"""
+
+mem_prompt = """
+Current research plan: {research_plan} 
+Current Facts: {memory} 
+Previous action: Called {action} with input {action_input}. 
+Observation: {observation} 
+Given the above information, generate a new list of known facts. Keep any important information from the previous list and add information from the new action and observation. Return only the content you need to remember in the future.
+Helpful tips:
+- If the previous action resulted in an error, make sure to note the cause, so the error is not repeated.
+- Remember important information such as parameter names and values, results after running a script, etc.
+- Do not include facts that are not confirmed previously or by the new observation.
 """
 
 tool_prompt = [
@@ -20,6 +36,7 @@ tool_prompt = [
         "function": {
             "name": "final_answer",
             "description": "Use this to submit the final answer to the current task",
+            "required": ["final_answer"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -36,6 +53,7 @@ tool_prompt = [
         "function": {
             "name": "understand_file",
             "description": "Use this to read the whole file and understand certain aspects. You should provide detailed description on what to look for and what should be returned. To get a better understanding of the file, you can use Inspect Script Lines action to inspect specific part of the file.",
+            "required": ["file_name", "things_to_look_for"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -56,10 +74,11 @@ tool_prompt = [
         "function": {
             "name": "inspect_file_lines",
             "description": "Use this to inspect specific part of a file precisely, or the full content for short files.",
+            "required": ["file_name", "start_line_number", "end_line_number"],
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "script_name": {
+                    "file_name": {
                         "type": "string",
                         "description": "a valid python script name with relative path to current directory if needed"
                     },
@@ -80,6 +99,7 @@ tool_prompt = [
         "function": {
             "name": "edit_file",
             "description": "Use this to do a relatively large but cohesive edit over a python script. Instead of editing the script directly, you should describe the edit instruction so that another AI can help you do this.",
+            "required": ["file_name", "edit_instructions", "save_name"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -104,6 +124,7 @@ tool_prompt = [
         "function": {
             "name": "execute_python_script",
             "description": "Use this to execute the python script. The script must already exist.",
+            "required": ["file_name"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -120,6 +141,7 @@ tool_prompt = [
         "function": {
             "name": "execute_bash_script",
             "description": "Use this to execute a bash script. The script must already exist",
+            "required": ["file_name"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -136,6 +158,7 @@ tool_prompt = [
         "function": {
             "name": "command_line",
             "description": "Use this to run any linux command line command",
+            "required": ["command"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -150,8 +173,26 @@ tool_prompt = [
     {
         "type": "function",
         "function": {
+            "name": "list_files",
+            "description": "Use this to list files in a directory",
+            "required": ["directory"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "directory": {
+                        "type": "string",
+                        "description": "valid path to directory"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "change_directory",
             "description": "Use this to navigate the file structure",
+            "required": ["directory"],
             "parameters": {
                 "type": "object",
                 "properties": {

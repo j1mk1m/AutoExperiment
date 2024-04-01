@@ -40,7 +40,7 @@ if __name__ == "__main__":
     wandb.log({"combined_id": args.combined_id, "paper_id": paper_id, "exp_id": exp_id})
     
     # Run baseline and get result
-    pred = run_agent(agent=args.agent, path=path, model=args.model) 
+    pred = run_agent(agent=args.agent, path=path, model=args.model, tags=tags) 
     loss = calculate_loss(pred, y, "abs")
     wandb.log({"agent_output": pred, "gt_output": y, "loss": loss})
 
