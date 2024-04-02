@@ -184,22 +184,22 @@ class Environment:
                 for key, _ in events:
                     line = key.fileobj.readline()
                     if key.fileobj == process.stdout:
-                        print("STDOUT:", line, end =" ")
+                        # print("STDOUT:", line, end =" ")
                         stdout_lines.append(line)
                         lines.append(line)
                     else:
-                        print("STDERR:", line, end =" ")
+                        # print("STDERR:", line, end =" ")
                         stderr_lines.append(line)
                         lines.append(line)
 
             for line in process.stdout:
                 line = line
-                print("STDOUT:", line, end =" ")
+                # print("STDOUT:", line, end =" ")
                 stdout_lines.append(line)
                 lines.append(line)
             for line in process.stderr:
                 line = line
-                print("STDERR:", line, end =" ")
+                # print("STDERR:", line, end =" ")
                 stderr_lines.append(line)
                 lines.append(line)
 
@@ -214,7 +214,7 @@ class Environment:
                 observation = "".join(lines)
             
             # Tips
-            if "FileNotFoundError" in observation or "ModuleNotFoundError":
+            if "FileNotFoundError" in observation or "ModuleNotFoundError" in observation:
                 observation += "\nTip: if you are getting FileNotFoundError or relative import failure, you are likely running the script in a wrong directory. Try changing directory. Refer to the README for examples."
             return observation
         except Exception as e:
