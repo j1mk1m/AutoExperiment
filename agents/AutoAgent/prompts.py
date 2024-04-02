@@ -2,32 +2,13 @@ base_prompt = """
 You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by executing the scripts given. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
 Here is the exact experiment:
 """
-v2_rp_prompt = """
-Generate a new research plan with current status and confirmed results of each step briefly annotated.
-Tip: refer to README.md on how to run scripts
-"""
+
 rp_prompt = """
-Current research plan: {research_plan}
-Current Facts: {memory}. 
-Given this, generate a new research plan, with current status and confirmed results of each step briefly annotated.
-"""
-
-tc_prompt = """
-Current research plan: {research_plan}
-Current Facts: {memory} 
-Given this, select the next function to call. Also, include a brief reasoning for why you chose this function.
-"""
-
-mem_prompt = """
-Current research plan: {research_plan} 
-Current Facts: {memory} 
-Previous action: Called {action} with input {action_input}. 
-Observation: {observation} 
-Given the above information, generate a new list of known facts. Keep any important information from the previous list and add information from the new action and observation. Return only the content you need to remember in the future.
-Helpful tips:
-- If the previous action resulted in an error, make sure to note the cause, so the error is not repeated.
-- Remember important information such as parameter names and values, results after running a script, etc.
-- Do not include facts that are not confirmed previously or by the new observation.
+Generate a new research plan with current status and confirmed results of each step briefly annotated.
+Tip: 
+- refer to README.md on how to run scripts
+- final answer should be obtained by executing scripts
+- before executing python or bash files, inspect file lines to verify parameter names and values
 """
 
 tool_prompt = [
