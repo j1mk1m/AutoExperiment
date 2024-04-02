@@ -5,7 +5,7 @@
 
 agent='AutoAgent' # MLAgentBench, refsol, AutoAgent
 file='experiments-light.csv'
-combined_id='2209.12288_0'
+combined_id='0000.00000_0'
 #model='gpt-4-1106-preview' 
 model='gpt-3.5-turbo-0125'
 

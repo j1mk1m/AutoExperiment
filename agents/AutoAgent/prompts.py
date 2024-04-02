@@ -4,12 +4,17 @@ Here is the exact experiment:
 """
 
 rp_prompt = """
+The current research plan is {plan}.
 Generate a new research plan with current status and confirmed results of each step briefly annotated.
 Tip: 
 - based on the experiment details, navigate the code base and identify the script you need to run
 - refer to README.md on how to run scripts
 - before executing python or bash files, inspect file lines to verify parameter names and values
 - final answer should be obtained only by executing scripts
+"""
+
+repeat_prompt = """
+Again, you are a research assistant tasked with running this experiment:
 """
 
 tool_prompt = [
@@ -34,8 +39,8 @@ tool_prompt = [
         "type": "function",
         "function": {
             "name": "understand_file",
-            "description": "Use this to read the whole file and understand certain aspects. You should provide detailed description on what to look for and what should be returned. To get a better understanding of the file, you can use Inspect Script Lines action to inspect specific part of the file.",
-            "required": ["file_name", "things_to_look_for"],
+            "description": "Use this to read the whole file and understand certain aspects. You can provide a detailed description on what to look for and what should be returned.",
+            "required": ["file_name"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -56,7 +61,7 @@ tool_prompt = [
         "function": {
             "name": "inspect_file_lines",
             "description": "Use this to inspect specific part of a file precisely, or the full content for short files.",
-            "required": ["file_name", "start_line_number", "end_line_number"],
+            "required": ["file_name"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -81,7 +86,7 @@ tool_prompt = [
         "function": {
             "name": "edit_file",
             "description": "Use this to do a relatively large but cohesive edit over a python script. Instead of editing the script directly, you should describe the edit instruction so that another AI can help you do this.",
-            "required": ["file_name", "edit_instructions", "save_name"],
+            "required": ["file_name", "edit_instructions"],
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -104,6 +109,27 @@ tool_prompt = [
     {
         "type": "function",
         "function": {
+            "name": "write_file",
+            "description": "Use this to write content to a file. If the file does not exist, a new file will be created. If file exists, content will be overriden",
+            "required": ["file_name", "content"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file_name": {
+                        "type": "string",
+                        "description": "a valid file name with relative path to current directory if needed"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "the content to be written to the file"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "execute_python_script",
             "description": "Use this to execute the python script. The script must already exist.",
             "required": ["file_name"],
@@ -112,7 +138,11 @@ tool_prompt = [
                 "properties": {
                     "file_name": {
                         "type": "string",
-                        "description": "a valid python script name with relative path to current directory if needed and arguments appended as a single string if needed"
+                        "description": "a valid python script name with relative path to current directory if needed"
+                    },
+                    "arguments": {
+                        "type": "string",
+                        "description": "command line arguments to use if needed"
                     }
                 }
             },
@@ -129,7 +159,11 @@ tool_prompt = [
                 "properties": {
                     "file_name": {
                         "type": "string",
-                        "description": "a valid bash script with relative path to current directory and arguments appended as a single string if needed"
+                        "description": "a valid bash script with relative path to current directory"
+                    },
+                    "arguments": {
+                        "type": "string",
+                        "description": "command line arguments to use if needed"
                     }
                 }
             },

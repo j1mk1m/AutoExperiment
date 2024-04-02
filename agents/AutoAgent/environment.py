@@ -64,7 +64,7 @@ class Environment:
         except:
             return f"Cannot find file {file_name}. Tip: use list_files to see contents of the current directory"
 
-    def understand_file(self, file_name, things_to_look_for, **kwargs):
+    def understand_file(self, file_name, things_to_look_for="General summary", **kwargs):
         lines = self.read_file(file_name).split("\n")
         if lines[0] == f"Cannot find file {file_name}":
             return lines[0]
@@ -113,15 +113,17 @@ class Environment:
         completion = call_llm(messages, None, self.model).content
         return completion
 
-    def inspect_file_lines(self, file_name, start_line_number, end_line_number, **kwargs):
+    def inspect_file_lines(self, file_name, start_line_number=0, end_line_number=None, **kwargs):
         lines = self.read_file(file_name).split("\n")
-        return "\n".join(lines[start_line_number:end_line_number])
+        if lines[0] == f"Cannot find file {file_name}":
+            return lines[0]
+        return "\n".join(lines[start_line_number:(end_line_number if end_line_number else len(lines))])
 
     def write_file(self, file_name, contents, **kwargs):
         with open(os.path.join(self.cur_dir, file_name), 'w') as file:
             file.write(contents)
 
-    def edit_file(self, file_name, edit_instruction, save_name, **kwargs):
+    def edit_file(self, file_name, edit_instruction, save_name=None, **kwargs):
         try:
             content = self.read_file(file_name)
         except:
@@ -142,6 +144,7 @@ class Environment:
         if "```" in new_content:
             new_content = new_content.split("```")[1].strip()
 
+        if save_name is None: save_name = file_name
         self.write_file(save_name, new_content)
 
         diff = list(difflib.unified_diff(content.splitlines(keepends=True), new_content.splitlines(keepends=True)))
@@ -150,19 +153,20 @@ class Environment:
         return f"The edited file is saved to {save_name}. Here is the diff, please check if the edit is correct and desirable:\n\n" + diff
 
     # Execution
-    def execute_python_script(self, file_name, **kwargs):
+    def execute_python_script(self, file_name, arguments="", **kwargs):
         file_name = file_name.strip()
-        if not os.path.exists(os.path.join(self.cur_dir,file_name.split()[0])):
-            return f"The file {file_name.split()[0]} does not exist. Tip: use the file's relative path or change the directory."
-        return self.command_line(f"python -u {file_name}")
+        if not os.path.exists(os.path.join(self.cur_dir,file_name)):
+            return f"The file {file_name} does not exist. Tip: use the file's relative path or change the directory."
+        return self.command_line(f"python -u {file_name} {arguments}")
 
-    def execute_bash_script(self, file_name, **kwargs):
+    def execute_bash_script(self, file_name, arguments="", **kwargs):
         file_name = file_name.strip()
-        if not os.path.exists(os.path.join(self.cur_dir,file_name.split()[0])):
-            return f"The file {file_name.split()[0]} does not exist. Tip: use the file's relative path or change the directory."
-        return self.command_line(f"bash -u {file_name}")
+        if not os.path.exists(os.path.join(self.cur_dir,file_name)):
+            return f"The file {file_name} does not exist. Tip: use the file's relative path or change the directory."
+        return self.command_line(f"bash -u {file_name} {arguments}")
 
     def command_line(self, command, **kwargs):
+        command = command.strip()
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=self.cur_dir)
 
@@ -208,6 +212,10 @@ class Environment:
             if observation == "" and return_code == 0:
                 # printed to stderr only
                 observation = "".join(lines)
+            
+            # Tips
+            if "FileNotFoundError" in observation or "ModuleNotFoundError":
+                observation += "\nTip: if you are getting FileNotFoundError or relative import failure, you are likely running the script in a wrong directory. Try changing directory. Refer to the README for examples."
             return observation
         except Exception as e:
             return f"Something went wrong in executing {command}: {e}."
@@ -215,7 +223,7 @@ class Environment:
     # Directory 
     def list_files(self, directory):
         try:
-            return subprocess.check_output(["ls", "-F", os.path.abspath(os.path.join(self.cur_dir, directory))]).decode("utf-8")
+            return self.command_line(f"ls -F {os.path.abspath(os.path.join(self.cur_dir, directory))}")
         except Exception as e:
             return f"Cannot list files due to {e}"            
 
@@ -228,5 +236,3 @@ class Environment:
         else:
             return f"Directory not found in the root directory. Tip: use list_files to see contents of the current directory"
 
-
-    
