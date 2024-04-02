@@ -28,12 +28,7 @@ class AutoAgent:
             wandb.log({"step": i})
             
             # 1. Generate Research Plan
-            if i == 0:
-                prompt = "First, generate a high level research plan, describing the course of action to take."
-            else:
-                prompt = rp_prompt
-
-            messages.append({"role": "system", "content": prompt}) 
+            messages.append({"role": "system", "content": rp_prompt}) 
             new_rp = call_llm(messages, None, self.rp_model).content
             messages.append({"role": "assistant", "content": new_rp})
 

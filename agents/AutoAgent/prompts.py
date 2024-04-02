@@ -6,9 +6,10 @@ Here is the exact experiment:
 rp_prompt = """
 Generate a new research plan with current status and confirmed results of each step briefly annotated.
 Tip: 
+- based on the experiment details, navigate the code base and identify the script you need to run
 - refer to README.md on how to run scripts
-- final answer should be obtained by executing scripts
 - before executing python or bash files, inspect file lines to verify parameter names and values
+- final answer should be obtained only by executing scripts
 """
 
 tool_prompt = [
