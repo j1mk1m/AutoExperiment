@@ -62,7 +62,7 @@ class Environment:
             observation = open(os.path.join(self.cur_dir, file_name)).read()
             return observation
         except:
-            return f"Cannot find file {file_name}"
+            return f"Cannot find file {file_name}. Tip: use list_files to see contents of the current directory"
 
     def understand_file(self, file_name, things_to_look_for, **kwargs):
         lines = self.read_file(file_name).split("\n")
@@ -114,7 +114,7 @@ class Environment:
         return completion
 
     def inspect_file_lines(self, file_name, start_line_number, end_line_number, **kwargs):
-        lines = self.read_file(file_name)
+        lines = self.read_file(file_name).split("\n")
         return "\n".join(lines[start_line_number:end_line_number])
 
     def write_file(self, file_name, contents, **kwargs):
@@ -153,13 +153,13 @@ class Environment:
     def execute_python_script(self, file_name, **kwargs):
         file_name = file_name.strip()
         if not os.path.exists(os.path.join(self.cur_dir,file_name.split()[0])):
-            return f"The file {file_name.split()[0]} does not exist."
+            return f"The file {file_name.split()[0]} does not exist. Tip: use the file's relative path or change the directory."
         return self.command_line(f"python -u {file_name}")
 
     def execute_bash_script(self, file_name, **kwargs):
         file_name = file_name.strip()
         if not os.path.exists(os.path.join(self.cur_dir,file_name.split()[0])):
-            return f"The file {file_name.split()[0]} does not exist."
+            return f"The file {file_name.split()[0]} does not exist. Tip: use the file's relative path or change the directory."
         return self.command_line(f"bash -u {file_name}")
 
     def command_line(self, command, **kwargs):
@@ -208,7 +208,7 @@ class Environment:
             if observation == "" and return_code == 0:
                 # printed to stderr only
                 observation = "".join(lines)
-            return "Successfully ran command. Here is the output:\n" + observation
+            return observation
         except Exception as e:
             return f"Something went wrong in executing {command}: {e}."
 
@@ -222,11 +222,11 @@ class Environment:
     def change_directory(self, directory):
         root = os.path.abspath(self.workspace_root)
         directory = os.path.abspath(os.path.join(self.cur_dir, directory))
-        if directory.startswith(root):
-            self.cur_dir = os.path.normpath(directory)
-            return f"Directory successfully changed to {self.cur_dir}"
+        if directory.startswith(root) and os.path.exists(directory):
+            self.cur_dir = directory
+            return f"Directory successfully changed to {self.cur_dir[len(root)+1:]}"
         else:
-            return f"Directory not found in the root directory"
+            return f"Directory not found in the root directory. Tip: use list_files to see contents of the current directory"
 
 
     

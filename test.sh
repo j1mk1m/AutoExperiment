@@ -6,9 +6,11 @@
 agent='AutoAgent' # MLAgentBench, refsol, AutoAgent
 file='experiments-light.csv'
 combined_id='2209.12288_0'
-model='gpt-3.5-turbo-0125' # gpt-4-1106-preview
+#model='gpt-4-1106-preview' 
+model='gpt-3.5-turbo-0125'
+
 ## Full Run $$
-bash run_exp_from_env.sh --_tags test --agent $agent --mode FC --file $file --combined_id $combined_id --model $model 
+bash run_exp_from_env.sh --_tags test,v2 --agent $agent --mode FC --file $file --combined_id $combined_id --model $model 
 
 ## How to run runner.py ##
 # python runner.py --_tags test --agent refsol --mode FC --file experiments-light.csv --combined_id 0000.00000_0

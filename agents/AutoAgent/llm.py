@@ -13,10 +13,11 @@ def call_openai(messages, tools, model):
         )
         return response.choices[0].message
     except Exception as e:
-        print(f"OpenAI error while using function calling api: {e}")
+        print(e)
 
 def call_llm(messages, tools, model):
     if 'gpt' in model:
         return call_openai(messages, tools, model)
     else:
         raise NotImplemented
+
