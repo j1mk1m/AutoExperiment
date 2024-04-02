@@ -7,7 +7,7 @@ from dataset.run_refsol import run_refsol
 from agents.MLAgentBench.run import run_MLAgentBench
 from agents.AutoAgent.run import run_AutoAgent
 
-def parse_output(output):
+def parse_output(res):
     # parse result to extract numerical value
     try:
         if isinstance(res, int): return float(res)

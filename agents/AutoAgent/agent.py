@@ -52,7 +52,7 @@ class AutoAgent:
 
                 if response is None:
                     # most likely token limit: remove history except the current research plan
-                    messages = messages[0:] + messages[-2:]
+                    messages = messages[0:1] + messages[-2:]
                  
             if not valid:
                 self.history.save_history()
@@ -62,6 +62,7 @@ class AutoAgent:
             for tool_call in response.tool_calls:
                 action = tool_call.function.name
                 action_input = json.loads(tool_call.function.arguments)
+                if self.v: print(f"Action: {action} Inputs: {action_input}")
                 observation = self.env.execute(action, action_input)
                 if len(observation) > 10000:
                     # TODO better summarization of long observations
@@ -69,7 +70,7 @@ class AutoAgent:
                 messages.append({"role": "tool", "tool_call_id": tool_call.id, "name": action, "content": observation})
                 self.history.append_action(str(tool_call.function))
                 self.history.append_observation(observation)
-                if self.v: print(f"Action {action} Inputs {action_input} \n\nObservation: {observation}\n")
+                if self.v: print(f"Observation: {observation}\n")
 
             # Exit if final answer is given
             if action == "final_answer":
