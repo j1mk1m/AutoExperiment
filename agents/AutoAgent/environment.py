@@ -26,6 +26,7 @@ class Environment:
             "understand_file": self.understand_file,
             "inspect_file_lines": self.inspect_file_lines,
             "list_files": self.list_files,
+            "move": self.move,
             "change_directory": self.change_directory,
             "execute_python_script": self.execute_python_script,
             "execute_bash_script": self.execute_bash_script,
@@ -37,7 +38,7 @@ class Environment:
         if os.path.exists(self.workspace_root):
             shutil.rmtree(self.workspace_root)
 
-        shutil.copytree(source, self.workspace_root, symlinks=True)
+        shutil.copytree(os.path.join(source, "code"), self.workspace_root, symlinks=True)
 
     def get_exp_description(self):
         with open(os.path.join(self.source, "experiment.txt"), 'r') as file: 
@@ -66,7 +67,7 @@ class Environment:
 
     def understand_file(self, file_name, things_to_look_for="General summary", **kwargs):
         lines = self.read_file(file_name).split("\n")
-        if lines[0] == f"Cannot find file {file_name}":
+        if f"Cannot find file {file_name}" in lines[0]:
             return lines[0]
         # group lines to blocks so that each block has at most 10000 characters
         counter = 0
@@ -115,13 +116,13 @@ class Environment:
 
     def inspect_file_lines(self, file_name, start_line_number=0, end_line_number=None, **kwargs):
         lines = self.read_file(file_name).split("\n")
-        if lines[0] == f"Cannot find file {file_name}":
+        if f"Cannot find file {file_name}" in lines[0]:
             return lines[0]
         return "\n".join(lines[start_line_number:(end_line_number if end_line_number else len(lines))])
 
-    def write_file(self, file_name, contents, **kwargs):
+    def write_file(self, file_name, content, **kwargs):
         with open(os.path.join(self.cur_dir, file_name), 'w') as file:
-            file.write(contents)
+            file.write(content)
 
     def edit_file(self, file_name, edit_instruction, save_name=None, **kwargs):
         try:
@@ -138,7 +139,7 @@ class Environment:
         Provide the full code after the edit, making no other changes. Provide only the code in markdown format. E.g. ```python or ```bash
         """
 
-        completion = call_llm([{"role": "system", "content": prompt}], None, self.model)
+        completion = call_llm([{"role": "system", "content": prompt}], None, self.model).content
 
         new_content = completion.strip()
         if "```" in new_content:
@@ -215,7 +216,7 @@ class Environment:
             
             # Tips
             if "FileNotFoundError" in observation or "ModuleNotFoundError" in observation:
-                observation += "\nTip: if you are getting FileNotFoundError or relative import failure, you are likely running the script in a wrong directory. Try changing directory. Refer to the README for examples."
+                observation += "\nTip: Verify that the file/directory exists.You could be running the script in a wrong directory, If so, try changing directory. Refer to the README for examples."
             return observation
         except Exception as e:
             return f"Something went wrong in executing {command}: {e}."
@@ -226,6 +227,11 @@ class Environment:
             return self.command_line(f"ls -F {os.path.abspath(os.path.join(self.cur_dir, directory))}")
         except Exception as e:
             return f"Cannot list files due to {e}"            
+    def move(self, source, destination, *kwargs):
+        try:
+            return self.command_line(f"mv {os.path.abspath(os.path.join(self.cur_dir, source))} {os.path.abspath(os.path.join(self.cur_dir, destination))}")
+        except Exception as e:
+            return f"Cannot move file"
 
     def change_directory(self, directory):
         root = os.path.abspath(self.workspace_root)

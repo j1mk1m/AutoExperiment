@@ -3,6 +3,16 @@ You are a research assistant that is tasked with running experiments to produce 
 Here is the exact experiment:
 """
 
+base_prompt_PC = """
+You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains some code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by adding missing code and executing code to get experiment results. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
+Here is the exact experiment:
+"""
+
+base_prompt_NC = """
+You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory contains utility files and dataset. Also, some code structure is given and the environment is already set up. Given this, you are tasked to perform a specific experiment by writing necessary code following the structure of functions given and executing code to get experiment results. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
+Here is the exact experiment:
+"""
+
 rp_prompt = """
 The current research plan is {plan}.
 Generate a new research plan with current status and confirmed results of each step briefly annotated.
@@ -15,6 +25,12 @@ Tip:
 
 repeat_prompt = """
 Again, you are a research assistant tasked with running this experiment:
+{experiment}
+
+Tips: 
+- prefer command line arguments over editing constants in scripts
+- avoid editing files unless necessary
+- do not repeat the same action unnecessarily
 """
 
 tool_prompt = [
@@ -199,6 +215,28 @@ tool_prompt = [
                         "type": "string",
                         "description": "valid path to directory"
                     }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "move",
+            "description": "Use this to move a file or directory from source to destination. You can also rename files with this function",
+            "required": ["source", "destination"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "valid path to file or directory"
+                    },
+                    "destination": {
+                        "type": "string",
+                        "description": "valid path to file or directory"
+                    }
+
                 }
             }
         }

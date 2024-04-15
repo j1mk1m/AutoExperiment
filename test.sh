@@ -3,9 +3,9 @@
 #python utils/find_conda_env.py --combined_id 0000.00000_0 --file experiments-light.csv  # micn_env
 #python utils/find_conda_yml.py --combined_id 0000.00000_0 --file experiments-light.csv  
 
-agent='AutoAgent' # MLAgentBench, refsol, AutoAgent
+agent='refsol' # MLAgentBench, refsol, AutoAgent
 file='experiments-light.csv'
-combined_id='0000.00000_0'
+combined_id='2210.07562_0'
 #model='gpt-4-1106-preview' 
 model='gpt-3.5-turbo-0125'
 
