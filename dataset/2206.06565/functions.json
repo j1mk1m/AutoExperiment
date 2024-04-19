@@ -1,0 +1,25 @@
+{
+    "functions": [
+        {
+            "script": "classification/run_exps/run_baseline_mnist.py",
+            "name": "add_noise",
+            "line_start": 78,
+            "line_end": 97,
+            "description": "Adds different types of noise to an image tensor and returns the noisy image.\n\n:param img: A tensor representing an image, to which the noise will be added.\n:param noise_type: A string specifying the type of noise to add. Can be 'const', 'unif', 'normal', or 'sign'.\n:param eps: A float representing the noise intensity scale factor. For 'const' noise, it is the noise value added to all pixels.\n\n:modifies: For 'normal' noise type, it prints the maximum absolute value of the noise tensor.\n\n:effects: Depending on the noise type:\n    - 'const': Adds constant noise with value eps to all image pixels.\n    - 'unif': Adds uniform noise within the range [-eps, eps] to all image pixels.\n    - 'normal': Adds Gaussian-like noise, scaled to have a maximum absolute value of eps, to all image pixels.\n    - 'sign': Adds noise of value +eps or -eps to each pixel with equal probability.\n\n:return: A tensor of the same shape as img, representing the image with added noise, clamped to the range [0, 1].\n\nNote: The function does not modify any global or class variables and does not have any side effects other than the print statement for the 'normal' noise type.\n\nExample usage:\n    noisy_image = add_noise(image_tensor, 'normal', 0.1)"
+        },
+        {
+            "script": "classification/run_exps/run_baseline_mnist.py",
+            "name": "train",
+            "line_start": 129,
+            "line_end": 161,
+            "description": "Trains a given model using provided data loader with specified training settings.\n\n:param model: The neural network model to train.\n:param train_loader: An iterable over the training data that yields batches of input data and target labels.\n:param name: The name of the model to determine the optimizer used. Defaults to 'lenet'.\n\n:modifies model: The function performs in-place training on the passed model, including updating its weights and biases.\n\n:effects: \n  - Sets the model in training mode by calling `model.train()`.\n  - Prints the current epoch and the training loss for each epoch.\n\n:return: The trained model after completing the specified number of training epochs.\n\nAdditional Details:\n- Two optimizers are used depending on the model name:\n  - 'lenet': uses the Stochastic Gradient Descent (SGD) optimizer with momentum of 0.9, learning rate (lr) of 0.05, and weight decay of 0.0001.\n  - 'mlp': uses the Adam optimizer with a learning rate (lr) of 0.0001 and weight decay of 0.0001.\n- The training uses Cross-Entropy Loss for the loss computation.\n- A learning rate scheduler, specifically the CosineAnnealingLR scheduler, is applied to adjust the learning rate across epochs.\n- The function assumes CUDA is available for GPU acceleration, as tensors are moved to CUDA (`X.cuda()`, `y.cuda()`).\n- Assumes that the dataset loaded by `train_loader` is already preprocessed and is compatible with the model input format.\n- Training is conducted for a fixed number of epochs, set to 5 in this implementation."
+        },
+        {
+            "script": "classification/run_exps/run_baseline_mnist.py",
+            "name": "test",
+            "line_start": 163,
+            "line_end": 175,
+            "description": "Evaluates the accuracy of a model on a provided dataset.\n\n:param model: The neural network model to be evaluated. The model should have an 'eval' method that sets it to evaluation mode.\n:param test_loader: An iterable data loader that provides batches of data in the form of (X, y), where X is the input data and y are the corresponding labels.\n:param eps: The epsilon value for adding noise to input data. When 'eps' is not 0, 'add_noise' function is called to perturb the input data with noise of a specified type and magnitude. Default value is 0, meaning no noise is added.\n:modifies model: Calls the 'eval' method of 'model', changing its state to evaluation mode. This often affects layers like dropout and batch normalization.\n:effects: \n    - Calls the 'cuda' method on input data `X` and labels `y` to move them to the GPU, which is required for model evaluation in PyTorch when using CUDA.\n    - Prints the accuracy of the model on the test set in percentage format.\n:return: Does not return any value. The accuracy is printed directly within the function.\n\nNote: This docstring assumes that 'add_noise', 'torch', and 'args' are available in the scope where the function 'test' is defined, and that 'args.type' specifies the type of noise to be added (which is not clear from the given function definition)."
+        }
+    ]
+}

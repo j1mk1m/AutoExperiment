@@ -329,7 +329,7 @@ class ResearchAgent(Agent):
 
                     try:
                         entries = self.parse_entries(completion, self.valid_format_entries)
-                        #assert entries["Action"].strip() in self.all_tool_names
+                        assert entries["Action"].strip() in self.all_tool_names
                         #assert "Action Input" in entries.keys()
                         valid_response = True
                     except:

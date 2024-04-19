@@ -3,9 +3,12 @@ import os
 import sys
 this_path = os.path.dirname(__file__)
 sys.path.append(".")
+
+# Agents
 from dataset.run_refsol import run_refsol
 from agents.MLAgentBench.run import run_MLAgentBench
 from agents.AutoAgent.run import run_AutoAgent
+from agents.BasicPromptAgent.run import run_BasicPromptAgent
 
 def parse_output(res):
     # parse result to extract numerical value
@@ -24,11 +27,10 @@ def parse_output(res):
         print("Could not convert to float, returning 0.0")
         return 0.0
 
-def run_agent(agent="MLAgentBench", path="../workspace", verbose=False, model="gpt-3.5-turbo-1106", tags="", **kwargs):
+def run_agent(agent="MLAgentBench", path="../workspace", model="gpt-3.5-turbo-1106", tags="", **kwargs):
     dirs = path.split(os.sep)
-    mode, paper_id, exp_id = dirs[-3], dirs[-2], dirs[-1]
-    if verbose:
-        print(f"Running {agent} with {mode} on paper {paper_id} experiment {exp_id}")
+    combined_id, mode = dirs[-2], dirs[-1][:2]
+    paper_id, exp_id = combined_id.split("_")
 
     if agent=="MLAgentBench":
         res = run_MLAgentBench(paper_id, exp_id, mode, path, model, **kwargs)

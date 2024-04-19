@@ -17,14 +17,15 @@ class AutoExperimentDataset():
                 if self.mode == "FC":
                     self.dataset.append((row, 0, []))
                 else:
-                    with open(os.path.join(this_dir, row["experiment_id"], "functions.json"), 'r') as file:
+                    with open(os.path.join(this_dir, row["paper_id"], "functions.json"), 'r') as file:
                         contents = json.loads(file.read())
                         self.functions = contents["functions"]
                     if self.mode == "NC":
                         self.dataset.append((row, 0, self.functions))
-                    else: # mode == PC
-                        for i in range(len(self.functions)):
-                            self.dataset.append((row, i, [self.functions[i]]))
+                    else: # mode == PC, for now just one function blocked
+                        self.dataset.append((row, 0, [self.functions[0]]))
+                        #for i in range(len(self.functions)):
+                        #    self.dataset.append((row, i, [self.functions[i]]))
 
     def __len__(self):
         return len(self.dataset)
@@ -32,46 +33,35 @@ class AutoExperimentDataset():
     def __getitem__(self, idx):
         exp, index, func_to_block = self.dataset[idx]
         paper_id, exp_id = exp["paper_id"], exp["exp_id"]
-        loader = ExperimentLoader(self.mode, self.workspace, exp, self.v, func_to_block, index)
-        if self.v:
-            print(f"EXPERIMENT {idx}\nPaperID {paper_id} / Sub-experiment ID {exp_id}")
-        return loader.get()
+        combined_id = f"{paper_id}_{exp_id}_{index}"
+        if self.v: print(f"EXPERIMENT {idx}\nID {combined_id} : PaperID {paper_id} / Sub-experiment ID {exp_id}")
+        return self.get_input_dict(), exp["result"]
 
     def get_item_by_id(self, combined_id):
         paper_id, exp_id = combined_id.split("_")
-        for experiment, index, func_to_block in self.dataset:
+        for idx in range(len(self.dataset)):
+            experiment, _, _ = self.dataset[idx]
             if experiment["paper_id"] == paper_id and experiment["exp_id"] == exp_id:
-                loader = ExperimentLoader(self.mode, self.workspace, experiment, self.v, func_to_block, index)
-                return loader.get()
+                return self.__getitem__(idx)
         return None
 
     def get_conda_env_by_id(self, combined_id):
         paper_id, _ = combined_id.split("_")
-        for experiment in self.dataset:
+        for experiment, _, _ in self.dataset:
             if experiment["paper_id"] == paper_id:
                 return experiment["environment"]
             
-    def remove_workspace(self, path):
+    def remove_workspace(self, X):
+        path = X["path"]
         shutil.rmtree(path)
         print(f"Successfully deleted workspace {path}")
-
-class ExperimentLoader:
-    def __init__(self, mode, workspace, experiment, verbose=False, function_to_block=[], index=0):
-        self.mode = mode
-        self.experiment = experiment
-        self.dataset_dir = this_dir
-        self.workspace = workspace 
-        self.v = verbose
-        self.function_to_block = function_to_block 
-        self.index = index
-
-    def get(self):
+    
+    def get_input_dict(self):
         workspace_dir = self.prepare_workspace()
         self.generate_ref_sol(workspace_dir)
-        return workspace_dir, float(self.experiment["result"])
 
-    """ If ref_sol is included for this experiment, create ref_sol bash file """
     def generate_ref_sol(self, path):
+        """ If ref_sol is included for this experiment, create ref_sol bash file """
         combined_id = self.experiment["paper_id"] + "_" + self.experiment["exp_id"]
         if os.path.isfile(os.path.join(this_dir, "refsols", combined_id + ".sh")) or "ref_sol" not in self.experiment:
             return
@@ -79,8 +69,8 @@ class ExperimentLoader:
             bash_file.write(f"cd {os.path.join(path, 'code')}\n")
             bash_file.write(self.experiment["ref_sol"])
 
-    """ Set up workspace directory for paper_id, exp_id and returns path to workspace """
     def prepare_workspace(self):
+        """ Set up workspace directory for paper_id, exp_id and returns path to workspace """
         paper_id, exp_id = self.experiment["paper_id"], self.experiment["exp_id"]
         combined_id = paper_id + "_" + exp_id
         paper_dir = os.path.join(this_dir, paper_id)
@@ -116,27 +106,26 @@ class ExperimentLoader:
         return workspace_dir
 
     def remove_function(self, workspace_code_dir, function):
-        before = []
-        after = []
-        found = False
-        exited = False
-        num_tabs = None
+        """Remove given function from repository and replace with NotImplementedError"""
         with open(os.path.join(workspace_code_dir, function["script"]), 'r') as file:
             lines = file.readlines()
-            for line in lines:
-                if line.startswith("def " + function["name"]):
-                    before.append(line)
-                    found = True
-                elif found:
-                    if line.startswith("def "):
-                        exited = True
-                    elif num_tabs is None:
-                        num_tabs = line.count("\t")
-                    if exited:
-                        after.append(line)
-                else:
-                    before.append(line)
-        middle = ['"""'] + function["description"].split("\n") + ['"""', "raise NotImplementedError()"] 
-        middle = [num_tabs * '\t' + line for line in middle]
+        line = lines[function["line_start"]-1]
+        num_space = 0
+        while line[num_space].isspace():
+            num_space += 1
+        num_space = num_space + 4
+        middle = ['"""'] + function["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
+        middle = [num_space * ' ' + line + "\n" for line in middle]
+        content = lines[:function["line_start"]] + middle + lines[function["line_end"]+1:]
         with open(os.path.join(workspace_code_dir, function["script"]), 'w') as file:
-            file.writelines(before + middle + after)
+            file.writelines(content)
+
+    def get_meta_data(self):
+        meta = {
+            "experiment_description": self.experiment["description"]}
+        if "refsol" in self.mode:
+            if "refsol" in self.experiment:
+                meta["refsol"] = self.experiment["refsol"]
+            else:
+                meta["refsol"] = "No reference script provided in dataset"
+        return meta

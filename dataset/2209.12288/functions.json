@@ -1,0 +1,18 @@
+{
+    "functions": [
+        {
+            "script": "1_generate_data.py",
+            "name": "generateLP",
+            "line_start": 33,
+            "line_end": 94,
+            "description": "Generates and saves a specified number of linear programming (LP) instances to CSV files within a designated folder.\n\n:param k_data: The number of LP instances to generate.\n:param configs: Tuple (m, n, nnz, prob_equal) representing configurations for each LP instance where:\n                m is the number of constraints,\n                n is the number of variables,\n                nnz is the number of non-zero entries in the constraint matrix,\n                prob_equal is the probability that a constraint is an equality constraint.\n:param folder: The folder path as a string where the LP instances should be saved.\n\n:effects: Creates new directories within the specified folder for each LP instance and\n          saves several CSV files for each instance containing different LP attributes such as:\n          'ConFeatures.csv' (constraint coefficients and types),\n          'EdgeFeatures.csv' (non-zero entries of the constraint matrix),\n          'EdgeIndices.csv' (indices of non-zero entries of the constraint matrix),\n          'VarFeatures.csv' (objective function coefficients and variable bounds),\n          'Labels_feas.csv' (feasibility status of the LP),\n          'Labels_obj.csv' (objective value if the LP is feasible), and\n          'Labels_solu.csv' (solution vector if the LP is feasible).\n          Additionally, prints progress updates to console for every 100 instances generated.\n\n:modifies: No global or class variables are modified.\n\n:return: None. The function's primary purpose is to generate files and does not return any values."
+        },
+        {
+            "script": "2_training.py",
+            "name": "process",
+            "line_start": 19,
+            "line_end": 41,
+            "description": "Trains a model using gradient descent and evaluates it against a dataloader.\n\n:param model: The machine learning model to be trained and evaluated.\n:param dataloader: A tuple containing data (c, ei, ev, v, n_cs, n_vs, n_csm, n_vsm, cand_scores)\n                   used for both training and evaluation.\n:param optimizer: The optimization algorithm used to update the model's weights.\n:param type: The type of evaluation to perform. 'fea' indicates feature-based evaluation.\n             The default is 'fea'.\n\n:modifies model.variables: Updates the model's weights based on the calculated gradients from the loss function.\n:modifies optimizer: Applies gradients to optimize the model's variables.\n\n:effects: - Uses TensorFlow's GradientTape to record operations for automatic differentiation.\n          - Calculates mean squared error as a loss function.\n          - Applies gradients to update the model's weights.\n          - Computes additional error metrics if `type` is 'fea'.\n\n:return: A tuple containing the following:\n         - return_loss (float): The mean squared error loss after training.\n         - errs (int or None): The total number of feature-based classification errors if `type` is 'fea', otherwise None.\n         - err_rate (float or None): The rate of feature-based classification errors if `type` is 'fea', otherwise None."
+        }
+    ]
+}
