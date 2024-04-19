@@ -60,8 +60,8 @@ def generate_code_comments(paper_id):
     for func in contents["functions"]:
         print(f"Generating comments for {func['name']}")
         with open(os.path.join(this_dir, paper_id, "code", func["script"]), 'r') as file:
-            code = file.read()
-        code = "def " + func["name"] + code.split("def " + func["name"])[1].split("def ")[0]
+            lines = file.readlines()
+        code = "\n".join(lines[func["line_start"]-1:func["line_end"]])
         message = SCRIPT.format(code=code)
         response = call_openai([{"role": "user", "content": message}], None, "gpt-4-1106-preview")
         print(response.content)
@@ -69,4 +69,6 @@ def generate_code_comments(paper_id):
     with open(os.path.join(this_dir, paper_id, "functions.json"), 'w') as file:
         json.dump(contents, file, indent=4)
 
-generate_code_comments("0000.00000")
+papers = ["2210.07562", "2209.15486"]
+for paper in papers:
+    generate_code_comments(paper)

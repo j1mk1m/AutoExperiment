@@ -11,7 +11,7 @@ from agents.MLAgentBench.MLAgentBench.runner import main
 
 def prepare_MLAgentBench(paper_id, exp_id, mode, source):
     # Pipeline for MLAgentBench
-    mla_dir = this_path    
+    mla_dir = this_path 
     prompt_file = os.path.join(mla_dir, "prompts", f"prompt_{mode}.txt")
     benchmark_dir = os.path.join(mla_dir, "MLAgentBench", "benchmarks", f"{paper_id}_{exp_id}")
     if os.path.exists(benchmark_dir):
