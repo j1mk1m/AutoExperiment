@@ -8,15 +8,17 @@ this_dir = os.path.dirname(__file__)
 sys.path.append(this_dir)
 
 from llm import call_llm
+from prompts import edit_func_prompt
 
 class Environment:
-    def __init__(self, paper_id, exp_id, mode, source, model, **kwargs) -> None:
-        self.paper_id = paper_id
-        self.exp_id = exp_id
-        self.mode = mode
-        self.source = source
+    def __init__(self, X, model, **kwargs) -> None:
+        self.X = X
+        self.paper_id = X["paper_id"]
+        self.exp_id = X["exp_id"]
+        self.mode = X["mode"]
+        self.source = X["path"]
         self.model = model
-        self.setup_workspace(source)
+        self.setup_workspace(self.source)
         self.cur_dir = self.workspace_root
         self.action_to_function_mapper = {
             "final_answer": self.final_answer,
@@ -30,7 +32,9 @@ class Environment:
             "change_directory": self.change_directory,
             "execute_python_script": self.execute_python_script,
             "execute_bash_script": self.execute_bash_script,
-            "command_line": self.command_line
+            "command_line": self.command_line,
+            "edit_missing_function": self.edit_missing_function,
+            "run_experiment": self.run_experiment
         }
 
     def setup_workspace(self, source):
@@ -142,8 +146,12 @@ class Environment:
         completion = call_llm([{"role": "system", "content": prompt}], None, self.model).content
 
         new_content = completion.strip()
+        if "```python" in new_content:
+            new_content = new_content.split("```python")[1].split("```")[0].strip()
+        if "```bash" in new_content:
+            new_content = new_content.split("```bash")[1].split("```")[0].strip()
         if "```" in new_content:
-            new_content = new_content.split("```")[1].strip()
+            new_content = new_content.split("```")[1]
 
         if save_name is None: save_name = file_name
         self.write_file(save_name, new_content)
@@ -152,6 +160,54 @@ class Environment:
         diff = "".join(diff)
 
         return f"The edited file is saved to {save_name}. Here is the diff, please check if the edit is correct and desirable:\n\n" + diff
+    
+    def edit_missing_function(self, instruction, **kwargs):
+        func_removed = self.X["func_to_block"]
+        description = self.X["experiment_description"]
+
+        # extract code
+        file_name = func_removed["script"]
+        func_name = func_removed["name"]
+        line_start, line_end = func_removed["line_start"], func_removed["line_end"]
+
+        with open(os.path.join(self.source, "code", file_name), 'r') as file:
+            contents = file.readlines()
+        
+        # Prompt LLM to complete code
+        prompt = edit_func_prompt.format(file_name=file_name, contents="".join(contents), func_name=func_name, line=line_start, instruction=instruction)
+        response = call_llm([{"role": "user", "content": prompt}], None, self.model)
+
+        func_content = response.content
+        func_content = func_content.split("```python\n")[1].split("```")[0] 
+        func_content = func_content.split("\n")
+
+        n = 0
+        while contents[line_start-1][n].isspace():
+            n += 1
+
+        m = 0
+        while func_content[0][m].isspace():
+            m += 1
+
+        if n == m:
+            middle = [line + "\n" for line in func_content[1:]]
+        else:
+            n = n - m  # shift
+            middle = [" " * n + line + "\n" for line in func_content[1:]]
+        
+        # Write generated code into file
+        new_contents = contents[:line_start] + middle + contents[line_end:]
+
+        self.X["line_end"] = line_start + len(middle)
+
+        with open(os.path.join(self.source, "code", file_name), 'w') as write_file:
+            write_file.writelines(new_contents)
+
+        func_content = "\n".join(func_content)
+        return f"Edited function with new content: {func_content}"
+    
+    def run_experiment(self, **kwargs):
+        return self.command_line(f"bash -u refsol.sh", root_dir=self.workspace_root)
 
     # Execution
     def execute_python_script(self, file_name, arguments="", **kwargs):
@@ -166,10 +222,10 @@ class Environment:
             return f"The file {file_name} does not exist. Tip: use the file's relative path or change the directory."
         return self.command_line(f"bash -u {file_name} {arguments}")
 
-    def command_line(self, command, **kwargs):
+    def command_line(self, command, root_dir=None, **kwargs):
         command = command.strip()
         try:
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=self.cur_dir)
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=root_dir if root_dir else self.cur_dir)
 
             stdout_lines = []
             stderr_lines = []
@@ -227,6 +283,7 @@ class Environment:
             return self.command_line(f"ls -F {os.path.abspath(os.path.join(self.cur_dir, directory))}")
         except Exception as e:
             return f"Cannot list files due to {e}"            
+
     def move(self, source, destination, *kwargs):
         try:
             return self.command_line(f"mv {os.path.abspath(os.path.join(self.cur_dir, source))} {os.path.abspath(os.path.join(self.cur_dir, destination))}")

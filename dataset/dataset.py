@@ -4,128 +4,117 @@ import csv
 import json
 this_dir = os.path.dirname(__file__)
 
-class AutoExperimentDataset():
-    def __init__(self, mode, experiment_csv="experiments-light.csv", workspace="../workspace", verbose=False):
-        self.mode = mode
-        self.workspace = workspace
-        self.v = verbose
-
-        self.dataset = []
-        with open(os.path.join(this_dir, "experiment_csvs", experiment_csv), "r") as exp_file:
-            reader = csv.DictReader(exp_file)
-            for row in reader:
-                if self.mode == "FC":
-                    self.dataset.append((row, 0, []))
-                else:
+def get_datapoint(mode, combined_id, experiment_csv="experiments-light.csv", index=0, workspace="workspace", verbose=False):
+    """ Parse experiment_csv and gather experiment information """
+    paper_id, exp_id = combined_id.split("_")
+    experiment = None
+    func_to_block = None
+    with open(os.path.join(this_dir, "experiment_csvs", experiment_csv), "r") as exp_file:
+        reader = csv.DictReader(exp_file)
+        for row in reader:
+            if (row["paper_id"] == paper_id and row["exp_id"] == exp_id) or row["combined_id"] == combined_id:
+                experiment = row
+                if "PC" in mode: 
                     with open(os.path.join(this_dir, row["paper_id"], "functions.json"), 'r') as file:
                         contents = json.loads(file.read())
-                        self.functions = contents["functions"]
-                    if self.mode == "NC":
-                        self.dataset.append((row, 0, self.functions))
-                    else: # mode == PC, for now just one function blocked
-                        self.dataset.append((row, 0, [self.functions[0]]))
-                        #for i in range(len(self.functions)):
-                        #    self.dataset.append((row, i, [self.functions[i]]))
+                        func_to_block = contents["functions"][index]
 
-    def __len__(self):
-        return len(self.dataset)
+    workspace_dir, new_end_line = prepare_workspace(mode, experiment, index, func_to_block, workspace, verbose)
+    if new_end_line:
+        func_to_block["line_end"] = new_end_line
 
-    def __getitem__(self, idx):
-        exp, index, func_to_block = self.dataset[idx]
-        paper_id, exp_id = exp["paper_id"], exp["exp_id"]
-        combined_id = f"{paper_id}_{exp_id}_{index}"
-        if self.v: print(f"EXPERIMENT {idx}\nID {combined_id} : PaperID {paper_id} / Sub-experiment ID {exp_id}")
-        return self.get_input_dict(), exp["result"]
+    X = {
+        "mode": mode, # meta
+        "combined_id": combined_id, # meta
+        "paper_id": paper_id, # meta
+        "exp_id": exp_id, # meta
+        "index": index, # meta
+        "environment": experiment["environment"] if "environment" in experiment else "None", # meta
+        "path": workspace_dir, # path to directory containing code, paper.txt, etc
+        "experiment_description": experiment["description"], # experiment description
+        "func_to_block": func_to_block, # missing function in Partial Code setting
+    } 
 
-    def get_item_by_id(self, combined_id):
-        paper_id, exp_id = combined_id.split("_")
-        for idx in range(len(self.dataset)):
-            experiment, _, _ = self.dataset[idx]
-            if experiment["paper_id"] == paper_id and experiment["exp_id"] == exp_id:
-                return self.__getitem__(idx)
-        return None
-
-    def get_conda_env_by_id(self, combined_id):
-        paper_id, _ = combined_id.split("_")
-        for experiment, _, _ in self.dataset:
-            if experiment["paper_id"] == paper_id:
-                return experiment["environment"]
-            
-    def remove_workspace(self, X):
-        path = X["path"]
-        shutil.rmtree(path)
-        print(f"Successfully deleted workspace {path}")
+    # Create refsol.sh if needed
+    if "refsol" in mode:
+        refsol = create_ref_sol(experiment, workspace_dir)
+        X["refsol"] = refsol
     
-    def get_input_dict(self):
-        workspace_dir = self.prepare_workspace()
-        self.generate_ref_sol(workspace_dir)
+    return X, float(experiment["result"])
+    
+def prepare_workspace(mode, experiment, index, func_to_block, workspace, verbose):
+    """ Set up workspace directory for paper_id, exp_id and returns path to workspace """
+    combined_id, paper_id = experiment["combined_id"], experiment["paper_id"]
+    paper_dir = os.path.join(this_dir, paper_id)
+    workspace_dir = os.path.join(workspace, combined_id, f"{mode}_{index}" if "PC" in mode else mode)
+    if os.path.exists(workspace_dir): 
+        if verbose: print(f"Using cached workspace {workspace_dir}")
+        return workspace_dir, None
+    os.makedirs(workspace_dir)
 
-    def generate_ref_sol(self, path):
-        """ If ref_sol is included for this experiment, create ref_sol bash file """
-        combined_id = self.experiment["paper_id"] + "_" + self.experiment["exp_id"]
-        if os.path.isfile(os.path.join(this_dir, "refsols", combined_id + ".sh")) or "ref_sol" not in self.experiment:
-            return
-        with open(os.path.join(this_dir, "refsols", combined_id + ".sh"), "w") as bash_file:
-            bash_file.write(f"cd {os.path.join(path, 'code')}\n")
-            bash_file.write(self.experiment["ref_sol"])
+    # Copy paper.txt
+    shutil.copyfile(os.path.join(paper_dir, "paper.txt"), os.path.join(workspace_dir, "paper.txt"))
 
-    def prepare_workspace(self):
-        """ Set up workspace directory for paper_id, exp_id and returns path to workspace """
-        paper_id, exp_id = self.experiment["paper_id"], self.experiment["exp_id"]
-        combined_id = paper_id + "_" + exp_id
-        paper_dir = os.path.join(this_dir, paper_id)
-        workspace_dir = os.path.join(self.workspace, combined_id, f"{self.mode}_{self.index}" if self.mode == "PC" else self.mode)
-        if os.path.exists(workspace_dir): 
-            if self.v: print(f"Using cached workspace {workspace_dir}")
-            return workspace_dir
-        os.makedirs(workspace_dir)
+    # Create experiment.txt
+    with open(os.path.join(workspace_dir, "experiment.txt"), 'w') as exp_file:
+        exp_file.write(experiment["description"])
 
-        # Copy environment.yml
-        shutil.copyfile(os.path.join(paper_dir, "environment.yml"), os.path.join(workspace_dir, "environment.yml"))
+    # Set up code directory in specified mode
+    source_code_dir = os.path.join(paper_dir, "code")
+    workspace_code_dir = os.path.join(workspace_dir, "code")
+    
+    new_end_line = None
+    if "FC" in mode:
+        shutil.copytree(source_code_dir, workspace_code_dir)
+    elif "PC" in mode: # Partial Code setting
+        shutil.copytree(source_code_dir, workspace_code_dir)
+        new_end_line = remove_function(workspace_code_dir, func_to_block)
+    else:
+        raise NotImplementedError()
+        
+    if verbose: print(f"Workspace {workspace_dir} prepared")
+    return workspace_dir, new_end_line
 
-        # Copy paper.txt
-        shutil.copyfile(os.path.join(paper_dir, "paper.txt"), os.path.join(workspace_dir, "paper.txt"))
+def remove_function(workspace_code_dir, function):
+    """Remove given function from repository and replace with NotImplementedError"""
+    with open(os.path.join(workspace_code_dir, function["script"]), 'r') as file:
+        lines = file.readlines()
+    line = lines[function["line_start"]-1]
+    num_space = 0
+    while line[num_space].isspace():
+        num_space += 1
+    num_space = num_space + 4
+    middle = ['"""'] + function["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
+    middle = [num_space * ' ' + line + "\n" for line in middle]
+    content = lines[:function["line_start"]] + middle + lines[function["line_end"]+1:]
+    with open(os.path.join(workspace_code_dir, function["script"]), 'w') as file:
+        file.writelines(content)
+    return function["line_start"] + len(middle)
 
-        # Create experiment.txt
-        with open(os.path.join(workspace_dir, "experiment.txt"), 'w') as exp_file:
-            exp_file.write(self.experiment["description"])
+def create_ref_sol(experiment, workspace):
+    """ If ref_sol is included for this experiment, create refsol bash file """
+    if "refsol" in experiment:
+        if os.path.exists(os.path.join(workspace, "refsol.sh")):
+            return experiment["refsol"]
+        with open(os.path.join(workspace, "refsol.sh"), "w") as bash_file:
+            bash_file.write("cd code\n")
+            bash_file.write(experiment["refsol"])
+        return experiment["refsol"]
+    return "No reference solution found"
 
-        # Set up code directory in specified mode
-        source_code_dir = os.path.join(paper_dir, "code")
-        workspace_code_dir = os.path.join(workspace_dir, "code")
-        if self.mode == "FC":
-            shutil.copytree(source_code_dir, workspace_code_dir)
-        elif self.mode == "NC":
-            os.mkdirs(workspace_code_dir)
-        elif self.mode == "PC":
-            shutil.copytree(source_code_dir, workspace_code_dir)
-            for func in self.function_to_block:
-                self.remove_function(workspace_code_dir, func)
+""" Util functions """
+def get_conda_env_by_id(combined_id, experiment_csv="experiments-light.csv"):
+    paper_id, _ = combined_id.split("_")
+    with open(os.path.join(this_dir, "experiment_csvs", experiment_csv), "r") as exp_file:
+        reader = csv.DictReader(exp_file)
+        for row in reader:
+            if row["paper_id"] == paper_id:
+                return row["environment"]
+
+def get_yml_by_id(combined_id):
+    paper_id = combined_id.split("_")[0]
+    return os.path.join(this_dir, paper_id)
             
-        if self.v: print(f"Workspace {workspace_dir} prepared")
-        return workspace_dir
-
-    def remove_function(self, workspace_code_dir, function):
-        """Remove given function from repository and replace with NotImplementedError"""
-        with open(os.path.join(workspace_code_dir, function["script"]), 'r') as file:
-            lines = file.readlines()
-        line = lines[function["line_start"]-1]
-        num_space = 0
-        while line[num_space].isspace():
-            num_space += 1
-        num_space = num_space + 4
-        middle = ['"""'] + function["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
-        middle = [num_space * ' ' + line + "\n" for line in middle]
-        content = lines[:function["line_start"]] + middle + lines[function["line_end"]+1:]
-        with open(os.path.join(workspace_code_dir, function["script"]), 'w') as file:
-            file.writelines(content)
-
-    def get_meta_data(self):
-        meta = {
-            "experiment_description": self.experiment["description"]}
-        if "refsol" in self.mode:
-            if "refsol" in self.experiment:
-                meta["refsol"] = self.experiment["refsol"]
-            else:
-                meta["refsol"] = "No reference script provided in dataset"
-        return meta
+def remove_workspace(path):
+    shutil.rmtree(path)
+    print(f"Successfully deleted workspace {path}")

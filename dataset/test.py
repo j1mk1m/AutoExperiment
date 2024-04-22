@@ -1,6 +1,7 @@
-from dataset import AutoExperimentDataset
+from dataset import get_datapoint
+import os
+this_path = os.path.dirname(__file__)
 
-dataset = AutoExperimentDataset("PC")
+X, y = get_datapoint("PC+refsol", "0000.00000_0", workspace=os.path.join(this_path, "../", "workspace"), verbose=True)
 
-res = dataset[1]
-print(res)
+print(X)

@@ -40,7 +40,8 @@ def run(agent_cls, args):
         return final_message
 
 
-def main(combined_id, model):
+def main(X, model):
+    combined_id = X["combined_id"]
     with open(os.path.join(this_dir, "config.yml"), "r") as yml_file:
         args = yaml.safe_load(yml_file)["parameters"]
 
@@ -49,13 +50,7 @@ def main(combined_id, model):
     args.work_dir = os.path.join(this_dir, args.work_dir)
     args.task = combined_id
     print(args, file=sys.stderr)
-    if args.no_retrieval or args.agent_type != "ResearchAgent":
-        # should not use these actions when there is no retrieval
-        args.actions_remove_from_prompt.extend(["Retrieval from Research Log", "Append Summary to Research Log", "Reflection"])
     LLM.FAST_MODEL = args.fast_llm_name
     args.llm_name = model
     return run(getattr(sys.modules[__name__], args.agent_type), args)
     
-if __name__=="__main__":
-    combined_id = sys.argv[1]
-    main(combined_id)

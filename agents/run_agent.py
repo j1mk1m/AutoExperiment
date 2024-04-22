@@ -27,30 +27,17 @@ def parse_output(res):
         print("Could not convert to float, returning 0.0")
         return 0.0
 
-def run_agent(agent="MLAgentBench", path="../workspace", model="gpt-3.5-turbo-1106", tags="", **kwargs):
-    dirs = path.split(os.sep)
-    combined_id, mode = dirs[-2], dirs[-1][:2]
-    paper_id, exp_id = combined_id.split("_")
-
+def run_agent(agent="MLAgentBench", X=None, model="gpt-3.5-turbo-1106", tags="", **kwargs):
     if agent=="MLAgentBench":
-        res = run_MLAgentBench(paper_id, exp_id, mode, path, model, **kwargs)
+        res = run_MLAgentBench(X, model, **kwargs)
     elif agent=="refsol":
-        res = run_refsol(paper_id, exp_id, mode, path)
+        res = run_refsol(X)
     elif agent=="AutoAgent":
-        res = run_AutoAgent(paper_id, exp_id, mode, path, model, tags, **kwargs)
+        res = run_AutoAgent(X, model, tags, **kwargs)
+    elif agent=="BasicPromptAgent":
+        res = run_BasicPromptAgent(X, model, tags, **kwargs)
     else:
         print(f"Agent {agent} not supported, returning 0.0")
         return 0.0
 
     return parse_output(res)
-    
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--agent", type=str, default="MLAgentBench", help="baseline")
-    parser.add_argument("--source", type=str, default="../workspace", help="path to source directory")
-    parser.add_argument("--verbose", action="store_true")
-    args = parser.parse_args()
-    
-    run_agent(args.agent, args.source, args.verbose)
-
-
