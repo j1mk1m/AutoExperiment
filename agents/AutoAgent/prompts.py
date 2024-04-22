@@ -1,16 +1,25 @@
-base_prompt = """
+# BASE PROMPTS
+base_prompt_FC = """
 You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by executing the scripts given. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
 Here is the exact experiment:
+{experiment}
 """
 
 base_prompt_PC = """
-You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains some code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by adding missing code and executing code to get experiment results. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
+You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains some code that implements the experiments done in the paper and the environment is already set up. There is one function that is NotImplemented. Given this, you are tasked to perform a specific experiment by adding missing code and executing code to get experiment results. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
 Here is the exact experiment:
+{experiment}
+
+The missing function {func_name} is in file {file_name}
 """
 
 base_prompt_NC = """
 You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory contains utility files and dataset. Also, some code structure is given and the environment is already set up. Given this, you are tasked to perform a specific experiment by writing necessary code following the structure of functions given and executing code to get experiment results. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
 Here is the exact experiment:
+"""
+
+refsol_prompt = """
+You can run the experiment by calling function 'run_experiment'
 """
 
 rp_prompt = """
@@ -23,16 +32,45 @@ Tip:
 - final answer should be obtained only by executing scripts
 """
 
-repeat_prompt = """
+rp_prompt_refsol = """
+The current research plan is {plan}.
+Generate a new research plan with current status and confirmed results of each step briefly annotated.
+Tip:
+- you can fill in the missing function by calling 'edit_missing_function'
+- you can run the experiment by calling function 'run_experiment'
+"""
+
+tc_prompt_FC = """
 Again, you are a research assistant tasked with running this experiment:
 {experiment}
 
+Pick a tool call.
 Tips: 
 - prefer command line arguments over editing constants in scripts
 - avoid editing files unless necessary
 - do not repeat the same action unnecessarily
 """
 
+tc_prompt_PC = """
+Again, you are a research assistant tasked with running this experiment:
+{experiment}
+The code contains an unimplemented function {func_name} in file {file_name}.
+Pick a tool call.
+"""
+
+edit_func_prompt = """
+Given the following code, fill out the missing function.
+
+File: {file_name}
+```
+{contents}
+```
+
+Fill out contents of function {func_name} at line {line}.
+Instruction: {instruction}
+"""
+
+# TOOL CALLS
 tool_prompt = [
     {
         "type": "function",
@@ -121,7 +159,7 @@ tool_prompt = [
                 }
             },
         }
-    },
+    }, 
     {
         "type": "function",
         "function": {
@@ -258,4 +296,33 @@ tool_prompt = [
             },
         }
     },
+]
+
+pc_tool = [
+    {
+        "type": "function",
+        "function": {
+            "name": "edit_missing_function",
+            "description": "Use this to edit the NotImplemented function",
+            "required": ["instruction"],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "instruction": {
+                        "type": "string",
+                        "description": "Instructions on how to fill out the missing function"
+                    },
+                }
+            },
+        }
+    },
+]
+refsol_tool = [
+    {
+        "type": "function",
+        "function": {
+            "name": "run_experiment",
+            "description": "runs given experiment"
+        }
+    }
 ]

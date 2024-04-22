@@ -21,4 +21,3 @@ parameters:
   edit_script_llm_max_tokens: 4000
   actions_remove_from_prompt: []
   actions_add_to_prompt: []
-  no_retrieval: False

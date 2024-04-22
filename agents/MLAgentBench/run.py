@@ -29,10 +29,10 @@ def prepare_MLAgentBench(paper_id, exp_id, mode, source):
     
     return mla_dir 
 
-def run_MLAgentBench(paper_id, exp_id, mode, source, model):
-    # subprocess.run(["pip", "install", "-r", os.path.join(this_path, "MLAgentBench", "requirements.txt")])
-    mla_dir = prepare_MLAgentBench(paper_id, exp_id, mode, source)
+def run_MLAgentBench(X, model, **kwargs):
+    paper_id, exp_id, combined_id, mode, path = X["paper_id"], X["exp_id"], X["combined_id"], X["mode"], X["path"]
+    mla_dir = prepare_MLAgentBench(paper_id, exp_id, mode, path)
     
-    answer = main(f"{paper_id}_{exp_id}", model)
+    answer = main(X, model)
     return answer
 

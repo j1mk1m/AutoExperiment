@@ -8,10 +8,11 @@ sys.path.append(this_path)
 from history import History
 from llm import call_llm 
 
-from prompts import base_prompt, tool_prompt, rp_prompt, repeat_prompt
+from prompts import *
 
 class AutoAgent:
     def __init__(self, env, model, tags, max_steps=50, max_retries=3, **kwargs):
+        # Configurations
         self.env = env
         self.tags = tags
         self.history = History(tags)
@@ -19,10 +20,25 @@ class AutoAgent:
         self.max_steps = max_steps
         self.max_retries = max_retries
         self.research_plan = "None"
-        self.base_prompt = base_prompt + self.env.get_exp_description()
-        self.repeat_prompt = repeat_prompt + self.env.get_exp_description()
+        self.mode = self.env.mode
         self.v = True
-        
+
+        # Prompts
+        self.experiment = self.env.get_exp_description()
+        if "FC" in self.mode:
+            self.base_prompt = base_prompt_FC.format(experiment=self.experiment)
+            self.tc_prompt = tc_prompt_FC.format(experiment=self.experiment)
+        else:
+            self.base_prompt = base_prompt_PC.format(experiment=self.experiment, func_name=self.env.X["func_to_block"]["name"], file_name=self.env.X["func_to_block"]["script"])
+            self.tc_prompt = tc_prompt_PC.format(experiment=self.experiment, func_name=self.env.X["func_to_block"]["name"], file_name=self.env.X["func_to_block"]["script"])
+        self.tools = tool_prompt 
+        if "PC" in self.mode:
+            self.tools += pc_tool
+        if "refsol" in self.mode:
+            self.tools += refsol_tool
+        if self.v: print("Base prompt", self.base_prompt)
+        if self.v: print("Available tools", [tool["function"]["name"] for tool in self.tools])
+            
     def run(self):
         messages = [{"role": "system", "content": self.base_prompt}]
         for i in range(self.max_steps):
@@ -30,7 +46,8 @@ class AutoAgent:
             wandb.log({"step": i})
             
             # 1. Generate Research Plan
-            messages.append({"role": "system", "content": rp_prompt.format(plan=self.research_plan)}) 
+            prompt = rp_prompt.format(plan=self.research_plan) if "refsol" not in self.mode else rp_prompt_refsol.format(plan=self.research_plan) 
+            messages.append({"role": "system", "content": prompt}) 
             new_rp = call_llm(messages, None, self.rp_model).content
             self.research_plan = new_rp
             messages.append({"role": "assistant", "content": new_rp})
@@ -39,10 +56,10 @@ class AutoAgent:
             self.history.append_research_plan(new_rp)
 
             # 2a. Action/Tool Call 
-            messages.append({"role": "system", "content": self.repeat_prompt})
+            messages.append({"role": "system", "content": self.tc_prompt})
             valid = False
             for _ in range(self.max_retries):
-                response = call_llm(messages, tool_prompt, self.tc_model)
+                response = call_llm(messages, self.tools, self.tc_model)
 
                 if response and response.tool_calls and len(response.tool_calls) > 0:
                     valid = True
