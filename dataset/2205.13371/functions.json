@@ -1,0 +1,28 @@
+{
+    "functions": [
+        {
+            "script": "train_vae.py",
+            "name": "train",
+            "line_start": 25,
+            "line_end": 53,
+            "class": "False",
+            "description": "Trains the Variational Autoencoder (VAE) for one epoch and returns the average Evidence Lower BOund (ELBO) over the training dataset.\n\n:param epoch: The current epoch number.\n:param args: An object containing arguments including `device`, `train_samples`, `beta`, `log_interval`, and `n_epochs`.\n:param train_loader: A data loader providing batches of data for the training process.\n:param vae: The Variational Autoencoder model to be trained.\n:param optimizer: The optimizer to use for training the VAE.\n\n:effects: \n- Initializes accumulated variables for tracking ELBO, reconstruction loss, and KL divergence to zero.\n- Iterates over each batch of data provided by `train_loader` and:\n  - Clears the gradients of VAE parameters.\n  - Moves each batch of data to the specified device indicated by `args.device`.\n  - Computes loss, ELBO, reconstruction loss, and KL loss by calling the VAE with the batch of data, the number of training samples per iteration (`args.train_samples`), and the \u03b2-weighting for the KL term (`args.beta`).\n  - Propagates the loss backward, and the optimizer updates the VAE parameters.\n  - Accumulates ELBO, reconstruction loss, and KL loss after each batch.\n- Prints out the epoch number, ELBO, reconstruction loss, and KL divergence to the console if the epoch number meets the logging criteria defined by `args.log_interval` or it is the final epoch as per `args.n_epochs`.\n- Computes the average ELBO, reconstruction loss, and KL divergence per data point after processing all batches.\n\n:return: The average ELBO value per data point over the entire training dataset for the given epoch."
+        },
+        {
+            "script": "train_vae.py",
+            "name": "eval",
+            "line_start": 56,
+            "line_end": 85,
+            "class": "False",
+            "description": "Evaluates the performance of a variational autoencoder (VAE) on a test dataset.\n\n:param epoch: The current epoch of training.\n:param args: An object containing model configuration and parameters such as latent_dim, device, dist (distribution), and test_samples.\n:param test_loader: A DataLoader object that provides batches of test data.\n:param vae: The variational autoencoder model being evaluated.\n:param root_dir: The root directory where logs and model checkpoints will be saved.\n:param test_data: The actual test dataset which can be used for additional evaluations.\n:param eval_fn: A function that takes arguments (args, vae, test_data, means) for performing additional evaluations.\n\n:effects:\n    * Creates a directory for logging within the root directory corresponding to the current epoch.\n    * Prints the Test ELBO, Test Reconstruction Loss, and Test KL Divergence after evaluation.\n    * Saves the state dictionary of the VAE to a file named 'model.pt' in the root directory.\n\n:return: None (but implicitly modifies `vae` to be in evaluation mode and performs file I/O operations)."
+        },
+        {
+            "script": "vae.py",
+            "name": "forward",
+            "line_start": 26,
+            "line_end": 61,
+            "class": "True",
+            "description": "Performs a forward pass through a Variational Autoencoder (VAE) network, computing the loss for optimization and the Evidence Lower Bound (ELBO) for evaluation.\n\n:param x: The input tensor to be reconstructed by the VAE.\n:param n_samples: The number of samples to draw from the variational distribution. Defaults to 1.\n:param beta: The weight given to the KL-divergence part of the loss in the VAE loss function, used for the \u03b2-VAE variant. Defaults to 1.\n\n:modifies encoder_layer: Processes the input x through the encoder_layer of the model to obtain the mean and covariance for the variational distribution.\n:modifies dist: Takes mean and covariance as parameters to define the variational distribution.\n:modifies generate: Uses the sampled latent variable z to generate a reconstructed version of the input.\n\n:effects:\n    - No print statements or output to stdout.\n    - Does not modify any global variables directly, but changes to internal model state may occur during forward pass depending on the implementation of encoder_layer, dist, and generate.\n\n:return: A tuple containing:\n    - loss: a tensor representing the averaged total loss for backpropagation.\n    - elbo: a tensor representing the negative Evidence Lower Bound for evaluation.\n    - z: the latent variable sampled from the variational distribution.\n    - mean: the mean of the variational distribution.\n    - recon_loss: a tensor that represents the reconstruction loss.\n    - kl_loss: a tensor that represents the KL-divergence loss.\n\nNotes:\nThe function assumes that `encoder`, `prior`, and `dist` are attributes of `self` corresponding to the encoder network, the prior distribution, and a distribution class for the variational distribution, respectively. The loss_type attribute of `self` determines whether Binary Cross Entropy ('BCE') or Gaussian Negative Log-Likelihood is used for the reconstruction loss. The final returned loss is a scalar for the minibatch, and the ELBO is also a scalar. The function implicitly assumes that `encoder`, `dist`, `prior`, and `generate` function correctly and that required libraries (such as torch and torch.nn.functional) are properly imported."
+        }
+    ]
+}

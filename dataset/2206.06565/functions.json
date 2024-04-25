@@ -5,6 +5,7 @@
             "name": "add_noise",
             "line_start": 78,
             "line_end": 97,
+            "class": "False",
             "description": "Adds different types of noise to an image tensor and returns the noisy image.\n\n:param img: A tensor representing an image, to which the noise will be added.\n:param noise_type: A string specifying the type of noise to add. Can be 'const', 'unif', 'normal', or 'sign'.\n:param eps: A float representing the noise intensity scale factor. For 'const' noise, it is the noise value added to all pixels.\n\n:modifies: For 'normal' noise type, it prints the maximum absolute value of the noise tensor.\n\n:effects: Depending on the noise type:\n    - 'const': Adds constant noise with value eps to all image pixels.\n    - 'unif': Adds uniform noise within the range [-eps, eps] to all image pixels.\n    - 'normal': Adds Gaussian-like noise, scaled to have a maximum absolute value of eps, to all image pixels.\n    - 'sign': Adds noise of value +eps or -eps to each pixel with equal probability.\n\n:return: A tensor of the same shape as img, representing the image with added noise, clamped to the range [0, 1].\n\nNote: The function does not modify any global or class variables and does not have any side effects other than the print statement for the 'normal' noise type.\n\nExample usage:\n    noisy_image = add_noise(image_tensor, 'normal', 0.1)"
         },
         {
@@ -12,6 +13,7 @@
             "name": "train",
             "line_start": 129,
             "line_end": 161,
+            "class": "False",
             "description": "Trains a given model using provided data loader with specified training settings.\n\n:param model: The neural network model to train.\n:param train_loader: An iterable over the training data that yields batches of input data and target labels.\n:param name: The name of the model to determine the optimizer used. Defaults to 'lenet'.\n\n:modifies model: The function performs in-place training on the passed model, including updating its weights and biases.\n\n:effects: \n  - Sets the model in training mode by calling `model.train()`.\n  - Prints the current epoch and the training loss for each epoch.\n\n:return: The trained model after completing the specified number of training epochs.\n\nAdditional Details:\n- Two optimizers are used depending on the model name:\n  - 'lenet': uses the Stochastic Gradient Descent (SGD) optimizer with momentum of 0.9, learning rate (lr) of 0.05, and weight decay of 0.0001.\n  - 'mlp': uses the Adam optimizer with a learning rate (lr) of 0.0001 and weight decay of 0.0001.\n- The training uses Cross-Entropy Loss for the loss computation.\n- A learning rate scheduler, specifically the CosineAnnealingLR scheduler, is applied to adjust the learning rate across epochs.\n- The function assumes CUDA is available for GPU acceleration, as tensors are moved to CUDA (`X.cuda()`, `y.cuda()`).\n- Assumes that the dataset loaded by `train_loader` is already preprocessed and is compatible with the model input format.\n- Training is conducted for a fixed number of epochs, set to 5 in this implementation."
         },
         {
@@ -19,7 +21,40 @@
             "name": "test",
             "line_start": 163,
             "line_end": 175,
+            "class": "False",
             "description": "Evaluates the accuracy of a model on a provided dataset.\n\n:param model: The neural network model to be evaluated. The model should have an 'eval' method that sets it to evaluation mode.\n:param test_loader: An iterable data loader that provides batches of data in the form of (X, y), where X is the input data and y are the corresponding labels.\n:param eps: The epsilon value for adding noise to input data. When 'eps' is not 0, 'add_noise' function is called to perturb the input data with noise of a specified type and magnitude. Default value is 0, meaning no noise is added.\n:modifies model: Calls the 'eval' method of 'model', changing its state to evaluation mode. This often affects layers like dropout and batch normalization.\n:effects: \n    - Calls the 'cuda' method on input data `X` and labels `y` to move them to the GPU, which is required for model evaluation in PyTorch when using CUDA.\n    - Prints the accuracy of the model on the test set in percentage format.\n:return: Does not return any value. The accuracy is printed directly within the function.\n\nNote: This docstring assumes that 'add_noise', 'torch', and 'args' are available in the scope where the function 'test' is defined, and that 'args.type' specifies the type of noise to be added (which is not clear from the given function definition)."
+        },
+        {
+            "script": "classification/run_exps/run_baseline_mnist.py",
+            "name": "__init__",
+            "line_start": 25,
+            "line_end": 41,
+            "class": "True",
+            "description": "Initializes the LeNet-5 model, which is a convolutional neural network commonly used for image classification tasks.\n\n:param num_classes: The number of classes for the final output layer. Defaults to 10, which is suitable for tasks like MNIST digit classification.\n:modifies layer1: Sets up the first convolutional layer consisting of a convolution operation, batch normalization, ReLU activation, and max pooling.\n:modifies layer2: Sets up the second convolutional layer with the same components as layer1 but different dimensions for convolution and batch normalization.\n:modifies fc: Defines a fully connected (linear) layer with input features flattened to 400 and output features as 120.\n:modifies relu: Sets up the ReLU activation function.\n:modifies fc1: Defines another fully connected layer with input features 120 and output features 84.\n:modifies relu1: Sets up another ReLU activation for the layer following fc1.\n:modifies fc2: Defines the final fully connected layer with input features 84 and output features equal to num_classes, which represents the number of target classes.\n\nThis method is the constructor of the LeNet-5 model class, and it is automatically called when an instance of the class is created. It initializes all the layers and activation functions that constitute the LeNet-5 neural network architecture. Note that 'nn' likely refers to 'torch.nn', PyTorch's neural network library module.\n\n:return: None. Since this is a constructor method (__init__), it does not return a value but initializes the instance variables of the class object."
+        },
+        {
+            "script": "classification/run_exps/run_baseline_mnist.py",
+            "name": "forward",
+            "line_start": 43,
+            "line_end": 53,
+            "class": "True",
+            "description": "Processes the input data `x` through the network layers to return the network output.\n\n:param x: The input data to the network.\n:modifies self.layer1, self.layer2, self.fc, self.relu, self.fc1, self.relu1, self.fc2: Utilizes these attributes of the 'self' object, which are presumably neural network layers (or functions), to process the input data `x`. The precise nature of how these attributes are modified (if at all \u2013 they might just be stateless functions) is not evident from the code snippet provided.\n:effects: The function might have side effects like updating weights during the forward pass in the case of training, or storing some intermediate outputs in the layers. However, these potential effects are not explicit in the code provided and would depend on the implementation details of the layer classes or functions.\n:return: The output of the network, after the input data has been processed by the various layers and activation functions. The output is a tensor reshaped to have the size of the first dimension equals `out.size(0)` and the rest flattened.\n\nNote: The implementation of `layer1`, `layer2`, `fc`, `relu`, `fc1`, `relu1`, and `fc2` methods/functions should be provided to fully understand the behavior and side effects of calling them."
+        },
+        {
+            "script": "classification/run_exps/run_baseline_mnist.py",
+            "name": "__init__",
+            "line_start": 56,
+            "line_end": 64,
+            "class": "True",
+            "description": "Initializes a Multilayer Perceptron (MLP) model with fully connected layers.\n\n:param num_classes: Number of classes for the output layer. Defaults to 10.\n\n:modifies self.fc: Creates a linear fully connected layer with 1024 input features and 300 output features.\n:modifies self.relu: Initializes a ReLU activation function for the first hidden layer.\n:modifies self.fc1: Creates a second linear fully connected layer with 300 input features and 300 output features.\n:modifies self.relu1: Initializes a ReLU activation function for the second hidden layer.\n:modifies self.fc2: Creates a third linear fully connected layer with 300 input features and 100 output features.\n:modifies self.relu2: Initializes a ReLU activation function for the third hidden layer.\n:modifies self.fc3: Creates an output linear fully connected layer with 100 input features and 'num_classes' output features.\n\n:return: Does not return any value, as it is the constructor of the MLP class."
+        },
+        {
+            "script": "classification/run_exps/run_baseline_mnist.py",
+            "name": "forward",
+            "line_start": 66,
+            "line_end": 75,
+            "class": "True",
+            "description": "Processes an input through a series of fully connected layers and ReLU activations.\n\n:param x: The input tensor to the neural network.\n:modifies: No global or class-level variables are modified directly within this function, but the object's state may be changed indirectly via calls to `self.fc`, `self.fc1`, `self.fc2`, `self.fc3` assuming these are layers with learnable parameters and this function is being called within a training loop or with gradient tracking enabled.\n:effects: No direct effects such as print statements or file I/O. However, the function involves computational effects such as reshaping the tensor, matrix multiplications, and applying activation functions through the network's layers.\n:return: The output tensor after being processed by four fully connected layers and ReLU activations."
         }
     ]
 }

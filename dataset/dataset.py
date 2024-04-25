@@ -79,7 +79,7 @@ def remove_function(workspace_code_dir, function):
     """Remove given function from repository and replace with NotImplementedError"""
     with open(os.path.join(workspace_code_dir, function["script"]), 'r') as file:
         lines = file.readlines()
-    line = lines[function["line_start"]-1]
+    line = lines[function["line_start"]-1].replace("\t", "    ")
     num_space = 0
     while line[num_space].isspace():
         num_space += 1
