@@ -1,0 +1,1741 @@
+paper_id,exp_id,combined_id,description,result,refsol,environment
+0000.00000,0,0000.00000_0,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 96
+Parameters:
+- model micn
+- mode regre
+- seq_len 96
+- label_len 96
+- multivariate to multivariate
+- conv_kernel 12 16
+Return: MSE loss",0.179,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,1,0000.00000_1,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 96
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.275,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,2,0000.00000_2,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 192
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.307,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,3,0000.00000_3,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 192
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.376,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,4,0000.00000_4,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.325,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,5,0000.00000_5,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.388,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,6,0000.00000_6,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.502,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+0000.00000,7,0000.00000_7,"Experiment: run a Multivariate experiment with MICN-regre model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.49,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+0000.00000,8,0000.00000_8,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 96
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.203,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,9,0000.00000_9,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 96
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.287,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,10,0000.00000_10,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 192
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.262,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,11,0000.00000_11,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 192
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.326,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,12,0000.00000_12,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.305,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,13,0000.00000_13,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.353,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,14,0000.00000_14,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.389,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+0000.00000,15,0000.00000_15,"Experiment: run a Multivariate experiment with MICN-mean model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.407,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features M \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+0000.00000,16,0000.00000_16,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 96
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.059,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,17,0000.00000_17,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 96
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.176,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,18,0000.00000_18,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 192
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.1,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,19,0000.00000_19,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 192
+Parameters:
+- model micn
+- mode regre
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+- univariate to univariate
+Return: MAE loss",0.234,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,20,0000.00000_20,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.153,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,21,0000.00000_21,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.301,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,22,0000.00000_22,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.21,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+0000.00000,23,0000.00000_23,"Experiment: run a Univariate experiment with MICN-regre model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.354,python -u run.py \--model micn \--mode regre \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+0000.00000,24,0000.00000_24,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 96
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.074,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,25,0000.00000_25,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 96
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.206,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 96,micn_env
+0000.00000,26,0000.00000_26,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 192
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.098,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,27,0000.00000_27,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 192
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.238,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 192,micn_env
+0000.00000,28,0000.00000_28,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.135,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,29,0000.00000_29,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 336
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.282,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 336,micn_env
+0000.00000,30,0000.00000_30,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MSE loss",0.175,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+0000.00000,31,0000.00000_31,"Experiment: run a Univariate experiment with MICN-mean model on ETTm2 dataset with prediction length 720
+Parameters:
+- seq_len 96
+- label_len 96
+- conv_kernel 12 16
+Return: MAE loss",0.326,python -u run.py \--model micn \--mode mean \--data ETTm2 \--features S \--freq t \--conv_kernel 12 16 \--d_layers 1 \--d_model 512 \--seq_len 96 \--label_len 96 \--pred_len 720,micn_env
+2205.10664,0,2205.10664_0,"Experiment: Run experiment using DRAIN method on ONP dataset
+Parameters:
+- learning rate 1e-4
+- 10 LSTM layers
+- 20 hidden dimension
+Return: Test misclassification rate in percent",38.3,"cd classification
+mv model_onp.py model.py
+python train.py --dataset ONP --learning_rate 1e-4 --num_rnn_layer 10 --hidden_dim 20",drain_env
+2205.10664,1,2205.10664_1,"Experiment: Run experiment using DRAIN method on Elec2 dataset
+Parameters:
+- learning rate 5e-5
+- 10 LSTM layers
+- 128 hidden dimension
+Return: Test misclassification rate in percent",12.7,"cd classification
+mv model_elec.py model.py
+python train.py --dataset Elec2 --learning_rate 5e-5 --num_rnn_layer 10 --hidden_dim 128",drain_env
+2205.10664,2,2205.10664_2,"Experiment: Run experiment using DRAIN method on HousePrice dataset
+Parameters:
+- learning rate 1e-5
+- 10 LSTM layers
+- 128 hidden dimension
+Return: mean absolute error",9.3,"cd regression
+mv model_house.py model.py
+python train.py --dataset HousePrice --learning_rate 1e-5 --num_rnn_layer 10 --hidden_dim 128",drain_env
+2205.10664,3,2205.10664_3,"Experiment: Run experiment using DRAIN method on 2-Moons dataset
+Parameters:
+- learning rate 1e-4
+- 10 LSTM layers
+- 50 hidden dimension
+Return: Test misclassification rate",3.2,"cd classification
+mv model_moons.py model.py
+python train.py --dataset Moons --learning_rate 1e-4 --num_rnn_layer 10 --hidden_dim 50",drain_env
+2205.10664,4,2205.10664_4,"Experiment: Run experiment using DRAIN method on Appliancesm energy dataset
+Parameters:
+- learning rate 1e-5
+- 10 LSTM layers
+- 128 hidden dimension
+Return: mean absolute error",6.4,"cd regression
+mv model_energy.py model.py
+python train.py --dataset Energy --learning_rate 1e-5 --num_rnn_layer 10 --hidden_dim 128",drain_env
+2206.06565,0,2206.06565_0,"Experiment: Run experiment on MNIST dataset using Lenet-5 as the model
+Parameters:
+- eps 0
+Return: test accuracy ",99.22,"cd classification
+python run_exps/run_baseline_mnist.py ",lift
+2206.06565,1,2206.06565_1,"Experiment: Run experiment on perturbed MNIST dataset using Lenet-5 as the model
+Parameters:
+- eps 0.01
+- Gaussian noise
+Return tes accuracy ",99.25,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.01 -t normal",lift
+2206.06565,2,2206.06565_2,"Experiment: Run the baseline experiment on perturbed MNIST dataset using Lenet-5 as the model
+Parameters:
+- model Lenet-5
+- dataset MNIST
+- eps 0.1
+- signed constant noise
+Return: test accuracy in percent",99.06,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.1 -t sign",lift
+2206.06565,3,2206.06565_3,"Experiment: Run experiment on perturbed MNIST dataset using Lenet-5 as the model
+Parameters:
+- eps 0.01
+- signed constant noise
+Return: test accuracy ",99.26,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.01 -t sign",lift
+2206.06565,4,2206.06565_4,"Experiment: Run experiment on perturbed MNIST dataset using Lenet-5 as the model
+Parameters:
+- eps 0.1
+- Gaussian noise
+Return tes accuracy ",99.2,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.1 -t normal",lift
+2206.06565,5,2206.06565_5,"Experiment: Run the baseline experiment on MNIST dataset using MLP as the model
+Parameters:
+- model MLP
+- dataset MNIST
+- eps 0
+Return: test accuracy in percent",98.09,"cd classification
+python run_exps/run_baseline_mnist.py -m mlp",lift
+2206.06565,6,2206.06565_6,"Experiment: Run experiment on perturbed MNIST dataset using MLP as the model
+Parameters:
+- eps 0.01
+- Gaussian noise
+Return tes accuracy ",98.05,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.01 -t normal -m mlp",lift
+2206.06565,7,2206.06565_7,"Experiment: Run experiment on perturbed MNIST dataset using MLP as the model
+Parameters:
+- eps 0.1
+- signed constant noise
+Return: test accuracy ",97.39,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.1 -t sign -m mlp",lift
+2206.06565,8,2206.06565_8,"Experiment: Run experiment on perturbed MNIST dataset using MLP as the model
+Parameters:
+- eps 0.01
+- signed constant noise
+Return: test accuracy ",98.08,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.01 -t sign -m mlp",lift
+2206.06565,9,2206.06565_9,"Experiment: Run experiment on perturbed MNIST dataset using MLP as the model
+Parameters:
+- eps 0.1
+- Gaussian noise
+Return tes accuracy ",97.7,"cd classification
+python run_exps/run_baseline_mnist.py  --eps 0.1 -t normal -m mlp",lift
+2209.12288,0,2209.12288_0,"Experiment: run experiment training a GNN model for finding the feasibility of LP instances
+Parameters: 
+- feasibility model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type fea --data 500 --embSize 6",gnn_lp_env
+2209.12288,1,2209.12288_1,"Experiment: run experiment training a GNN model for finding the feasibility of LP instances
+Parameters: 
+- feasibility model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.339,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type fea --data 500 --embSize 6
+python 3_testing.py --type fea --set test --loss l2 --embSize 6 --data 500 --dataTest 500",gnn_lp_env
+2209.12288,2,2209.12288_2,"Experiment: run experiment training a GNN model for finding the feasibility of LP instances
+Parameters: 
+- feasibility model
+- 100 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.454,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type fea --data 100 --embSize 6
+python 3_testing.py --type fea --set test --loss l2 --embSize 6 --data 100 --dataTest 100",gnn_lp_env
+2209.12288,3,2209.12288_3,"Experiment: run experiment training a GNN model for finding the feasibility of LP instances
+Parameters: 
+- feasibility model
+- 100 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type fea --data 100 --embSize 6",gnn_lp_env
+2209.12288,4,2209.12288_4,"Experiment: run experiment training a GNN model for finding the objective of LP instances
+Parameters: 
+- objective model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0.08,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type obj --data 500 --embSize 6",gnn_lp_env
+2209.12288,5,2209.12288_5,"Experiment: run experiment training a GNN model for finding the objective of LP instances
+Parameters: 
+- objective model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+- l2 loss
+Return: Testing error rate",0.591,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type obj --data 500 --embSize 6
+python 3_testing.py --type obj --set test --loss l2 --embSize 6 --data 500 --dataTest 500",gnn_lp_env
+2209.12288,6,2209.12288_6,"Experiment: run experiment training a GNN model for finding the objective of LP instances
+Parameters: 
+- objective model
+- 100 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.79,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type obj --data 100 --embSize 6
+python 3_testing.py --type obj --set test --loss l2 --embSize 6 --data 100 --dataTest 100",gnn_lp_env
+2209.12288,7,2209.12288_7,"Experiment: run experiment training a GNN model for finding the objective of LP instances
+Parameters: 
+- objective model
+- 100 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0.0000019,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type obj --data 100 --embSize 6",gnn_lp_env
+2209.12288,8,2209.12288_8,"Experiment: run experiment training a GNN model for finding the solution of LP instances
+Parameters: 
+- solution model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0.193,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type sol --data 500 --embSize 16",gnn_lp_env
+2209.12288,9,2209.12288_9,"Experiment: run experiment training a GNN model for finding the solution of LP instances
+Parameters: 
+- solution model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.351,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type sol --data 500 --embSize 16
+python 3_testing.py --type sol --set test --loss l2 --embSize 16 --data 500 --dataTest 500",gnn_lp_env
+2209.12288,10,2209.12288_10,"Experiment: run experiment training a GNN model for finding the solution of LP instances
+Parameters: 
+- solution model
+- 100 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.55,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type sol --data 100 --embSize 16
+python 3_testing.py --type sol--set test --loss l2 --embSize 16 --data 100 --dataTest 100",gnn_lp_env
+2209.12288,11,2209.12288_11,"Experiment: run experiment training a GNN model for finding the solution of LP instances
+Parameters: 
+- solution model
+- 100 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0.141,"python 1_generate_data.py --k_train 2000 --k_test 1000 
+python 2_training.py --type sol --data 100 --embSize 16",gnn_lp_env
+2209.12288,12,2209.12288_12,"Experiment: run experiment training a GNN model for finding the feasibility of LP instances
+Parameters: 
+- feasibility model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0.067,"python 1_generate_data.py --k_train 3000 --k_test 3000
+python 2_training.py --type fea --data 2500 --embSize 6",gnn_lp_env
+2209.12288,13,2209.12288_13,"Experiment: run experiment training a GNN model for finding the feasibility of LP instances
+Parameters: 
+- feasibility model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.175,"python 1_generate_data.py --k_train 3000 --k_test 3000
+python 2_training.py --type fea --data 2500 --embSize 6
+python 3_testing.py --type fea --set test --loss l2 --embSize 6 --data 2500 --dataTest 2500",gnn_lp_env
+2209.12288,14,2209.12288_14,"Experiment: run experiment training a GNN model for finding the objective of LP instances
+Parameters: 
+- objective model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.128,"python 1_generate_data.py --k_train 3000 --k_test 3000
+python 2_training.py --type obj --data 2500 --embSize 6",gnn_lp_env
+2209.12288,15,2209.12288_15,"Experiment: run experiment training a GNN model for finding the objective of LP instances
+Parameters: 
+- objective model
+- 100 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.173,"python 1_generate_data.py --k_train 3000 --k_test 3000
+python 2_training.py --type obj --data 2500 --embSize 6
+python 3_testing.py --type obj --set test --loss l2 --embSize 6 --data 2500 --dataTest 2500",gnn_lp_env
+2209.12288,16,2209.12288_16,"Experiment: run experiment training a GNN model for finding the solution of LP instances
+Parameters: 
+- solution model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Training error rate",0.205,"python 1_generate_data.py --k_train 3000 --k_test 3000
+python 2_training.py --type sol --data 2500 --embSize 16",gnn_lp_env
+2209.12288,17,2209.12288_17,"Experiment: run experiment training a GNN model for finding the solution of LP instances
+Parameters: 
+- solution model
+- 500 data points 
+- embedding size 6
+- 10000 epochs 
+Return: Testing error rate",0.274,"python 1_generate_data.py --k_train 3000 --k_test 3000
+python 2_training.py --type sol --data 2500 --embSize 16
+python 3_testing.py --type sol --set test --loss l2 --embSize 16 --data 2500 --dataTest 2500",gnn_lp_env
+2210.02041,0,2210.02041_0,"Experiment: run experiment using NCF attacks with Res-18 as attack model and Inception-v3 as defense model
+Parameters:
+- NCF attack
+- Attack model Res-18
+- Defense Model Inception-v3
+Return: attack success rate",57.7,python main.py,
+2210.02041,1,2210.02041_1,"Experiment: run experiment using NCF attacks with Mobilenet-v2 as attack model and  Inception-v3 as defense model
+Parameters:
+- NCF attack
+- Attack model Mobile-v2
+- Defense Model Inception-v3
+Return: attack success rate",56.8,python main.py,
+2210.02041,2,2210.02041_2,"Experiment: run experiment using NCF attacks with Inception-v3 as attack model and Inception-v3 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model Inception-v3
+Return: attack success rate",83.8,python main.py,
+2210.02041,6,2210.02041_6,"Experiment: run experiment using NCF attacks with Res-18 as attack model and Res-18 as defense model
+Parameters:
+- NCF attack
+- Attack model Res-18
+- Defense Model Res-18
+Return: attack success rate",92.9,"# Edit yml file 
+python main.py",
+2210.02041,7,2210.02041_7,"Experiment: run experiment using NCF attacks with Mobilenet-v2 as attack model and Res-18 as defense model
+Parameters:
+- NCF attack
+- Attack model Mobile-v2
+- Defense Model Res-18
+Return: attack success rate",72.1,"# Edit yml file 
+python main.py",
+2210.02041,8,2210.02041_8,"Experiment: run experiment using NCF attacks with Inception-v3 as attack model and Res-18 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model Res-18
+Return: attack success rate",72.7,"# Edit yml file 
+python main.py",
+2210.02041,12,2210.02041_12,"Experiment: run experiment using NCF attacks with Res-18 as attack model and Mobilenet-v2 as defense model
+Parameters:
+- NCF attack
+- Attack model Res-18
+- Defense Model Mobilenet-v2
+Return: attack success rate",72.8,"# Edit yml file 
+python main.py",
+2210.02041,13,2210.02041_13,"Experiment: run experiment using NCF attacks with Mobilenet-v2 as attack model and Mobilenet-v2 as defense model
+Parameters:
+- NCF attack
+- Attack model Mobile-v2
+- Defense Model Mobilenet-v2
+Return: attack success rate",72.2,"# Edit yml file 
+python main.py",
+2210.02041,14,2210.02041_14,"Experiment: run experiment using NCF attacks with Inception-v3 as attack model and Mobilenet-v2 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model Mobilenet-v2
+Return: attack success rate",92.7,"# Edit yml file 
+python main.py",
+2210.02041,18,2210.02041_18,"Experiment: run experiment using NCF attacks with Res-18 as attack model and VGG-19 as defense model
+Parameters:
+- NCF attack
+- Attack model Res-18
+- Defense Model VGG-19
+Return: attack success rate",73.7,"# Edit yml file 
+python main.py",
+2210.02041,19,2210.02041_19,"Experiment: run experiment using NCF attacks with Mobilenet-v2 as attack model and VGG-19 as defense model
+Parameters:
+- NCF attack
+- Attack model Mobile-v2
+- Defense Model VGG-19
+Return: attack success rate",93.3,"# Edit yml file 
+python main.py",
+2210.02041,20,2210.02041_20,"Experiment: run experiment using NCF attacks with Inception-v3 as attack model andVGG-19 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model VGG-19
+Return: attack success rate",70.3,"# Edit yml file 
+python main.py",
+2210.02042,3,2210.02042_3,"Experiment: run experiment using NCF attacks with VGG-19 as attack model and Inception-v3 as defense model
+Parameters:
+- NCF attack
+- Attack model VGG-19
+- Defense Model Inception-v3
+Return: attack success rate",57.7,python main.py,
+2210.02042,9,2210.02042_9,"Experiment: run experiment using NCF attacks with VGG-19 as attack model and Res-18 as defense model
+Parameters:
+- NCF attack
+- Attack model VGG-19
+- Defense Model Res-18
+Return: attack success rate",48.3,"# Edit yml file 
+python main.py",
+2210.02042,15,2210.02042_15,"Experiment: run experiment using NCF attacks with VGG-19 as attack model and Mobilenet-v2 as defense model
+Parameters:
+- NCF attack
+- Attack model VGG-19
+- Defense Model Mobilenet-v2
+Return: attack success rate",50,"# Edit yml file 
+python main.py",
+2210.02042,21,2210.02042_21,"Experiment: run experiment using NCF attacks with VGG-19 as attack model and VGG-19 as defense model
+Parameters:
+- NCF attack
+- Attack model VGG-19
+- Defense Model VGG-19
+Return: attack success rate",49.4,"# Edit yml file 
+python main.py",
+2210.02043,4,2210.02043_4,"Experiment: run experiment using NCF attacks with Dense-121 as attack model and  Inception-v3 as defense model
+Parameters:
+- NCF attack
+- Attack model Dense-121
+- Defense Model Inception-v3
+Return: attack success rate",40.1,python main.py,
+2210.02043,10,2210.02043_10,"Experiment: run experiment using NCF attacks with Dense-121 as attack model and Res-18 as defense model
+Parameters:
+- NCF attack
+- Attack model Dense-121
+- Defense Model Res-18
+Return: attack success rate",55.3,"# Edit yml file 
+python main.py",
+2210.02043,16,2210.02043_16,"Experiment: run experiment using NCF attacks with Dense-121 as attack model and Mobilenet-v2 as defense model
+Parameters:
+- NCF attack
+- Attack model Dense-121
+- Defense Model Mobilenet-v2
+Return: attack success rate",54.4,"# Edit yml file 
+python main.py",
+2210.02043,22,2210.02043_22,"Experiment: run experiment using NCF attacks with Dense-121 as attack model and VGG-19 as defense model
+Parameters:
+- NCF attack
+- Attack model Dense-121
+- Defense Model VGG-19
+Return: attack success rate",53.6,"# Edit yml file 
+python main.py",
+2210.02044,5,2210.02044_5,"Experiment: run experiment using NCF attacks with Res-50 as attack model and Inception-v3 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model Inception-v3
+Return: attack success rate",47.7,python main.py,
+2210.02044,11,2210.02044_11,"Experiment: run experiment using NCF attacks with Res-50 as attack model and Res-18 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model Res-18
+Return: attack success rate",66.7,"# Edit yml file 
+python main.py",
+2210.02044,17,2210.02044_17,"Experiment: run experiment using NCF attacks with Res-50 as attack model and Mobilenet-v2 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model Mobilenet-v2
+Return: attack success rate",66.2,"# Edit yml file 
+python main.py",
+2210.02044,23,2210.02044_23,"Experiment: run experiment using NCF attacks with Res-50 as attack model and VGG-19 as defense model
+Parameters:
+- NCF attack
+- Attack model Inception-v3
+- Defense Model VGG-19
+Return: attack success rate",64.3,"# Edit yml file 
+python main.py",
+2303.12247,0,2303.12247_0,"Experiment: Run the following experiment by training 1000 teacher swin models, generate noisy votes, and train the student model on CIFAR-10 dataset
+Parameters:
+- Cifar-10 dataset
+- Teacher model swin
+- 1000 teachers
+- threshold 600
+- sigma1 200
+- sigma2 50
+- epsilon 1.019
+- 1000 queries
+- student model paramters in cifar10.yaml
+Return: top-1 accuracy on CIFAR-10",99.17,"cd pate
+python pate_cifar10.py
+cd ../noisycount
+python noisy_and_count.py --dataset CIFAR10 --preds_file cifar10 --class_num 10 --sigma1 200 --sigma2 50 --threshold 600 --queries 1000 --eps 1.019
+cd ../SSL
+python train.py --c cifar10.yaml",
+2303.12247,1,2303.12247_1,"Experiment: Run the following experiment by training 1000 teacher swin models, generate noisy votes, and train the student model on CIFAR-10 dataset
+Parameters:
+- Cifar-10 dataset
+- Teacher model swin
+- 1000 teachers
+- threshold 600
+- sigma1 200
+- sigma2 50
+- epsilon 1.019
+- 1000 queries
+- fixmatch algorithm
+- ViT pretrained model
+Return: top-1 accuracy on CIFAR-10",97.07,"cd pate
+python pate_cifar10.py
+cd ../noisycount
+python noisy_and_count.py --dataset CIFAR10 \
+    --preds_file cifar10 \
+    --class_num 10 \
+    --sigma1 200 \
+    --sigma2 50 \
+    --threshold 600 \
+    --queries 1000 \
+    --eps 1.019 \
+cd ../SSL
+// edit cifar10.yaml to use ViT and fixmatch algorithm
+python train.py --c cifar10.yaml",
+2303.12247,2,2303.12247_2,"Experiment: Run the following experiment by training 100 teacher swin models, generate noisy votes, and train the student model on CIFAR-10 dataset
+Parameters:
+- Cifar-10 dataset
+- Teacher model swin
+- 100 teachers
+- threshold 430
+- sigma1 150
+- sigma2 50
+- epsilon 1.095
+- 1000 queries
+- fixmatch algorithm
+- ViT pretrained model
+Return: top-1 accuracy on CIFAR-10",59.2,"cd pate
+python pate_cifar10.py --teacher_num 100
+cd ../noisycount
+python noisy_and_count.py --dataset CIFAR10 \
+    --preds_file cifar10 \
+    --class_num 10 \
+    --sigma1 150 \
+    --sigma2 50 \
+    --threshold 430 \
+    --queries 1000 \
+    --eps 1.095 \
+cd ../SSL
+// edit cifar10.yaml to use ViT and fixmatch algorithm
+python train.py --c cifar10.yaml",
+2311.10227,0,2311.10227_0,"Experiment: run evaluation of BigToM on false belief action using gpt-3.5-turbo with simulation method.
+Parameters:
+- false belief action
+- model gpt-3.5-turbo
+- simulation method
+Return: evaluation accuracy",70.5,"cd code
+python evaluate_bigtom.py --eval_model=gpt-3.5-turbo --condition=false_belief --method=simulation",simulatedtom_env
+2311.10227,1,2311.10227_1,"Experiment: run evaluation of BigToM on false belief action using GPT-3.5 with chain of though method.
+Parameters:
+- false belief action
+- model GPT-3.5
+- chain of thought method
+Return: evaluation accuracy",56.25,"cd code
+python evaluate_bigtom.py --eval_model=gpt-3.5-turbo --condition=false_belief --method=cot",simulatedtom_env
+2311.10227,2,2311.10227_2,"Experiment: run evaluation of BigToM on false belief action using GPT-4 with simulation method.
+Parameters:
+- false belief action
+- model GPT-4
+- simulation method
+Return: evaluation accuracy",92,"cd code
+python evaluate_bigtom.py --eval_model=gpt-4 --condition=false_belief --method=simulation",simulatedtom_env
+2311.10227,3,2311.10227_3,"Experiment: run evaluation of BigToM on false belief action using GPT-4 with chain of thought method.
+Parameters:
+- false belief action
+- model GPT-4
+- chain of thought method
+Return: evaluation accuracy",93.25,"cd code
+python evaluate_bigtom.py --eval_model=gpt-4 --condition=false_belief --method=cot",simulatedtom_env
+2311.10227,4,2311.10227_4,"Experiment: run evaluation of BigToM on false belief action using Llama2-13b-chat with simulation method.
+Parameters:
+- false belief action
+- model Llama2-13b-chat
+- simulation method
+Return: evaluation accuracy",61.75,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13b-chat-hf --condition=false_belief --method=simulation",simulatedtom_env
+2311.10227,5,2311.10227_5,"Experiment: run evaluation of BigToM on false belief action using Llama2-13b-chat with chain of though method.
+Parameters:
+- false belief action
+- model Llama2-13b-chat
+- chain of thought method
+Return: evaluation accuracy",52.25,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13b-chat-hf --condition=false_belief --method=cot",simulatedtom_env
+2311.10227,6,2311.10227_6,"Experiment: run evaluation of BigToM on false belief action using Llama2-7b-chat with simulation method.
+Parameters:
+- false belief action
+- model Llama2-7b-chat
+- simulation method
+Return: evaluation accuracy",70.5,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13==7b-chat-hf --condition=false_belief --method=simulation",simulatedtom_env
+2311.10227,7,2311.10227_7,"Experiment: run evaluation of BigToM on false belief action using Llama2-7b-chat with chain of thought method.
+Parameters:
+- false belief action
+- model Llama2-7b-chat
+- chain of thought method
+Return: evaluation accuracy",31.5,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-7b-chat-hf --condition=false_belief --method=cot",simulatedtom_env
+2311.10227,8,2311.10227_8,"Experiment: run evaluation of BigToM on false belief action using GPT-3.5 with baseline method.
+Parameters:
+- false belief action
+- model GPT-3.5
+- baseline method
+Return: evaluation accuracy",41,"cd code
+python evaluate_bigtom.py --eval_model=gpt-3.5-turbo --condition=false_belief --method=baseline",simulatedtom_env
+2311.10227,9,2311.10227_9,"Experiment: run evaluation of BigToM on false belief action using GPT-4 with baseline method.
+Parameters:
+- false belief action
+- model GPT-4
+- baseline method
+Return: evaluation accuracy",89,"cd code
+python evaluate_bigtom.py --eval_model=gpt-4 --condition=false_belief --method=baseline",simulatedtom_env
+2311.10227,10,2311.10227_10,"Experiment: run evaluation of BigToM on false belief action using Llama2-13b-chat with baseline method.
+Parameters:
+- false belief action
+- model Llama2-13b-chat
+- baseline method
+Return: evaluation accuracy",41.25,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13b-chat-hf --condition=false_belief --method=baseline",simulatedtom_env
+2311.10227,11,2311.10227_11,"Experiment: run evaluation of BigToM on false belief action using Llama2-7b-chat with baseline method.
+Parameters:
+- false belief action
+- model Llama2-7b-chat
+- baseline method
+Return: evaluation accuracy",47.5,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13==7b-chat-hf --condition=false_belief --method=baseline",simulatedtom_env
+2311.10227,12,2311.10227_12,"Experiment: run evaluation of BigToM on all categories using GPT-3.5 with simulation method.
+Parameters:
+- all categories
+- model GPT-3.5
+- simulation method
+Return: evaluation accuracy",81.62,"cd code
+python evaluate_bigtom.py --eval_model=gpt-3.5-turbo --all --method=simulation",simulatedtom_env
+2311.10227,13,2311.10227_13,"Experiment: run evaluation of BigToM on all categories using GPT-3.5 with chain of though method.
+Parameters:
+- all categories
+- model GPT-3.5
+- chain of thought method
+Return: evaluation accuracy",75.88,"cd code
+python evaluate_bigtom.py --eval_model=gpt-3.5-turbo --all--method=cot",simulatedtom_env
+2311.10227,14,2311.10227_14,"Experiment: run evaluation of BigToM on all categories using GPT-4 with simulation method.
+Parameters:
+- all categories
+- model GPT-4
+- simulation method
+Return: evaluation accuracy",95,"cd code
+python evaluate_bigtom.py --eval_model=gpt-4 --all --method=simulation",simulatedtom_env
+2311.10227,15,2311.10227_15,"Experiment: run evaluation of BigToM on all categories using GPT-4 with chain of thought method.
+Parameters:
+- all categories
+- model GPT-4
+- chain of thought method
+Return: evaluation accuracy",95.5,"cd code
+python evaluate_bigtom.py --eval_model=gpt-4 --all --method=cot",simulatedtom_env
+2311.10227,16,2311.10227_16,"Experiment: run evaluation of BigToM on all categories using Llama2-13b-chat with simulation method.
+Parameters:
+- all categories
+- model Llama2-13b-chat
+- simulation method
+Return: evaluation accuracy",58,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13b-chat-hf --all --method=simulation",simulatedtom_env
+2311.10227,17,2311.10227_17,"Experiment: run evaluation of BigToM on all categories using Llama2-13b-chat with chain of though method.
+Parameters:
+- all categories
+- model Llama2-13b-chat
+- chain of thought method
+Return: evaluation accuracy",56,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13b-chat-hf --all --method=cot",simulatedtom_env
+2311.10227,18,2311.10227_18,"Experiment: run evaluation of BigToM on all categories using Llama2-7b-chat with simulation method.
+Parameters:
+- all categories
+- model Llama2-7b-chat
+- simulation method
+Return: evaluation accuracy",57.25,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13==7b-chat-hf --all --method=simulation",simulatedtom_env
+2311.10227,19,2311.10227_19,"Experiment: run evaluation of BigToM on all categories using Llama2-7b-chat with chain of thought method.
+Parameters:
+- all categories
+- model Llama2-7b-chat
+- chain of thought method
+Return: evaluation accuracy",48.62,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-7b-chat-hf --all --method=cot",simulatedtom_env
+2311.10227,20,2311.10227_20,"Experiment: run evaluation of BigToM on all categories using GPT-3.5 with baseline method.
+Parameters:
+- all categories
+- model GPT-3.5
+- baseline method
+Return: evaluation accuracy",66.38,"cd code
+python evaluate_bigtom.py --eval_model=gpt-3.5-turbo --all --method=baseline",simulatedtom_env
+2311.10227,21,2311.10227_21,"Experiment: run evaluation of BigToM on all categories using GPT-4 with baseline method.
+Parameters:
+- all categories
+- model GPT-4
+- baseline method
+Return: evaluation accuracy",92.5,"cd code
+python evaluate_bigtom.py --eval_model=gpt-4 --all --method=baseline",simulatedtom_env
+2311.10227,22,2311.10227_22,"Experiment: run evaluation of BigToM on all categories using Llama2-13b-chat with baseline method.
+Parameters:
+- all categories
+- model Llama2-13b-chat
+- baseline method
+Return: evaluation accuracy",51.38,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13b-chat-hf --all --method=baseline",simulatedtom_env
+2311.10227,23,2311.10227_23,"Experiment: run evaluation of BigToM on all categories using Llama2-7b-chat with baseline method.
+Parameters:
+- all categories
+- model Llama2-7b-chat
+- baseline method
+Return: evaluation accuracy",53.62,"cd code
+python evaluate_bigtom.py --eval_model=meta-llama/Llama-2-13==7b-chat-hf --all --method=baseline",simulatedtom_env
+2210.07562,0,2210.07562_0,"Experiment: run evaluation on Cifar-10 dataset using CCT-7/3x1(1500)+HTM model using checkpoint model
+Parameters:
+- checkpoint weights directory: experiments/weights/cct_cifar10_htm.pth.tar
+- Cifar-10 dataset
+Return: top-1 accuracy",97.57,"cd experiments
+sh run/eval_cct_7-3x1_cifar10_HTM.sh ",tokenmixup
+2210.07562,1,2210.07562_1,"Experiment: run evaluation on Cifar-10 dataset using CCT-7/3x1(1500)+VTM model using checkpoint model
+Parameters:
+- checkpoint weights directory: experiments/weights/cct_cifar10_vtm.pth.tar
+- Cifar-10 dataset
+Return: top-1 accuracy",97.78,"cd experiments
+sh run/eval_cct_7-3x1_cifar10_VTM.sh ",tokenmixup
+2210.07562,2,2210.07562_2,"Experiment: run experiment on Cifar-10 dataset using CCT-7/3x1(1500)+HVTM model. First train the model then evaluate 
+Parameters:
+- Cifar-10 dataset
+- CCT-7/3x1(1500)+HVTM
+Return: top-1 accuracy",97.75,"cd experiments
+sh run/train_cct_7-3x1_cifar10_HVTM.sh 
+// Change weight path in eval file
+sh run/eval_cct_7-3x1_cifar10_HVTM.sh ",tokenmixup
+2210.07562,3,2210.07562_3,"Experiment: run experiment on Cifar-100 dataset using CCT-7/3x1(1500)+HTM model. First train the model then evaluate 
+Parameters:
+- checkpoint weights directory: experiments/weights/cct_cifar10_htm.pth.tar
+- Cifar-100 dataset
+Return: top-1 accuracy",83.56,"cd experiments
+sh run/train_cct_7-3x1_cifar100_HTM.sh 
+// Change weight path in eval file
+sh run/eval_cct_7-3x1_cifar100_HTM.sh ",tokenmixup
+2210.07562,4,2210.07562_4,"Experiment: run experiment on Cifar-100 dataset using CCT-7/3x1(1500)+VTM model. First train the model then evaluate 
+Parameters:
+- checkpoint weights directory: experiments/weights/cct_cifar10_vtm.pth.tar
+- Cifar-100 dataset
+Return: top-1 accuracy",83.54,"cd experiments
+sh run/train_cct_7-3x1_cifar100_VTM.sh 
+// Change weight path in eval file
+sh run/eval_cct_7-3x1_cifar100_VTM.sh ",tokenmixup
+2210.07562,5,2210.07562_5,"Experiment: run experiment on Cifar-100 dataset using CCT-7/3x1(1500)+HVTM model. First train the model then evaluate 
+Parameters:
+- Cifar-100 dataset
+- CCT-7/3x1(1500)+HVTM
+Return: top-1 accuracy",83.57,"cd experiments
+sh run/train_cct_7-3x1_cifar100_HVTM.sh 
+// Change weight path in eval file
+sh run/eval_cct_7-3x1_cifar100_HVTM.sh ",tokenmixup
+2211.00269,0,2211.00269_0,"Experiment: run experiment on Kuzushiji dataset with two-stage baseline
+Parameters: 
+- CNN
+- two-stage method
+- log method
+- 100 epochs (50 for adversarial training, 50 for complementary learning)
+- 256 batch size
+- SGD
+- adversarial training learning rate 0.01
+- complementary learning learning rate 0.001
+Return: test accuracy",89.75,python main.py --dataset 'kuzushiji' --model 'cnn' --method 'log' --framework 'two_stage' --cl_epochs 50 --adv_epochs 50 --cl_lr 0.001 --at_lr 0.01,
+2211.00269,1,2211.00269_1,"Experiment: run experiment on MNIST dataset with two-stage baseline
+Parameters: 
+- CNN
+- two-stage method
+- log method
+- 100 epochs (50 for adversarial training, 50 for complementary learning)
+- 256 batch size
+- SGD
+- adversarial training learning rate 0.01
+- complementary learning learning rate 0.001
+Return: test accuracy",99.07,python main.py --dataset 'mnist' --model 'cnn' --method 'log' --framework 'two_stage' --cl_epochs 50 --adv_epochs 50 --cl_lr 0.001 --at_lr 0.01,
+2211.00269,2,2211.00269_2,"Experiment: run experiment on CIFAR-10 dataset with two-stage baseline
+Parameters: 
+- Resnet18
+- 120 epochs (70 for adversarial training, 50 for complementary learning)
+- 128 batch size
+- SGD
+- adversarial training learning rate 0.01
+- complementary learning learning rate 0.01
+Return: test accuracy",64.98,python main.py --dataset 'cifar10' --model 'resnet18' --method 'log' --framework 'two_stage' --cl_epochs 50 --adv_epochs 70 --cl_lr 0.01 --at_lr 0.01,
+2211.00269,3,2211.00269_3,"Experiment: run experiment on SVHN dataset with two-stage baseline
+Parameters: 
+- Resnet18
+- 120 epochs (70 for adversarial training, 50 for complementary learning)
+- 128 batch size
+- SGD
+- adversarial training learning rate 0.01
+- complementary learning learning rate 0.01
+Return: test accuracy",90.62,python main.py --dataset 'svhn' --model 'resnet18' --method 'log' --framework 'two_stage' --cl_epochs 50 --adv_epochs 70 --cl_lr 0.01 --at_lr 0.01,
+2211.00269,4,2211.00269_4,"Experiment: run experiment on Kuzushiji dataset with one-stage baseline
+Parameters: 
+- CNN
+- one-stage method
+- log method
+- 100 epochs
+- 256 batch size
+- SGD
+- adversarial training learning rate 0.01
+Return: test accuracy",32.66,python main.py --dataset 'kuzushiji' --model 'cnn' --method 'log' --framework 'one_stage' --adv_epochs 100 --at_lr 0.01 --scheduler 'none',
+2211.00269,5,2211.00269_5,"Experiment: run experiment on MNIST dataset with one-stage baseline
+Parameters: 
+- CNN
+- one-stage method
+- log method
+- 100 epochs
+- 256 batch size
+- SGD
+- adversarial training learning rate 0.01
+Return: test accuracy",97.16,python main.py --dataset 'mnist' --model 'cnn' --method 'log' --framework 'one_stage' --adv_epochs 100 --at_lr 0.01 --scheduler 'none',
+2211.00269,6,2211.00269_6,"Experiment: run experiment on CIFAR-10 dataset with one-stage baseline
+Parameters: 
+- Resnet18
+- log method
+- 120 epochs
+- 128 batch size
+- SGD
+- adversarial training learning rate 0.01
+Return: test accuracy",11.7,python main.py --dataset 'cifar10' --model 'resnet18' --method 'log' --framework 'one_stage' --adv_epochs 120 --at_lr 0.01 --scheduler 'none',
+2211.00269,7,2211.00269_7,"Experiment: run experiment on SVHN dataset with one-stage baseline
+Parameters: 
+- Resnet18
+- log method
+- 120 epochs
+- 128 batch size
+- SGD
+- adversarial training learning rate 0.01
+- seed 1
+Return: test accuracy",19.59,python main.py --dataset 'svhn' --model 'resnet18' --method 'log' --framework 'one_stage' --adv_epochs 120 --at_lr 0.01 --scheduler 'none',
+2211.00269,8,2211.00269_8,"Experiment: run experiment on Kuzushiji dataset with Warm Up +PLA method
+Parameters: 
+- CNN
+- log_ce loss function
+- one-stage framework
+- 100 adversarial training epochs
+- adversarial training learning rate 0.01
+- cosine scheduler
+- schedule epoch 50
+- warm up epoch 10
+- seed 1
+Return: test accuracy",91.6,python main.py --dataset 'kuzushiji' --model 'cnn' --method 'log_ce' --framework 'one_stage' --adv_epochs 100 --at_lr 0.01 --scheduler 'cosine' --sch_epoch 50 --warmup_epoch 10,
+2211.00269,9,2211.00269_9,"Experiment: run experiment on MNIST dataset with Warm Up +PLA method
+Parameters: 
+- CNN
+- log_ce loss function
+- one-stage framework
+- 100 adversarial training epochs
+- adversarial training learning rate 0.01
+- cosine scheduler
+- schedule epoch 50
+- warm up epoch 10
+Return: test accuracy",99.22,python main.py --dataset 'mnist' --model 'cnn' --method 'log_ce' --framework 'one_stage' --adv_epochs 100 --at_lr 0.01 --scheduler 'cosine' --sch_epoch 50 --warmup_epoch 10,
+2211.00269,10,2211.00269_10,"Experiment: run experiment on CIFAR-10 dataset with Warm Up +PLA method
+Parameters: 
+- Resnet18
+- log_ce loss function
+- one-stage framework
+- 120 adversarial training epochs
+- adversarial training learning rate 0.01
+- cosine scheduler
+- schedule epoch 40
+- warm up epoch 40
+- seed 1
+Return: test accuracy",65.88,python main.py --dataset 'cifar10' --model 'resnet18' --method 'log_ce' --framework 'one_stage' --adv_epochs 120 --at_lr 0.01 --scheduler 'cosine' --sch_epoch 40 --warmup_epoch 40,
+2211.00269,11,2211.00269_11,"Experiment: run experiment on SVHN dataset with Warm Up +PLA method
+Parameters: 
+- Resnet18
+- log_ce loss function
+- one-stage framework
+- 120 adversarial training epochs
+- adversarial training learning rate 0.01
+- cosine scheduler
+- schedule epoch 40
+- warm up epoch 40
+- seed 1
+Return: test accuracy",90.5,python main.py --dataset 'svhn' --model 'resnet18' --method 'log_ce' --framework 'one_stage' --adv_epochs 120 --at_lr 0.01 --scheduler 'cosine' --sch_epoch 40 --warmup_epoch 40,
+2210.00055,0,2210.00055_0,"Experiment: run the selective classification task experiment on CIFAR-10 dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- momentum 0.9
+- weight decay 0.0001
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 100%",8.96,bash bash_files/cifar10_masktune.sh ,
+2210.00055,1,2210.00055_1,"Experiment: run the selective classification task experiment on CIFAR-10 dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- momentum 0.9
+- weight decay 0.0001
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 90%",4.74,bash bash_files/cifar10_masktune.sh ,
+2210.00055,2,2210.00055_2,"Experiment: run the selective classification task experiment on CIFAR-10 dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- momentum 0.9
+- weight decay 0.0001
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 80%",2.13,bash bash_files/cifar10_masktune.sh ,
+2210.00055,3,2210.00055_3,"Experiment: run the selective classification task experiment on CIFAR-10 dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- momentum 0.9
+- weight decay 0.0001
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 85%",3.23,bash bash_files/cifar10_masktune.sh ,
+2210.00055,4,2210.00055_4,"Experiment: run the selective classification task experiment on CIFAR-10 dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- momentum 0.9
+- weight decay 0.0001
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 95%",6.54,bash bash_files/cifar10_masktune.sh ,
+2210.00055,5,2210.00055_5,"Experiment: run the selective classification task experiment on SVHN dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- gamma 0.5
+- weight decay 0.0005
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 100%",3.68,"# edit bash_files/svhn_masktune.sh with correct path
+bash bash_files/svhn_masktune.sh ",
+2210.00055,6,2210.00055_6,"Experiment: run the selective classification task experiment on SVHN dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- gamma 0.5
+- weight decay 0.0005
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 95%",1.84,"# edit bash_files/svhn_masktune.sh with correct path
+bash bash_files/svhn_masktune.sh ",
+2210.00055,7,2210.00055_7,"Experiment: run the selective classification task experiment on SVHN dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- gamma 0.5
+- weight decay 0.0005
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 90%",0.96,"# edit bash_files/svhn_masktune.sh with correct path
+bash bash_files/svhn_masktune.sh ",
+2210.00055,8,2210.00055_8,"Experiment: run the selective classification task experiment on SVHN dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- gamma 0.5
+- weight decay 0.0005
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 85%",0.57,"# edit bash_files/svhn_masktune.sh with correct path
+bash bash_files/svhn_masktune.sh ",
+2210.00055,9,2210.00055_9,"Experiment: run the selective classification task experiment on SVHN dataset using the Masktune method with resnet32 model
+Parameters:
+- learning rate 0.1
+- gamma 0.5
+- weight decay 0.0005
+- halve learning rate every 25 epochs
+- batch size 128
+- train for 300 epochs
+- sgd optimizer
+Return: misclassification error at target covariance 80%",0.45,"# edit bash_files/svhn_masktune.sh with correct path
+bash bash_files/svhn_masktune.sh ",
+2205.13371,0,2205.13371_0,"Experiment: run experiment on NSBT task using RoWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.788,python train_vae.py --task NSBT --dist RoWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,1,2205.13371_1,"Experiment: run experiment on NSBT task using RoWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.827,python train_vae.py --task NSBT --dist RoWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,2,2205.13371_2,"Experiment: run experiment on NSBT task using RoWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.82,python train_vae.py --task NSBT --dist RoWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,3,2205.13371_3,"Experiment: run experiment on NSBT task using RoWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.93,python train_vae.py --task NSBT --dist RoWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,4,2205.13371_4,"Experiment: run experiment on NSBT task using RoWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.807,python train_vae.py --task NSBT --dist RoWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,5,2205.13371_5,"Experiment: run experiment on NSBT task using RoWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.911,python train_vae.py --task NSBT --dist RoWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,6,2205.13371_6,"Experiment: run experiment on NSBT task using RoWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.822,python train_vae.py --task NSBT --dist RoWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,7,2205.13371_7,"Experiment: run experiment on NSBT task using RoWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution RoWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.901,python train_vae.py --task NSBT --dist RoWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,8,2205.13371_8,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.733,python train_vae.py --task NSBT --dist EuclideanNormal --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,9,2205.13371_9,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.612,python train_vae.py --task NSBT --dist EuclideanNormal --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,10,2205.13371_10,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.748,python train_vae.py --task NSBT --dist EuclideanNormal --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,11,2205.13371_11,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.762,python train_vae.py --task NSBT --dist EuclideanNormal --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,12,2205.13371_12,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.74,python train_vae.py --task NSBT --dist EuclideanNormal --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,13,2205.13371_13,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.807,python train_vae.py --task NSBT --dist EuclideanNormal --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,14,2205.13371_14,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.741,python train_vae.py --task NSBT --dist EuclideanNormal --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,15,2205.13371_15,"Experiment: run experiment on NSBT task using Euclidean distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Euclidean
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.712,python train_vae.py --task NSBT --dist EuclideanNormal --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,16,2205.13371_16,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.735,python train_vae.py --task NSBT --dist IsotropicHWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,17,2205.13371_17,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.602,python train_vae.py --task NSBT --dist IsotropicHWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,18,2205.13371_18,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.773,python train_vae.py --task NSBT --dist IsotropicHWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,19,2205.13371_19,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.902,python train_vae.py --task NSBT --dist IsotropicHWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,20,2205.13371_20,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.809,python train_vae.py --task NSBT --dist IsotropicHWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,21,2205.13371_21,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.867,python train_vae.py --task NSBT --dist IsotropicHWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,22,2205.13371_22,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.798,python train_vae.py --task NSBT --dist IsotropicHWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,23,2205.13371_23,"Experiment: run experiment on NSBT task using Isotropic HWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Isotropic HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.811,python train_vae.py --task NSBT --dist IsotropicHWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,24,2205.13371_24,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.759,python train_vae.py --task NSBT --dist DiagonalHWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,25,2205.13371_25,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.697,python train_vae.py --task NSBT --dist DiagonalHWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,26,2205.13371_26,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.814,python train_vae.py --task NSBT --dist DiagonalHWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,27,2205.13371_27,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.918,python train_vae.py --task NSBT --dist DiagonalHWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,28,2205.13371_28,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.791,python train_vae.py --task NSBT --dist DiagonalHWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,29,2205.13371_29,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.808,python train_vae.py --task NSBT --dist DiagonalHWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,30,2205.13371_30,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.817,python train_vae.py --task NSBT --dist DiagonalHWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,31,2205.13371_31,"Experiment: run experiment on NSBT task using Diagonal HWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Diagonal HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.862,python train_vae.py --task NSBT --dist DiagonalHWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,32,2205.13371_32,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.794,python train_vae.py --task NSBT --dist FullHWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,33,2205.13371_33,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 7
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.815,python train_vae.py --task NSBT --dist FullHWN --depth=7 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,34,2205.13371_34,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.827,python train_vae.py --task NSBT --dist FullHWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,35,2205.13371_35,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 4
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.956,python train_vae.py --task NSBT --dist FullHWN --depth=4 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,36,2205.13371_36,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.798,python train_vae.py --task NSBT --dist FullHWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,37,2205.13371_37,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 5
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.878,python train_vae.py --task NSBT --dist FullHWN --depth=5 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,38,2205.13371_38,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with hamming distance",0.798,python train_vae.py --task NSBT --dist FullHWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2205.13371,39,2205.13371_39,"Experiment: run experiment on NSBT task using Full HWN distribution and depth 6
+Parameters:
+- NSBT task
+- distribution Full HWN
+- depth 7
+- learning rate 0.0001
+- 1000 epochs
+- 1 layer
+- 128 batch size
+- 500 test samples
+Return: correlation with depth",0.87,python train_vae.py --task NSBT --dist FullHWN --depth=6 --device=cuda:0 --eval_interval=1001 --exp_name=nsbt --lr=0.0001 --n_epochs=1000 --n_layers=1 --test_samples=500 --train_batch_size=128 --seed 1,
+2212.08645,0,2212.08645_0,"Experiment: run experiment on CIRCE method using linear dsprites
+Parameters:
+- CIRCE
+- ridge regression 0.1
+- conditional independence/regularization strength 10
+Return: MSE loss on out of domain test set",0.1,python main.py -v dsprites_linear/circe.yml,
+2212.08645,1,2212.08645_1,"Experiment: run experiment on CIRCE method using linear dsprites
+Parameters:
+- CIRCE
+- ridge regression 0.1
+- conditional independence/regularization strength 100
+Return: MSE loss on out of domain test set",0.07,"// change yml to use lambda 100
+python main.py -v dsprites_linear/circe.yml",
+2212.08645,2,2212.08645_2,"Experiment: run experiment on CIRCE method using nonlinear dsprites
+Parameters:
+- CIRCE
+- nonlinear dSprites
+- ridge regression 0.1
+- conditional independence/regularization strength 10
+Return: MSE loss on out of domain test set",0.075,python main.py -v dsprites_tricky/circe.yml,
+2209.15486,0,2209.15486_0,"Experiment: Run ELPH model on Cora dataset
+Return: test accuracy",87.72,"cd src
+python runners/run.py --dataset_name Cora --model ELPH",subgraph
+2209.15486,1,2209.15486_1,"Experiment: Run BUDDY model on Cora dataset
+Return: test accuracy",88,"cd src
+python runners/run.py --dataset_name Cora --model BUDDY",subgraph
+2209.15486,2,2209.15486_2,"Experiment: Run ELPH model on Citeseer dataset
+Return: test accuracy",93.44,"cd src
+python runners/run.py --dataset_name Citeseer --model ELPH",subgraph
+2209.15486,3,2209.15486_3,"Experiment: Run BUDDY model on Citeseer dataset
+Return: test accuracy",92.93,"cd src
+python runners/run.py --dataset_name Citeseer --model BUDDY",subgraph
+2209.15486,4,2209.15486_4,"Experiment: Run ELPH model on Pubmed dataset
+Parameters:
+- max hash hops 3
+- feature dropout 0.2
+Return: test accuracy",72.99,"cd src
+python runners/run.py --dataset_name Pubmed --max_hash_hops 3 --feature_dropout 0.2 --model ELPH",subgraph
+2209.15486,5,2209.15486_5,"Experiment: Run BUDDY model on Pubmed dataset
+Parameters:
+- max hash hops 3
+- feature dropout 0.2
+Return: test accuracy",74.1,"cd src
+python runners/run.py --dataset_name Pubmed --max_hash_hops 3 --feature_dropout 0.2 --model BUDDY",subgraph
+2209.15486,6,2209.15486_6,"Experiment: Run ELPH model on Collab dataset
+Parameters:
+- K 50 
+- lr 0.01 
+- feature_dropout 0.05 
+- add_normed_features 1 
+- label_dropout 0.1 
+- batch_size 2048 
+- year 2007
+Return: test accuracy",66.32,"cd src
+python runners/run.py --dataset_name ogbl-collab --K 50 --lr 0.01 --feature_dropout 0.05 --add_normed_features 1 --label_dropout 0.1 --batch_size 2048 --year 2007 --model ELPH",subgraph
+2209.15486,7,2209.15486_7,"Experiment: Run BUDDY model on Collab dataset
+Parameters:
+- K 50 
+- lr 0.02
+- feature_dropout 0.05 
+- add_normed_features 1 
+- label_dropout 0.1 
+- cache_subgraph_features
+- year 2007
+Return: test accuracy",65.94,"cd src
+python runners/run.py --dataset_name ogbl-collab --K 50 --lr 0.02 --feature_dropout 0.05 --add_normed_features 1 --cache_subgraph_features --label_dropout 0.1 --year 2007 --model BUDDY",subgraph
+2209.15486,8,2209.15486_8,"Experiment: Run ELPH model on DDI dataset
+Parameters:
+--K 20 
+--train_node_embedding 
+--propagate_embeddings 
+--label_dropout 0.25 
+--epochs 150 
+--hidden_channels 256 
+--lr 0.0015 
+--num_negs 6 
+--use_feature 0 
+--sign_k 2 
+--batch_size 131072
+Return: test accuracy",83.19,"cd src
+python runners/run.py --dataset ogbl-ddi --K 20 --train_node_embedding --propagate_embeddings --label_dropout 0.25 --epochs 150 --hidden_channels 256 --lr 0.0015 --num_negs 6 --use_feature 0 --sign_k 2 --batch_size 131072 --model ELPH
+",subgraph
+2209.15486,9,2209.15486_9,"Experiment: Run BUDDY model on DDI dataset
+Parameters:
+--K 20 
+--train_node_embedding 
+--propagate_embeddings 
+--label_dropout 0.25 
+--epochs 150 
+--hidden_channels 256 
+--lr 0.0015 
+--num_negs 6 
+--use_feature 0 
+--sign_k 2 
+--cache_subgraph_features
+--batch_size 131072
+Return: test accuracy",78.51,"cd src
+python runners/run.py --dataset ogbl-ddi --K 20 --train_node_embedding --propagate_embeddings --label_dropout 0.25 --epochs 150 --hidden_channels 256 --lr 0.0015 --num_negs 6 --use_feature 0 --sign_k 2 --cache_subgraph_features --batch_size 131072 --model BUDDY
+",subgraph
+2209.15486,10,2209.15486_10,"Experiment: Run BUDDY model on PPA dataset
+Parameters:
+--label_dropout 0.1 
+--use_feature 0 
+--use_RA 1 
+--lr 0.03 
+--epochs 100 
+--hidden_channels 256 
+--cache_subgraph_features 
+--add_normed_features 1 
+--use_zero_one 1
+Return: test accuracy",49.85,"cd src
+python runners/run.py --dataset_name ogbl-ppa --label_dropout 0.1 --use_feature 0 --use_RA 1 --lr 0.03 --epochs 100 --hidden_channels 256 --cache_subgraph_features --add_normed_features 1 ----use_zero_one 1 model BUDDY",subgraph
+2209.15486,11,2209.15486_11,"Experiment: Run BUDDY model on Citation2 dataset
+Parameters:
+--hidden_channels 128 
+--num_negs 5 
+--lr 0.0005 
+--sign_dropout 0.2 
+--feature_dropout 0.7 
+--label_dropout 0.8 
+--sign_k 3 
+--batch_size 261424 
+--eval_batch_size 522848 
+--cache_subgraph_features
+Return: test accuracy",87.56,"cd src
+python runners/run.py --dataset ogbl-citation2 --hidden_channels 128 --num_negs 5 --lr 0.0005 --sign_dropout 0.2 --feature_dropout 0.7 --label_dropout 0.8 --sign_k 3 --batch_size 261424 --eval_batch_size 522848 --cache_subgraph_features --model BUDDY
+",subgraph
+2307.03135,0,2307.03135_0,"Experiment: First, install dependencies using ""pip install -e ."". Then, train a Resnet18 student model using CLIP ViT-L/14 model as teacher with L-cls and L-mse loss enabled on CaltechBirds dataset
+Parameters:
+- dataset directory: dataset/cub
+- train batch: 128
+- test batch: 64
+- 90 epochs
+- 0.05 learning rate
+Return: evaluation performance for in-distribution dataset",63.7,"pip install -e .
+python main_experiments.py -d datasets/cub -a resnet18 --label-path datasets/cub/label2text.txt --repeat-epochs 5 --epochs 90 --lr 0.05 --schedule 30 60 --gamma 0.1 --train-batch 128 --test-batch 64 --use-clip --clip-model ViT-L/14 --clip-align-image-classification=1 --clip-align-image-mse",
+2307.03135,1,2307.03135_1,"Experiment: First, install dependencies using ""pip install -e ."". Then, train a Resnet18 student model using CLIP ViT-L/14 model as teacher with L-cls, L-cst, and L-mse loss enabled on CaltechBirds dataset
+Parameters:
+- dataset directory: dataset/cub
+- train batch: 128
+- test batch: 64
+- 90 epochs
+- 0.05 learning rate
+- 5 shot
+Return: evaluation performance for out-of-distribution dataset",39,"pip install -e .
+python main_experiments.py -d datasets/cub -a resnet18 \ 
+--label-path datasets/cub/label2text.txt --repeat-epochs 5 \
+--epochs 20 --lr 0.001 --onecyclelr --gamma 0.1 \
+--train-batch 128 --test-batch 64 \
+--use-clip --clip-model ViT-L/14 \
+--clip-align-image-classification=1 \
+--clip-align-image-mse \
+--clip-align-image-contrastive \
+--few-shot-num 5 --few-shot-method finetune",
+2307.03135,2,2307.03135_2,"Experiment: First, install dependencies using ""pip install -e ."". Then, train a Resnet18 student model using CLIP ViT-L/14 model as teacher with L-cls, L-cst, L-mse, and L-vlalign (with k=256) loss enabled on Flower102 dataset
+Parameters:
+- dataset directory: dataset/flowers
+- train batch: 128
+- test batch: 64
+- 90 epochs
+- 0.05 learning rate
+- one shot, out-of-distribution
+Return: evaluation performance for out-of-distribution dataset",14.6,"pip install -e .
+python main_experiments.py -d datasets/flowers -a resnet18 \ 
+--label-path datasets/cub/label2text.txt --repeat-epochs 5 \
+--epochs 90 --lr 0.05 --schedule 30 60 --gamma 0.1 \
+--train-batch 128 --test-batch 64 \
+--use-clip --clip-model ViT-L/14 \
+--clip-align-image-classification=1 \
+--clip-align-image-mse \
+--clip-align-image-contrastive \
+--clip-align-proximal-text-num=256",

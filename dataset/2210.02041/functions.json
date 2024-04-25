@@ -1,0 +1,20 @@
+{
+    "functions": [
+        {
+            "script": "main.py",
+            "name": "attack_pipeline",
+            "line_start": 18,
+            "line_end": 39,
+            "class": "False",
+            "description": "Initializes the attack pipeline with specific hyperparameters and options and conducts an attack \n    using the NCF (Neural Collaborative Filtering) mechanism with the provided white and black models.\n\n    :param hyperparameters: A dictionary containing key settings that are particularly aimed for \n                            tracking and logging purposes, possibly with wandb (Weights & Biases service).\n                            'local' key within the dictionary is used to determine the running mode.\n    :param opt: An object containing various other parameters that may affect the operation of the pipeline \n                including but not limited to the run name for logging purposes.\n\n    :modifies run_mode: A variable set to either \"disabled\" if hyperparameters specify 'local' as True, \n                        or None otherwise. Controls the initialization mode for wandb.\n    \n    :effects:\n        - Initializes a wandb run (Weights & Biases) with the given project settings, configuration, \n          run name, run mode (enabled/disabled/None), and anonymity settings.\n        - Initializes white and black models using the specified model names, modes, and device settings.\n        - Creates an instance of NCF (Neural Collaborative Filtering) with the white models and configuration.\n        - Starts the attack process by calling the attack() function with relevant parameters including \n          the attacker object, models, config, and output directory.\n    \n    :return: Does not explicitly return a value, but may implicitly result in various side effects such as \n             file generation in the output directory and updates to the wandb dashboard if enabled."
+        },
+        {
+            "script": "main.py",
+            "name": "attack",
+            "line_start": 41,
+            "line_end": 124,
+            "class": "False",
+            "description": "Performs adversarial attacks on specified models, saving adversarial images and calculating attack success rates.\n\n:param attacker: An attack function that takes images, labels, filenames, a mask, color distribution, and batch index, and produces adversarial images.\n:param white_models: A dictionary of white box models to be attacked, with model names as keys.\n:param black_models: A dictionary of black box models to be attacked, with model names as keys.\n:param config: A configuration object containing parameters like data ranges, device, path to labels, masks, input images, and other model configurations.\n:param output_dir: A string indicating the directory where adversarial images will be saved after the attack.\n\n:modifies correct_num: A dictionary keyed by model names, modified to store the accumulated number of correctly classified images.\n:modifies correct_class_num: A dictionary keyed by model names, modified to store the success rate data for different classes.\n\n:effects:\n- Reads ground truth data from a file.\n- Prints the progress of image processing using the tqdm library.\n- Loads images, labels, masks, and color distributions from specified file paths.\n- Saves adversarial images to the specified directory.\n- Prints the ongoing progress of the data processing and attack batches.\n- Optionally modifies labels for compatibility with PyTorch models (if config.model_mode is 'torch').\n\n:return: Does not return any values, but this function outputs adversarial images into the output directory and updates the correct_num and correct_class_num dictionaries to reflect the success rate of the attacks.\n\nNote: This docstring assumes that the functionality of the configuration object, the attacker function, and helper functions like 'save_img' are documented elsewhere, as they are not fully detailed here."
+        }
+    ]
+}

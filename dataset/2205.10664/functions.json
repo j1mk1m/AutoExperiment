@@ -5,6 +5,7 @@
             "name": "train",
             "line_start": 84,
             "line_end": 116,
+            "class": "False",
             "description": "Trains an RNN model using the provided data loader and optimizer.\n\n:param dataloader: The data loader for the dataset that provides batches of input and target data.\n:param optimizer: The optimizer used to update the model's parameters.\n:param rnn_unit: The RNN unit (essentially, the model to be trained).\n:param args: A namespace or object containing training hyperparameters like `epoches`, `noise_dim`, `noise_type`, and device information.\n:param task_id: An integer representing a unique identifier for the training task, default is 0.\n:param input_E: Initial state for the embedding layer (defaults to None), used in the RNN unit.\n:param input_hidden: Initial hidden state for the RNN unit (defaults to None).\n\n:effects: \n- Calls the 'log' function to print a start training message with the `task_id`.\n- Iterates over the number of epochs defined in `args.epoches`, displaying a progress bar with `tqdm`.\n- Updates `rnn_unit`, `E`, and `hidden` states during training.\n- Prints the real-time loss and accuracy on batches using `tepoch.set_postfix()`.\n- (Functionality to log epoch training statistics commented out.)\n\n:modifies E: Sets and detaches E to avoid backpropagating through the entire training dataset.\n:modifies hidden: Sets and detaches `hidden` states to avoid backpropagating through the entire training dataset.\n:modifies rnn_unit: Updates the rnn_unit's parameters during optimizing step.\n\n:return: A tuple containing the last state of `E`, the last `hidden` state, and the trained `rnn_unit`."
         },
         {
@@ -12,6 +13,7 @@
             "name": "evaluation",
             "line_start": 119,
             "line_end": 137,
+            "class": "False",
             "description": "Evaluates the performance of a recurrent neural network (RNN) unit on a given dataset.\n\n:param dataloader: An instance of DataLoader containing the dataset to evaluate.\n:param rnn_unit: The RNN module being evaluated.\n:param args: An object containing various arguments, including `noise_dim` and `noise_type` which are used to generate initial noise.\n:param input_E: The initial embedding tensor passed to the RNN unit.\n:param input_hidden: The initial hidden state for the rnn_unit.\n\n:effects:\n    - Calls `rnn_unit.eval()` to set the RNN unit to evaluation mode.\n    - Logs the start and end of the testing process.\n    - Iterates over `dataloader` and logs the loss and accuracy of each batch.\n    - Updates progress for each batch to a tqdm progress bar.\n\n:modifies:\n    - The contents of `test_accs` are updated with the accuracy for each batch during the evaluation process.\n    - Uses the global `device` to ensure the tensors are on the correct device before processing.\n        \n:return:\n    - None. However, it prints out the average testing accuracy after evaluating all batches.\n    \n:note: The function assumes a global `device` variable that specifies the computational device for tensors ('cuda' or 'cpu') and the existence of helper functions such as `make_noise` and `log`. It also uses the library `tqdm` for progress bars and `torch` for tensor operations. The `F` in `F.binary_cross_entropy` refers to `torch.nn.functional`."
         },
         {
@@ -19,6 +21,7 @@
             "name": "main",
             "line_start": 140,
             "line_end": 190,
+            "class": "False",
             "description": "Executes the main procedure of creating output and model directories, logging, preparing datasets, setting up the RNN model, and performing training and evaluation.\n\n:param args: Argument parser or similar namespace containing dataset options, learning rate, and other configuration settings.\n:modifies output_directory: A directory name 'outputs-{dataset}', created to store output files.\n:modifies model_directory: A directory name 'models-{dataset}', created to store model files.\n:effects: \n    - Prints to log the dataset in use and a divider line.\n    - Prints information when each task\u2019s training is completed.\n    - Prints the total training time after completion.\n:return: None. This function is designed to handle procedures that include data processing, model training, and evaluation, with outputs managed through file systems and print statements.\n\nNote on globals: This function appears to reference globals like `RNN`, `train`, `evaluation`, `dataset_preparation`, along with the variable `device`, and Python modules like `os`, `torch`, `time`. These should be imported or defined elsewhere in the codebase."
         }
     ]

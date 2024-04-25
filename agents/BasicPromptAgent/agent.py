@@ -27,7 +27,12 @@ class CodeAgent:
             return self.run_PC_refsol()
         elif self.mode == "FC+refsol":
             return self.run_FC_refsol()
+        elif self.mode == "FC":
+            return self.run_FC()
         return 0
+
+    def run_FC(self):
+        pass
     
     def run_FC_refsol(self):
         # Run refsol

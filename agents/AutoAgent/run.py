@@ -9,7 +9,9 @@ from environment import Environment
 
 def run_AutoAgent(X, model, tags, **kwargs):
     env = Environment(X, model, **kwargs)
-    agent = AutoAgent(env, model, tags, **kwargs)
-    res = agent.run()
-    wandb.log({"final_answer": res})
-    return res
+    print(env.edit_missing_function(instruction="Fill out this missing function"))
+    return 0
+    # agent = AutoAgent(env, model, tags, **kwargs)
+    # res = agent.run()
+    # wandb.log({"final_answer": res})
+    # return res

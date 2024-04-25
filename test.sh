@@ -6,8 +6,8 @@
 agent='AutoAgent' # MLAgentBench, refsol, AutoAgent, BasicPromptAgent
 file='experiments-light.csv'
 combined_id='0000.00000_0'
-model='gpt-4-1106-preview' 
-#model='gpt-3.5-turbo-0125'
+#model='gpt-4-1106-preview' 
+model='gpt-3.5-turbo-0125'
 mode='PC+refsol'
 
 ## Full Run $$

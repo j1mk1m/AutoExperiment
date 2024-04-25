@@ -48,4 +48,4 @@ if __name__ == "__main__":
     wandb.log({"agent_output": pred, "result": y, "loss": loss})
 
     # clean up
-    remove_workspace(X["path"])
+    # remove_workspace(X["path"])

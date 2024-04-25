@@ -7,3 +7,4 @@ agents/logs/*
 agents/tmp/*
 dataset/__pycache__/*
 dataset/refsols/*
+dataset/archive/*

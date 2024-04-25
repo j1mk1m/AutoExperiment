@@ -1,0 +1,20 @@
+{
+    "functions": [
+        {
+            "script": "src/models/resnet.py",
+            "name": "forward",
+            "line_start": 102,
+            "line_end": 110,
+            "class": "True",
+            "description": "Passes an input tensor through the model and returns the output tensor.\n\n:param x: The input tensor to the neural network.\n\n:modifies self.bn1: Applies batch normalization to the output of the first convolutional layer using self.bn1.\n:modifies self.conv1: Applies the first convolutional transformation using self.conv1.\n:modifies self.layer1: Applies the first layer transformation to the tensor.\n:modifies self.layer2: Applies the second layer transformation to the tensor.\n:modifies self.layer3: Applies the third layer transformation to the tensor.\n:modifies self.linear: Applies a linear transformation to the flattened tensor using self.linear.\n\n:effects: Each layer, including convolutional layers, batch normalization, and linear transformations, modifies the input tensor based on the parameters and the functions defined in the layers. Batch normalization may update running mean and variance during training if it is in training mode. The ReLU activation function is applied, which may set some elements of the tensor to zero. Average pooling is applied, which reduces the tensor dimension by taking the average over a window.\n\n:return: The output tensor of the neural network after passing through several layers and transformations."
+        },
+        {
+            "script": "src/models/resnet.py",
+            "name": "__init__",
+            "line_start": 50,
+            "line_end": 69,
+            "class": "True",
+            "description": "Initializes a BasicBlock instance as a part of a neural network model, usually used in constructing ResNet architectures.\n\n:param in_planes: Number of input planes (channels) for the convolutional layers.\n:param planes: Number of output planes (channels) after the convolutional layers.\n:param stride: The stride size for the convolutions. Default is 1.\n:param option: Option for modifying the shortcut connection, with 'A' using zero-padding and 'B' using a convolutional layer. Default is 'A'.\n\n:modifies self.conv1: Adds a convolutional layer with input channels equal to in_planes, output channels equal to planes, a kernel size of 3, a stride defined by the stride parameter, padding of 1, and without a bias term.\n:modifies self.bn1: Adds a batch normalization layer which normalizes the output of conv1.\n:modifies self.conv2: Adds another convolutional layer with input and output channels equal to planes, a kernel size of 3, a stride of 1, padding of 1, and without a bias term.\n:modifies self.bn2: Adds a batch normalization layer which normalizes the output of conv2.\n:modifies self.shortcut: Adds either a padding layer (if option 'A') or a convolutional and batch normalization layer (if option 'B') to the shortcut path depending on the stride and channel matching conditions. This modifies the input tensor to have the same dimensions as the output of conv2 for residual connections.\n\n:effects: \n- Calls the __init__ method of the superclass (nn.Module) to handle standard initialization.\n- Sets up the convolutional and batch normalization layers, and defines the shortcut connection.\n\n:return: None. This is an __init__ function, hence it does not return anything but initializes the object instance.\n\nNote: The parameter `self.expansion` should be defined in the class that `BasicBlock` belongs to. If it is not, the use of `self.expansion` in the `option == 'B'` case will result in an AttributeError."
+        }
+    ]
+}

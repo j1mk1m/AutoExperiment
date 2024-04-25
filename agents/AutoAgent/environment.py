@@ -178,7 +178,10 @@ class Environment:
         response = call_llm([{"role": "user", "content": prompt}], None, self.model)
 
         func_content = response.content
-        func_content = func_content.split("```python\n")[1].split("```")[0] 
+        if "```python" in func_content:
+            func_content = func_content.split("```python\n")[1].split("```")[0] 
+        elif "```" in func_content:
+            func_content = func_content.split("```")[1]
         func_content = func_content.split("\n")
 
         n = 0
@@ -279,11 +282,16 @@ class Environment:
 
     # Directory 
     def list_files(self, directory):
-        try:
-            return self.command_line(f"ls -F {os.path.abspath(os.path.join(self.cur_dir, directory))}")
-        except Exception as e:
-            return f"Cannot list files due to {e}"            
-
+        root = os.path.abspath(self.workspace_root)
+        directory = os.path.abspath(os.path.join(self.cur_dir, directory))
+        if directory.startswith(root) and os.path.exists(directory):
+            try:
+                return self.command_line(f"ls -F {directory}")
+            except Exception as e:
+                return f"Cannot list files due to {e}"            
+        else:
+            return f"Directory not found in the root directory. Tip: use list_files to see contents of the current directory"
+        
     def move(self, source, destination, *kwargs):
         try:
             return self.command_line(f"mv {os.path.abspath(os.path.join(self.cur_dir, source))} {os.path.abspath(os.path.join(self.cur_dir, destination))}")
