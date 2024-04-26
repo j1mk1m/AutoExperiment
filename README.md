@@ -70,9 +70,19 @@ Input `X`:
 	- `line_start`, `line_end`: location of missing function in file
 Output `y`:
 - `result`: single numerical measurement after running given experiment
+
+Sample Data point
+![sample_datapoint](https://github.com/j1mk1m/AutoExperiment/assets/68579388/4a26384e-6bd7-4bc3-9f48-801852b44fd1)
+
+Sample function removed
+![AutoExperiment_sample_func](https://github.com/j1mk1m/AutoExperiment/assets/68579388/c84a5f23-fdff-4577-9e15-8f42859443d0)
+
 # Testing Framework
-TODO
+![AutoExperiment Pipeline](https://github.com/j1mk1m/AutoExperiment/assets/68579388/0910eeef-b6fe-4125-813f-a13fbcd6b23a)
+
 # Agents
+![AutoExperiment Agent Architecture](https://github.com/j1mk1m/AutoExperiment/assets/68579388/db1bd038-8f44-473a-8830-f5eb26637e3b)
+
 We characterize an Agent with the following properties:
 - Architecture
 	- Prompting: what kind of prompting strategies are used
