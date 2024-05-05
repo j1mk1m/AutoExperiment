@@ -8,3 +8,4 @@ agents/tmp/*
 dataset/__pycache__/*
 dataset/refsols/*
 dataset/archive/*
+ae_logs_archive
