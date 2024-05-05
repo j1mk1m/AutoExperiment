@@ -1,68 +1,100 @@
-# Requirements 
-- docker https://docs.docker.com/engine/install/ubuntu/#install-from-a-package
-- nvidia-container-toolkit (for gpu use) https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-apt 
+# Tasks
+General Task: Given information about a scientific experiment with (potentially) incomplete code, reproduce the experiment and output a numerical result.
+### Settings
+- **Full Code**: full repository given as input. Goal is to reproduce the experiment by running a sequence of commands
+- **Partial Code**: one Python function will be blocked and replaced with a GPT-4 generated docstring. The goal is to fill in the missing function, then run the sequence of commands to reproduce the experiment
+- **Partial Code + Refsol** : one Python function will be blocked and replaced with a GPT-generated docstring. In addition, we give the refsol containing sequence of commands to run. The goal is to fill in the missing function so that running the refsol runs the desired experiment
 
-# How to run
-First, set up base docker image:
-```
-cd baselines
-docker build -t base_image .
-```
-Then, run the following:
-```
-python main.py --baseline MLAgentBench --mode FC --local
-```
-### Arguments
-- `exp_file`: experiment csv file to be used. Put custom csv files inside `dataset/experiment_csvs/` directory
-  - `experiments-light.csv` (default)
-- `baseline`: pick baseline/agent to use
-  - MLAgentBench (default)
-- `mode`
-  - FC (full code/ default)
-  - NC (no code)
-- `local`
-  - if flag is set, baseline will run locally and not on docker
-  - if flag is not set (default), baseline will run on docker
- 
-# Repository Structure
-`dataset/`: contains repositories in the dataset, DataLoader class, and experiment csvs
-- `0000.00000/`: organized by paper id (usually ArXiv id)
-  - `code/`: contains cloned respository
-  - `paper.txt`: contents of paper in txt format with experiment results removed
-  - `environment.yml`: environment yaml file used to reproduce the environment in the paper
-- `experiment_csvs/`: contains csv files of experiments
-- `refsols`: contains refsol files of experiments (if applicable)
-- `dataset.py`: contains DataLoader class that creates workspace for each data point given as argument a experiment csv file
-- `test_refsol.py`: if you have refsols for experiments, run this to verify that it works inside docker
+| Setting                           | Code               | paper contents | experiment description | refsol |
+| --------------------------------- | ------------------ | -------------- | ---------------------- | ------ |
+| Full Code (FC)                    | Full               | Yes            | Yes                    | No     |
+| Partial Code (PC)                 | 1 function removed | Yes            | Yes                    | No     |
+| Partial Code + Refsol (PC+refsol) | 1 function removed | Yes            | Yes                    | Yes    |
 
-`workspace/`: this directory will be populated by the DataLoader in `dataset/dataset.py` and used as cache. To save space, use the `remove_workspace` function in `dataset/dataset.py` to delete cached workspaces. This directory is organized by `mode/paper_id/exp_id` (e.g. `FC/0000.00000/0`)
+# Dataset
+### Dataset Creation
+This explains the process of creating new data points for the benchmark. 
+1. First, pick a research paper and find the repository for its code.
+2. Create a directory named with the paper id in `dataset/{paper_id}`
+#### Paper Processing
+1. Find paper on arxiv
+2. Change URL to ar5iv and download the HTML5
+3. Use [Pandoc](https://pandoc.org/MANUAL.html)to convert html to .txt
+	1. `pandoc -o paper.txt paper.html`
+4. Extract specific experiments and results from the paper
+#### Code Processing
+1. Git clone repository inside `dataset/{paper_id}` directory as `code/`
+2. Set up a conda environment and verify that it has all necessary dependencies
+3. Create a `environment.yml` file from the conda environment
+4. Identify main Python functions to remove in the PC setting and list them in `functions.json`
+	1. Each function should contain `script` (relative path to Python file), `name` (name of Python function), `line_start`, `line_end` (location of Python function in file), `description` (GPT-4 generated docstring)
+	2. Helper script to generate the docstrings is in `dataset/util.py`
+### Dataset Directory Structure
+- `dataset/`
+	- `{paper_id}/` :contain contents for one paper
+		- `code/` : contains full repository implementing experiments in paper
+		- `environment.yml` : yml file with necessary dependencies 
+		- `paper.txt` : contents of paper in txt
+		- `functions.json`: contains list of main Python functions to remove for the Partial Code setting
+	- `experiment_csvs/` : contains csv files for experiments
+		- `experiments-light.csv` : each csv file should have rows paper_id, exp_id, description, result, refsol, environment
+	- `dataset.py` : contains helper functions to prepare workspace for specific datapoint `{paper_id}_{exp_id}`
+### Experiment CSV files
+- paper_id: arxiv id of the paper
+- exp_id: numbering of the experiments for one paper
+- combined_id (optional): `{paper_id}_{exp_id}`
+- description: text description of the experiment including all parameters and what to return
+- result: expected result of the experiment. This should be a single numerical value
+- refsol: reference sequence of commands to run to reproduce the experiment. This should be able to be copied into a bash file and run.
+- environment: name of conda environment if already exists
 
-`baselines`: contains implementation of baselines used
-- `MLAgentBench`: contains code implementing MLAgentBench baseline
-- `openai_api_key.txt`: put your OpenAI api key in this file
-- `Dockerfile`: use this to create the base docker image that will be used for all data points
-- `run.sh`: bash script used to run the baseline inside docker
-- `tmp/`: temporary directory that will store log and output of a run
-- `run_baseline.py`: python script that sets up baseline and runs for one data point (experiment)
+### Datapoint
+One datapoint is defined by `{paper_id}_{exp_id}` (one specific experiment from a paper).
+We set up input, output pair as follows:
 
-`main.py`: main script to run Agents over experiments. See How to Run section above.
+Input `X`:
+- `path`: path to workspace directory created by `dataset.py`
+	- `paper.txt`: paper contents
+	- `experiment.txt`: experiment description in txt form
+	- `code/` : repository (FC: full repo, PC: one Python function removed)
+	- `refsol.sh` : bash file containing refsol commands (PC+refsol setting)
+- `mode`: (meta) FC, PC, PC+refsol, etc
+- `paper_id` (meta)
+- `exp_id` (meta)
+- `environment` (meta)
+- `description`: string description of the experiment
+- `func_to_block`: dictionary containing information about removed function (PC setting)
+	- `script`: relative path to Python script with the missing function
+	- `name`: name of missing function
+	- `description`: GPT-4 generated docstring for the function
+	- `line_start`, `line_end`: location of missing function in file
+Output `y`:
+- `result`: single numerical measurement after running given experiment
 
-# Create new datapoints
-Here are instructions on how to expand the dataset.
-```
-cd dataset
-mkdir {paper_id}
-cd {paper_id}
-git clone {repo_url}
-# rename repo directory to code/
-touch environment.yml # figure out necessary dependencies
-touch paper.txt # Copy contents of paper (see below)
-# Add row(s) to experiments.csv (paper_id, exp_id, description, result, ref_sol(optional))
-# See experiments-light.csv for example format
-```
-## Paper to txt pipeline
-1. Find paper on ArXiv
-2. Change url from arxiv -> ar5iv
-3. Download webpage (html)
-4. ``` pandoc -o paper.txt {webpage.html} ``` https://pandoc.org/MANUAL.html
-5. Delete experiment results in paper.txt
+Sample Data point
+![sample_datapoint](https://github.com/j1mk1m/AutoExperiment/assets/68579388/4a26384e-6bd7-4bc3-9f48-801852b44fd1)
+
+Sample function removed
+![AutoExperiment_sample_func](https://github.com/j1mk1m/AutoExperiment/assets/68579388/c84a5f23-fdff-4577-9e15-8f42859443d0)
+
+# Testing Framework
+![AutoExperiment Pipeline](https://github.com/j1mk1m/AutoExperiment/assets/68579388/0910eeef-b6fe-4125-813f-a13fbcd6b23a)
+
+# Agents
+![AutoExperiment Agent Architecture](https://github.com/j1mk1m/AutoExperiment/assets/68579388/db1bd038-8f44-473a-8830-f5eb26637e3b)
+
+We characterize an Agent with the following properties:
+- Architecture
+	- Prompting: what kind of prompting strategies are used
+	- Memory: how does the agent maintain memory
+	- Tool call: what are the tool calls available
+- LLM model: which models does the agent use (e.g. GPT-3.5, GPT-4, etc)
+	- Instruction fine-tuned models
+	- Code Generation tuned models
+	- Function calling models
+
+Baseline Agent architectures
+- `BasicPromptAgent`: this agent prompts LLM one time to generate missing code and to generate the sequence of commands to run
+- `MLAgentBench`: this agent prompts the LLM to generate a research plan, 
+- `AutoAgent`: this agent uses similar tool calls and prompting strategies as MLAgentBench but uses function calling, prompting by parts, and better memory management
+
