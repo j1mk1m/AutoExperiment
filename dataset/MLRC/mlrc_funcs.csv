@@ -1,0 +1,372 @@
+paper_id,func_id,file,name,header_line,line_start,line_end,relevant_paper
+2303.11932,0,losses.py,__call__,68,69,88,"Energy Pointing Game (EPG) measures the concentration of attribution energy within the mask, the
+fraction of positive attributions inside the bounding boxes:
+$$\label{eq:epg}
+    \text{EPG}_k = \frac{\sum_{h=1}^H\sum_{w=1}^W M_{k,hw} A^+_{k,hw}}{\sum_{h=1}^H\sum_{w=1}^W A^+_{k,hw}}\;.$$
+
+In addition to
+the losses described in prior work, we propose to also evaluate using
+the score (, [\[eq:epg\]](#eq:epg){reference-type=""ref""
+reference=""eq:epg""}) as a loss function for model guidance, as it is
+fully differentiable. In particular, we simply define it as
+$$\label{eq:energyloss}
+\textstyle
+    \mathcal{L}_{\text{loc},k} = -\text{EPG}_k.$$ Unlike existing
+localization losses that either (i) do not constrain attributions across
+the entire input (, ), or (ii) force the model to attribute uniformly
+within the mask even if it includes irrelevant background regions (, ),
+maximizing the score jointly optimizes for higher attribution energy
+within the mask and lower attribution energy outside the mask. By not
+enforcing a uniformity prior, we find that the loss is able to provide
+effective guidance while allowing the model to learn freely what to
+focus on within the bounding boxes"
+2303.11932,1,losses.py,__call__,90,91,102,"RRR* introduced the RRR loss to regularize the normalized input gradients
+$\hat{A}_{k,hw}$ as $$\label{eq:rrr}
+    \textstyle \mathcal{L}_{\text{loc},k} = \sum_{h=1}^H\sum_{w=1}^W (1-M_{k,hw}) \hat{A}_{k,hw}^2 \;.$$
+To extend it to our setting, we take $\hat{A}_{k,hw}$ to be given by an
+arbitrary attribution method (); we denote this generalized version by RRR*.
+In contrast to the loss, only regularizes attributions *outside* the
+ground truth masks. While it thus does not introduce a uniformity prior
+similar to the loss, it also does not explicitly promote high importance
+attributions inside the masks."
+2303.11932,2,losses.py,__call__,120,121,133,"Per-pixel cross entropy loss (PPCE) applies a binary cross entropy loss between the mask and the normalized
+positive annotations $\hat A_{k}^+$, thus guiding the model to maximize
+the attributions inside the mask: $$\label{eq:ppce}
+\textstyle
+    \mathcal{L}_{\text{loc},k} = -\frac{1}{\lVert M_k \rVert_1}\sum_{h=1}^H\sum_{w=1}^W M_{k,hw}\log(\hat{A}_{k,hw}^+) \;.$$
+As PPCE does not constrain attributions outside the mask, there is no
+explicit pressure to avoid spurious features."
+2303.11932,3,losses.py,__call__,105,106,117,
+2303.11932,4,bcos/models/bcos_common.py,forward_and_explain,64,65,115,
+2303.11932,5,bcos/models/bcos_common.py,gradient_to_image,118,119,149,
+2303.11932,6,metrics.py,compute,34,35,41,
+2303.11932,7,metrics.py,update,61,62,90,
+2303.11932,8,metrics.py,update,170,171,192,
+2303.11932,9,attribution_methods.py,_call_batch_mode,175,176,181,"B-cos attributions are generated using the inherently-interpretable networks,
+which promote alignment between the input $\mathbf x$ and a dynamic
+weight matrix $\mathbf W(\mathbf x)$ during optimization. In our
+experiments, we use the contribution maps given by the element-wise
+product of the dynamic weights with the input
+($\mathbf W^T_k(\mathbf x)\odot \mathbf x$), which faithfully represent
+the contribution of each pixel to class $k$. To be able to guide models,
+we developed a differentiable implementation of explanations, see
+supplement."
+2303.11932,10,attribution_methods.py,_call_single,183,184,189,"B-cos attributions are generated using the inherently-interpretable networks,
+which promote alignment between the input $\mathbf x$ and a dynamic
+weight matrix $\mathbf W(\mathbf x)$ during optimization. In our
+experiments, we use the contribution maps given by the element-wise
+product of the dynamic weights with the input
+($\mathbf W^T_k(\mathbf x)\odot \mathbf x$), which faithfully represent
+the contribution of each pixel to class $k$. To be able to guide models,
+we developed a differentiable implementation of explanations, see
+supplement."
+2303.11932,11,attribution_methods.py,_call_batch_mode,198,199,206,"GradCam computes importance attributions as a ReLU-thresholded,
+gradient-weighted sum of activation maps. In detail, it is given by
+$\text{ReLU}(\sum_c \alpha_c^k \odot U_c)$ with $c$ denoting the channel
+dimension, and $\alpha^k$ the average-pooled gradients of the output for
+class $k$ with respect to the activations $U$ of the last convolutional
+layer in the model."
+2303.11932,12,attribution_methods.py,_call_single,208,209,215,"GradCam computes importance attributions as a ReLU-thresholded,
+gradient-weighted sum of activation maps. In detail, it is given by
+$\text{ReLU}(\sum_c \alpha_c^k \odot U_c)$ with $c$ denoting the channel
+dimension, and $\alpha^k$ the average-pooled gradients of the output for
+class $k$ with respect to the activations $U$ of the last convolutional
+layer in the model."
+2303.11932,13,attribution_methods.py,_call_batch_mode,224,225,229,"IxG computes the element-wise product $\odot$ of the input and the gradients
+of the $k$-th output w.r.t. the input, $X\odot\nabla_X f_k(X)$. For
+piece-wise linear models such as DNNs with ReLU activations , this
+faithfully computes the linear contributions of a given input pixel to
+the model output."
+2303.11932,14,attribution_methods.py,_call_single,231,232,236,"IxG computes the element-wise product $\odot$ of the input and the gradients
+of the $k$-th output w.r.t. the input, $X\odot\nabla_X f_k(X)$. For
+piece-wise linear models such as DNNs with ReLU activations , this
+faithfully computes the linear contributions of a given input pixel to
+the model output."
+2309.05569,0,iti_gen/model.py,__init__,30,31,57,
+2309.05569,1,iti_gen/model.py,ori_text_feature_extraction,129,130,139,
+2309.05569,2,iti_gen/model.py,construct_fair_text_features,194,195,210,"Inspired by [@lester2021power; @jia2022visual], we propose prompt tuning
+for inclusive generation. Specifically, for a given category $a^{m}_{k}$
+within attribute $\mathcal{A}_{m}$, we inject $q$ *learnable* tokens
+$\bm{S}^{m}_{k} \in \mathbb{R}^{q \times e}$ after the original $\bm{T}$
+to construct a new prompt
+$\bm{P}_{k}^{m} = [\bm{T}; \bm{S}^{m}_{k}] \in \mathbb{R}^{(p+q) \times e}$.
+By querying the model $G$ with $\bm{P}_{k}^{m}$, we can generate images
+exhibiting the characteristics of the corresponding category
+$a^{m}_{k}$. To differentiate the new tokens $\bm{S}^{m}_k$ from the
+original prompt $\bm{T}$, we refer to them as *inclusive tokens*.
+
+When jointly considering $M$ attributes, we aggregate $M$ separate
+inclusive tokens
+$\bm{S}^{1}_{o_1}, \bm{S}^{2}_{o_2}, \dots, \bm{S}^{M}_{o_M}$ to
+represent a specific category combination
+$(a^1_{o_1}, a^2_{o_2}, \dots, a^M_{o_M})$, , the concept of (""woman"",
+""dark skin"", $\dots$, ""young""). We thus expect to create a unique
+$\bm{S}_{o_1 o_2 \dots o_M}$, $$\begin{aligned}
+ \label{eq:aggregation}
+    \bm{S}_{o_1 o_2 \dots o_M} = f (\bm{S}^{1}_{o_1}, \bm{S}^{2}_{o_2}, \dots, \bm{S}^{M}_{o_M})
+\end{aligned}$$ that can be injected after $\bm{T}$ to generate images
+for this particular category combination. The aggregation function $f$
+in Equation [\[eq:aggregation\]](#eq:aggregation){reference-type=""ref""
+reference=""eq:aggregation""} should be able to take various numbers of
+attributes while maintaining the permutation invariant property[^3] with
+respect to attributes. Common options include element-wise average, sum,
+and max operations. Following [@mikolov2013efficient], we adopt
+element-wise sum to preserve the text semantics without losing
+information[^4]. Finally, we define the *inclusive prompt set* as
+follows: $$\begin{aligned}
+ \label{eq:set} 
+    \mathcal{P}_\text{total} = \{ &\bm{P}_{o_1 o_2 \dots o_M} = [{\color{blue}{\bm{T}}};\sum_{m=1}^{M} {\color{my_pink}{\bm{S}^{m}_{o_m}}}] \in \mathbb{R}^{(p+q) \times e} ~| \nonumber \\
+    & 1 \leq o_1 \leq K_1, \dots, 1 \leq o_M \leq K_M \}.
+\end{aligned}$$ By uniformly sampling the prompts from
+$\mathcal{P}_\text{total}$ as the conditions to generate images using
+the generative model $G$, we achieve inclusiveness across all attributes
+(see Figure [\[fig:overview\]](#fig:overview){reference-type=""ref""
+reference=""fig:overview""}). *More generally speaking, the distribution
+of the generated data is directly correlated to the distribution of the
+prompts, which can be easily controlled.*"
+2309.05569,3,iti_gen/model.py,cos_loss,212,213,238,
+2309.05569,4,iti_gen/model.py,iti_gen_loss,240,241,287,"Specifically, we define the direction alignment loss
+$\mathcal{L}_\text{dir}$ to maximize the cosine similarity between the
+image direction and the prompt direction as follows: $$\begin{aligned}
+ \label{equ:4}
+    \mathcal{L}_\text{dir}^{m}(\bm{S}^{m}_i, \bm{S}^{m}_j) = 1 - \bigl\langle \Delta_{\bm{I}}^{m} (i, j), \Delta_{\bm{P}}^{m} (i, j) \bigl\rangle.
+\end{aligned}$$ Here, the image direction $\Delta_{\bm{I}}$ is defined
+as the difference of the averaged image embeddings between two
+categories of the attribute $\mathcal{A}_m$. Let
+$\mathfrak{X}_{k}^{m} = \frac{1}{|\mathcal{B}_k|}\sum_{y_n^m = a_k^m} E_\text{img} (\vx_n^m)$
+be the averaged image embedding for category $a_k^m$; $|\mathcal{B}_k|$
+is the number of images from category $a_k^m$ in each mini-batch. We
+denote the image direction as follows: $$\begin{aligned}
+    \Delta_{\bm{I}}^{m} (i, j) = \mathfrak{X}_{i}^{m} - \mathfrak{X}_{j}^{m}.
+\end{aligned}$$ Similarly, the prompt direction $\Delta_{\bm{P}}$ is
+defined as the difference of the averaged prompt embeddings between two
+categories. Let
+$\mathfrak{P}_{k}^{m} = \frac{1}{|\mathcal{P}_k^m|} \sum_{\bm{P} \in \mathcal{P}^m_k} E_\text{text}(\bm{P})$
+be the averaged prompt embedding for attribute $a_k^m$. Specifically,
+$\mathcal{P}^{m}_{k} = \{ \bm{P} \in \mathcal{P}_\text{total} ~|~ o_m = k \}$
+is a collection of prompts containing all the category combinations for
+other attributes given the category $a_k^m$ for attribute
+$\mathcal{A}_m$ (cf. Equation [\[eq:set\]](#eq:set){reference-type=""ref""
+reference=""eq:set""}). Finally, we denote the prompt direction as
+follows: $$\begin{aligned}
+    \Delta^{m}_{\bm{P}} (i, j) = \mathfrak{P}_{i}^{m} -  \mathfrak{P}_{j}^{m}.
+\end{aligned}$$ By inducing the direction alignment, we aim to
+facilitate the prompt learning of more meaningful and nuanced
+differences between images from different categories.
+
+We observe that direction alignment loss alone may result in language
+drift [@lu2020countering; @lee2019countering; @ruiz2022dreambooth] ---
+the prompts slowly lose syntactic and semantic properties of language as
+they only focus on solving the alignment task. To resolve this issue, we
+design a semantic consistency objective to regularize the training by
+maximizing the cosine similarity between the learning prompts and the
+original input prompt (see
+Figure [2](#fig:approach){reference-type=""ref""
+reference=""fig:approach""}): $$\begin{aligned}
+ \label{equ:7}
+    \mathcal{L}_\text{sem}^{m}(\bm{S}^{m}_i, \bm{S}^{m}_j) = \text{max} \Bigl(0, \lambda - \bigl \langle E_\text{text}(\bm{P}), E_\text{text}(\bm{T}) \bigl\rangle \Bigl)
+\end{aligned}$$ where $\bm{P} \in \mathcal{P}^m_i \cup \mathcal{P}^m_j$
+and $\lambda$ is a hyperparameter (see an analysis in Section ). This
+loss is crucial for generating high-quality images that remain faithful
+to the input prompt."
+2309.05569,5,iti_gen/model.py,prompt_prepend,289,290,296,
+2309.05569,6,iti_gen/model.py,train,317,318,385,
+2309.05569,7,dataloader/image_dataset.py,__init__,20,21,34,
+2309.05569,8,dataloader/image_dataset.py,prepare_datalist,36,37,45,
+2309.05569,9,dataloader/image_dataset.py,__getitem__,50,51,54,
+2205.00048,0,src/utils/evaluation_functions/fairness_metrics.py,II_F,4,5,15,"We refer to the expected exposure $\mathsf{E}$
+corresponding to a stochastic ranking policy $\pi$ as determined by a
+retrieval system as *system exposure*. Similarly, *target exposure* is
+defined as the expected exposure $\mathsf{E}^*$ corresponding to an
+ideal stochastic ranking policy $\pi^*$, whose behavior may be dictated
+by some desirable principle, such as the *equal expected exposure
+principle*. The II-F metric, previously proposed by @diaz2020evaluating, measures
+the disparity between the system and target exposure at the level of
+individual users and individual items. Using similar notations as
+before, we have:
+
+$$\begin{aligned}
+\textbf{II-F} &=\frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{U}|}\sum_{d\in \mathcal{D}}\sum_{u\in \mathcal{U}}\left(p(\epsilon|d, u)-p^*(\epsilon|d, u)\right)^2 \label{eqn:metric-iif1} \\
+&= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{U}|}\sum_{j=1}^{|\mathcal{D}|}\sum_{i=1}^{|\mathcal{U}|}(\mathsf{E}_{ij}-\mathsf{E}^*_{ij})^2. \label{eqn:metric-iif2}
+\end{aligned}$$
+
+For notational brevity, let
+$\mathsf{E}^\delta_{ij} = \mathsf{E}_{ij}-\mathsf{E}^\sim_{ij}$ and
+$\mathsf{E}^\Delta_{ij} = \mathsf{E}^*_{ij}-\mathsf{E}^\sim_{ij}$. Based
+on [\[eqn:metric-iif3\]](#eqn:metric-iif3){reference-type=""ref""
+reference=""eqn:metric-iif3""}, we now redefine II-D and II-R as:
+
+$$\begin{aligned}
+    \textbf{II-D} &= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{U}|}\sum_{j=1}^{|\mathcal{D}|}\sum_{i=1}^{|\mathcal{U}|}{\mathsf{E}^\delta}_{ij}^2 \label{eqn:metric-iid} \\
+    \textbf{II-R} &= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{U}|}\sum_{j=1}^{|\mathcal{D}|}\sum_{i=1}^{|\mathcal{U}|}2{\mathsf{E}^\delta}_{ij}{\mathsf{E}^\Delta}_{ij}. \label{eqn:metric-iir}
+\end{aligned}$$
+
+\textbf{II-D} &= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{U}|}\sum_{j=1}^{|\mathcal{D}|}\sum_{i=1}^{|\mathcal{U}|}{\mathsf{E}^\delta}_{ij}^2
+
+\textbf{II-R} &= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{U}|}\sum_{j=1}^{|\mathcal{D}|}\sum_{i=1}^{|\mathcal{U}|}2{\mathsf{E}^\delta}_{ij}{\mathsf{E}^\Delta}_{ij}"
+2205.00048,1,src/utils/evaluation_functions/fairness_metrics.py,GI_F,18,19,56,"Next, we introduce group attributes on the user-side which gives us the
+GI-F metric that measures the over or under exposure of individual items
+to groups of users. Similar to the way we define the IG-F metric, the
+GI-F metric can be defined as follows, where $U \in \mathcal{G}_u$
+denote a group of users and $\mathcal{G}_u$ the set of all user groups:
+
+::: small
+$$\begin{aligned}
+\textbf{GI-F} &=\frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{G}_u|}\sum_{d\in \mathcal{D}}\sum_{U \in \mathcal{G}_u}\left(p(\epsilon|d, U)-p^*(\epsilon|d, U)\right)^2 \label{eqn:metric-gif1} \\
+&= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{G}_u|}\sum_{j=1}^{|\mathcal{D}|}\sum_{U\in \mathcal{G}_u}\left(\sum_{i=1}^{|U|}p(U_i|U)(\mathsf{E}_{ij}-\mathsf{E}^*_{ij})\right)^2. \label{eqn:metric-gif2}
+\end{aligned}$$
+:::
+
+Consequently, $p(U_i|U)$ can be defined as a uniform probability
+distribution over all users in a group, or could be proportional to
+their usage of the recommender system.
+
+      \textbf{GI-D} &= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{G}_u|}\sum_{j=1}^{|\mathcal{D}|}\sum_{U\in \mathcal{G}_u}\left(\sum_{i=1}^{|U|}p(U_i|U){\mathsf{E}^\delta}_{ij}\right)^2                                     
+
+\textbf{GI-R} &= \frac{1}{|\mathcal{D}|}\frac{1}{|\mathcal{G}_u|}\sum_{j=1}^{|\mathcal{D}|}\sum_{U\in \mathcal{G}_u}\left(\sum_{i=1}^{|U|}2p(U_i|U){\mathsf{E}^\delta}_{ij}{\mathsf{E}^\Delta}_{ij}\right)^2"
+2205.00048,2,src/utils/evaluation_functions/fairness_metrics.py,IG_F,59,60,85,"IG-F metric which is concerned with whether groups of items are over or
+under exposed to individual users. We achieve this by making couple of
+minor modifications to
+[\[eqn:metric-iif1\]](#eqn:metric-iif1){reference-type=""ref""
+reference=""eqn:metric-iif1""}:
+
+::: enumerate*
+replacing $p(\epsilon|d, u)$ and $p^*(\epsilon|d, u)$ with
+$p(\epsilon|D, u)$ and $p^*(\epsilon|D, u)$, respectively, where
+$D \in \mathcal{G}_d$ denotes a group of items and $\mathcal{G}_d$ is
+the set of all item groups, and
+
+averaging the deviations across groups of items instead of individual
+items.
+:::
+
+::: small
+$$\begin{aligned}
+\textbf{IG-F} &= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{U}|}\sum_{D \in \mathcal{G}_d}\sum_{u \in \mathcal{U}}\left(p(\epsilon|D, u)-p^*(\epsilon|D, u)\right)^2 \label{eqn:metric-igf1} \\
+&= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{U}|}\sum_{D \in \mathcal{G}_d}\sum_{i=1}^{|\mathcal{U}|}\left(\sum_{j=1}^{|D|}p(D_j|D)(\mathsf{E}_{ij}-\mathsf{E}^*_{ij})\right)^2. \label{eqn:metric-igf2}
+\end{aligned}$$
+:::
+
+Here, $p(D_j|D)$ can be defined as a uniform probability distribution
+over all items in a group, or when appropriate a popularity weighted
+distribution over items can also be employed.
+
+      \textbf{IG-D} &= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{U}|}\sum_{D \in \mathcal{G}_d}\sum_{i=1}^{|\mathcal{U}|}\left(\sum_{j=1}^{|D|}p(D_j|D){\mathsf{E}^\delta}_{ij}\right)^2
+
+\textbf{IG-R} &= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{U}|}\sum_{D \in \mathcal{G}_d}\sum_{i=1}^{|\mathcal{U}|}\left(\sum_{j=1}^{|D|}2p(D_j|D){\mathsf{E}^\delta}_{ij}{\mathsf{E}^\Delta}_{ij}\right)^2"
+2205.00048,3,src/utils/evaluation_functions/fairness_metrics.py,GG_F,88,89,127,"Having introduced group attributes for users and items separately, we
+now change our focus to exposure disparities that emerge when we look at
+group attributes for both the users and items jointly. Using similar
+notations as before, we can write:
+
+::: small
+$$\begin{aligned}
+\textbf{GG-F} &= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{G}_u|}\sum_{D \in \mathcal{G}_d}\sum_{U \in \mathcal{G}_u}\left(p(\epsilon|D,U)-p^*(\epsilon|D,U)\right)^2 \label{eqn:metric-ggf1} \\
+&= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{G}_u|}\sum_{D \in \mathcal{G}_d}\sum_{U \in \mathcal{G}_u}\left(\sum_{j=1}^{|D|}\sum_{i=1}^{|U|} p(D_j|D) p(U_i|U)(\mathsf{E}_{ij}-\mathsf{E}^*_{ij})\right)^2. \label{eqn:metric-ggf2}
+\end{aligned}$$
+:::
+
+Of all six fairness metrics defined in this section, the GG-F metric is
+particularly interesting as all the other metrics can be thought of
+specific instances of GG-F. For example, if we define the group
+attributes for users in GG-F such that each group contains only one user
+and every user belongs to only one group then we recover the IG-F
+metric. A similar trivial definition of groups on the item-side gives us
+the GI-F metric. Consequently, if this trivial definition of groups is
+applied to both the users and items, we get the II-F metric. Another
+trivial, but conceptually interesting, definition of the user group may
+involve a single group to which all users belong. Under this setting,
+depending on group definition on the item-side, we can recover the AI-F
+and AG-F metrics that we describe next.
+
+      \textbf{GG-D} &= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{G}_u|}\sum_{D \in \mathcal{G}_d}\sum_{U \in \mathcal{G}_u}\left(\sum_{j=1}^{|D|}\sum_{i=1}^{|U|} p(D_j|D)  p(U_i|U){\mathsf{E}^\delta}_{ij}\right)^2
+
+\textbf{GG-R} &= \frac{1}{|\mathcal{G}_d|}\frac{1}{|\mathcal{G}_u|}\sum_{D \in \mathcal{G}_d}\sum_{U \in \mathcal{G}_u}\left(\sum_{j=1}^{|D|}\sum_{i=1}^{|U|} 2  p(D_j|D)  p(U_i|U){\mathsf{E}^\delta}_{ij}{\mathsf{E}^\Delta}_{ij}\right)^2"
+2205.00048,4,src/utils/evaluation_functions/fairness_metrics.py,AI_F,130,131,149,"A recommender system may systemically under or over expose an item to
+all users. To quantify this kind of systemic disparities we define the
+AI-F metric which computes the mean deviation between overall system
+exposure $p(\epsilon|d)$ and target exposure $p^*(\epsilon|d)$ for
+items:
+
+::: small
+$$\begin{aligned}
+\textbf{AI-F} &= \frac{1}{|\mathcal{D}|}\sum_{d \in \mathcal{D}}\left(p(\epsilon|d)-p^*(\epsilon|d)\right)^2 \label{eqn:metric-aif1} \\
+&= \sum_{j=1}^{|\mathcal{D}|}\left(\sum_{i=1}^{|\mathcal{U}|} p(\mathcal{U}_i)(\mathsf{E}_{ij}-\mathsf{E}^*_{ij})\right)^2. \label{eqn:metric-aif2}
+\end{aligned}$$
+:::
+
+As earlier, $p(\mathcal{U}_i)$ can either be uniform or weighted by
+usage.
+
+      \textbf{AI-D} &= \sum_{j=1}^{|\mathcal{D}|}\left(\sum_{i=1}^{|\mathcal{U}|} p(\mathcal{U}_i){\mathsf{E}^\delta}_{ij}\right)^2                                                                                           
+
+\textbf{AI-R} &= \sum_{j=1}^{|\mathcal{D}|}\left(\sum_{i=1}^{|\mathcal{U}|} 2 p(\mathcal{U}_i){\mathsf{E}^\delta}_{ij}{\mathsf{E}^\Delta}_{ij}\right)^2"
+2205.00048,5,src/utils/evaluation_functions/fairness_metrics.py,AG_F,152,153,177,"Finally, the AG-F metric is concerned with systemic under or over
+exposure of groups of items to all users and is defined as follows:
+
+::: small
+$$\begin{aligned}
+\textbf{AG-F} &= \frac{1}{|\mathcal{G}_d|}\sum_{D \in \mathcal{G}_d}\left(p(\epsilon|D)-p^*(\epsilon|D)\right)^2 \label{eqn:metric-agf1} \\
+&= \frac{1}{|\mathcal{G}_d|}\sum_{D \in \mathcal{G}_d}\left(\sum_{j=1}^{|D|}\sum_{i=1}^{|\mathcal{U}|} p(D_j|D)  p(\mathcal{U}_i)(\mathsf{E}_{ij}-\mathsf{E}^*_{ij})\right)^2. \label{eqn:metric-agf2}
+\end{aligned}$$
+:::
+
+      \textbf{AG-D} &= \frac{1}{|\mathcal{G}_d|}\sum_{D \in \mathcal{G}_d}\left(\sum_{j=1}^{|D|}\sum_{i=1}^{|\mathcal{U}|} p(D_j|D)  p(\mathcal{U}_i){\mathsf{E}^\delta}_{ij}\right)^2
+
+\textbf{AG-R} &= \frac{1}{|\mathcal{G}_d|}\sum_{D \in \mathcal{G}_d}\left(\sum_{j=1}^{|D|}\sum_{i=1}^{|\mathcal{U}|} 2 p(D_j|D)  p(\mathcal{U}_i){\mathsf{E}^\delta}_{ij}{\mathsf{E}^\Delta}_{ij}\right)^2"
+2205.00048,6,src/utils/evaluation_functions/stochastic.py,eval_function_stochas,10,11,44,
+2205.00048,7,src/utils/evaluation_functions/static.py,eval_function_static,9,10,34,
+2110.03485,0,cartoonx/cartoonX.py,step,42,43,91,"CartoonX, as described in Algorithm \ref{alg: cartoon RDE}, computes the RDE mask in the wavelet domain of images. More precisely, for the data representation $x = f(h)$,
+we choose $h$ as the concatenation of all the DWT coefficients along the channels, \ie, $h_i\in\R^{c}$. The representation function $f$ is then the discrete inverse wavelet transform, \ie, the summation of the DWT coefficients times the DWT basis vectors. We optimize the mask $s\in[0,1]^k$ on the DWT coefficients $[h_1,\hdots,h_k]^T$ to minimize RDE's $\ell_1$-relaxation from Definition \ref{def:ell_1 relaxation}. For the obfuscation strategy $\mathcal{V}$, we use adaptive Gaussian noise with a partition by the DWT scale (see Section \ref{subsubsec: obfuscation strategies}), \ie, we compute the empirical mean and standard deviation per scale. %We measure distortion as the squared difference in the post-softmax score of the predicted label for $x$ (see Section \ref{subsubsec: measures of distortion}).
+To visualize the final DWT mask $s$ as a piece-wise smooth image in pixel space, we multiply the mask with the DWT coefficients of the greyscale image $\hat x$ of $x$ before inverting the product back to pixel space with the inverse DWT. The pixel values of the inversion are finally clipped into $[0,1]$ as are obfuscations during the RDE optimization to avoid overflow (we assume here the pixel values in $x$ are normalized into $[0,1]$). The clipped inversion in pixel space is the final CartoonX explanation.
+
+
+\RestyleAlgo{ruled} 
+\SetKwInput{kwHparams}{Hyperparameters}
+\SetKwInput{kwInit}{Initialization}
+
+\begin{algorithm}[hbt!]
+
+\caption{CartoonX}\label{alg: cartoon RDE}
+\KwData{Image $x\in[0,1]^n$ with $c$ channels and $k$ pixels, pre-trained classifier $\Phi$.}
+ \kwInit{Initialize mask $s\coloneqq[1,...,1]^T$ on\\ \\ DWT coefficients $h=[h_1,...,h_k]^T$ with $x=f(h)$, where $f$ is the inverse DWT. Choose sparsity level $\lambda>0$, number of steps $N$,  number of noise samples $L$, and measure of distortion $d$.}
+  \For{$i\gets1$ \KwTo $N$}{
+    Sample $L$ adaptive Gaussian noise samples $v^{(1)},...,v^{(L)}\sim \mathcal{N}(\mu,\sigma^2)$\;
+    Compute obfuscations $y^{(1)},..., y^{(L)}$ with $y^{(i)}\coloneqq f(h\odot s + (1-s)\odot v^{(i)})$\;
+    Clip obfuscations into $[0,1]^{n}$\;
+    Approximate expected distortion $\hat D(x,s,\Phi)\coloneqq \sum_{i=1}^Ld(\Phi(x),\Phi(y^{(i)}))^2/L$\;
+    Compute loss for the mask, \ie, $\ell(s)\coloneqq \hat D(x,s,\Phi) + \lambda \|s\|_1$\;
+    Update mask $s$ with gradient descent step using $\nabla_s \ell(s)$ and clip $s$ back to $[0,1]^{k}$\;
+    }
+    Get DWT coefficients $\hat h$ for greyscale image $\hat x$ of $x$\;
+    Set ${\mathcal{E}}\coloneqq f(\hat h \odot s)$ and finally clip ${\mathcal{E}}$ into $[0,1]^{k}$\;
+\end{algorithm}"
+2110.03485,1,cartoonx/cartoonX.py,get_distortion,93,94,119,
+2110.03485,2,cartoonx/cartoonX.py,get_scaled_mask,121,122,128,
+2110.03485,3,cartoonx/cartoonX.py,initialize_dwt_mask,130,131,218,
+2110.03485,4,cartoonx/cartoonX.py,__call__,220,221,376,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+2203.01928,0,experiments/mnist.py,consistency_feature_importance,,62,139,"**Setup.** We fit 3 models on 3 datasets: a denoising autoencoder CNN on
+the MNIST image dataset [@LeCun1998], a LSTM reconstruction autoencoder
+on the ECG5000 time series dataset [@Goldberger2000] and a
+SimCLR [@Chen2020] neural network with a ResNet-18 [@He2015] backbone on
+the CIFAR-10 image dataset [@Krizhevsky2009]. We extract an encoder
+$\f_e$ to interpret from each model. We compute the label-free feature
+importance $b_i(\f_e, \x)$ of each feature (pixel/time step) $x_i$ for
+building the latent representation of the test example $\x \in \Dtest$.
+To verify that high-scoring features are salient, we use an approach
+analogous to pixel-flipping [@Montavon2018]: we mask the $M$ most
+important features with a mask $\m \in \{0,1\}^{d_X}$. We measure the
+latent shift
+$\norm{\f_e(\x) - \f_e(\m \odot \x + (1 - \m) \odot \bar{\x})}$ induced
+by replacing the most important features with a baseline $\bar{\x}$,
+where $\odot$ denotes the Hadamard product. We expect this shift to
+increase with the importance of masked features. We report the average
+shift over the testing set for several values of $M$ and feature
+importance methods in
+Figure [\[fig:cons_features\]](#fig:cons_features){reference-type=""ref""
+reference=""fig:cons_features""}."
