@@ -1,0 +1,50 @@
+from pathlib import Path
+
+base_script = """
+#!/bin/bash
+
+python models/sd/scripts/txt2img.py \\
+    --config='models/sd/configs/stable-diffusion/v1-inference.yaml' \\
+    --ckpt='models/sd/models/ldm/stable-diffusion-v1/model.ckpt' \\
+    --plms \\
+    --prompt="{prompt}" \\
+    --outdir="{outdir}" \\
+    --skip_grid \\
+    --n_iter=13 \\
+    --n_samples=8 \\
+    --seed={seed}
+"""
+# Remove leading '\n'
+base_script = base_script[1:]
+
+prompt_template = "a headshot of {age} {gender}"
+ages = ["an old", "a young"]
+genders = ["man", "woman"]
+
+attr_names = [
+    "Male",
+    "Young",
+]
+
+idx_to_bool = [
+    "positive",
+    "negative",
+]
+
+attr_list = "_".join(attr_names)
+seed = 0
+for idx_age, age in enumerate(ages):
+    for idx_gender, gender in enumerate(genders):
+        combination = ""
+        for attr, idx in zip(attr_names, [idx_gender, idx_age]):
+            combination += f"{attr}_{idx_to_bool[idx]}_"
+        combination = combination[:-1]  # Remove the trailing '_'
+
+        outdir = f"results/celeba_multi/2/hps/{attr_list}/{combination}"
+        prompt = prompt_template.format(age=age, gender=gender)
+
+        script = base_script.format(prompt=prompt, outdir=outdir, seed=seed)
+        jobfile = Path(f"jobfiles/celeba_multi/2/hps/generation/{attr_list}/{combination}.sh")
+        jobfile.parent.mkdir(exist_ok=True, parents=True)
+        jobfile.write_text(script)
+        seed += 1

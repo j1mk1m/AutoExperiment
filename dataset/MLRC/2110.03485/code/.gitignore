@@ -1,0 +1,19 @@
+pytorch_wavelets/
+vit-explain/
+
+# Python 
+__pycache__
+*.pyc
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
+.vscode
+
+# Pytorch
+checkpoints
+*.pt
+
+# General
+.DS_Store

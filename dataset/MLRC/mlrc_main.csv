@@ -1,0 +1,6 @@
+Title,github,paper_id,conda_env
+ITI-GEN: Inclusive Text-to-Image Generation,https://github.com/amonroym99/iti-gen-reproducibility/tree/main,2309.05569,iti-gen
+Studying How to Efficiently and Effectively Guide Models with Explanations,https://github.com/ryan-ott/model-guidance-reproducibility/tree/main,2303.11932,fact
+Label-Free Explainability for Unsupervised Models,https://github.com/EricLangezaal/Re-Label-Free-XAI/tree/main,2203.01928,
+Cartoon Explanations of Image Classifiers,https://arxiv.org/abs/2110.03485,2110.03485,cartoonx
+Joint Multisided Exposure Fairness for Recommendation,https://arxiv.org/abs/2205.00048,2205.00048,jme
