@@ -1,0 +1,15 @@
+command:
+- bash
+- run_exp_from_env.sh
+- ${args}
+method: grid
+parameters:
+  mode: PC+refsol
+  model: gpt-4o
+  agent: AutoAgent
+  retrieval: 'agent'
+  subtests:
+    test:
+      combined_id:
+      - '2309.05569_2'
+      - '2110.03485_0'

@@ -1,0 +1,23 @@
+# Agent 
+agents/openai_api_key.txt
+agents/__pycache__
+
+# Workspace, logs, and utils
+workspace/*
+logs
+wandb
+deploy/*.sbatch
+deploy/sbatches/*.sbatch
+*.py[cod]
+
+# dataset
+dataset
+dataset/__pycache__
+*.pt
+*.zip
+*.tar
+*.gz
+*.npz
+*.png
+*.jpg
+

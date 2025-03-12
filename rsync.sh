@@ -1,0 +1,1 @@
+rsync -av ./ atlas:/work/gyeongwk/auto_experiment --exclude ./wandb 

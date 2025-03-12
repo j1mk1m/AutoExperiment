@@ -1,0 +1,23 @@
+parameters:
+  task: task
+  log_dir: logs
+  work_dir: workspace
+  device: 0
+  python: python
+  interactive: False
+  agent_type: ResearchAgent
+  resume: False
+  max_retries: 5
+  
+  max_steps: 100
+  agent_max_steps: 50
+  max_steps_in_context: 3
+  max_observation_steps_in_context: 3
+  max_time: 72000
+  llm_name: gpt-3.5-turbo-1106
+  edit_script_llm_name: gpt-3.5-turbo-1106
+  fast_llm_name: gpt-3.5-turbo-1106
+
+  edit_script_llm_max_tokens: 4000
+  actions_remove_from_prompt: []
+  actions_add_to_prompt: []

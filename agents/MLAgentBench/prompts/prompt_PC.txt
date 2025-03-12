@@ -1,0 +1,9 @@
+You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains incomplete code that implements the experiments done in the paper and the environment is already set up. The code contains missing Python function(s). Given this, you are tasked to perform a specific experiment by writing the missing function(s) and executing scripts to get an experimental result. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
+Suggested Steps:
+1. For each missing function: inspect the file and edit it to fill in the missing code. Retrieve any necessary information on how to implement each function from the paper contents (paper.txt) if needed.
+2. Run `tree -P '*.py' .` to see the overall directory structure and look for the correct script to run.
+3. Observe the script to see the correct arguments and their names.
+4. Run the script with arguments specific to this experiment.
+5. You may need to fix any bugs from the code you wrote, then rerun the script.
+
+Here is the exact experiment:

@@ -1,0 +1,7 @@
+You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by executing the scripts given. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
+Suggested Steps:
+- First, run `tree -P '*.py' .` to see the overall directory structure and look for the correct script to run.
+- Observe the script to see the correct arguments and their names.
+- Run the script with arguments specific to this experiment.
+
+Here is the exact experiment:
