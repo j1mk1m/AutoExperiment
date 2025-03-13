@@ -23,7 +23,7 @@ def run_agent(agent="AutoAgent", X=None, metadata=None, model="gpt-4o-mini", ret
     if agent=="MLAgentBench":
         res = run_MLAgentBench(X, metadata, model, **kwargs)
     elif agent=="refsol":
-        res = run_refsol(X, metadata)
+        res = run_refsol(X)
     elif agent=="AutoAgent":
         res = run_AutoAgent(X, metadata, model, retrieval=retrieval, tags=tags, **kwargs)
     elif agent=="BasicPromptAgent":

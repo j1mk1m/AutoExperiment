@@ -67,7 +67,7 @@ def calculate_loss(gold, pred, metric_fn=percent_loss):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--_tags", type=str, default="auto_exp_test")
-    parser.add_argument("--agent", type=str, default="AutoAgent", choices=["MLAgentBench", "AutoAgent", "BasicPromptAgent"], help="agent")
+    parser.add_argument("--agent", type=str, default="AutoAgent", choices=["MLAgentBench", "AutoAgent", "BasicPromptAgent", "refsol"], help="agent")
     parser.add_argument("--split", type=str, default="MLRC", choices=["MLRC", "super", "auto_experiment"])
     parser.add_argument("--mode", type=str, default="main", choices=["FC", "FC+refsol", "NC", "PC", "PC+refsol", "main"], help="FC, NC, PC, PC+refsol")
     parser.add_argument("--combined_id", type=str, default="0000.00000_0,1,2", help="combined_id = paper_id + func_ids")

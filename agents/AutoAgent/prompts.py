@@ -1,16 +1,6 @@
 # BASE PROMPTS
-base_prompt_FC = """
-You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains code that implements the experiments done in the paper and the environment is already set up. Given this, you are tasked to perform a specific experiment by executing the scripts given. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
-Here is the exact experiment:
-{experiment}
-"""
-
-base_prompt_PC = """
-You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory already contains some code that implements the experiments done in the paper and the environment is already set up. There is one function that is NotImplemented. Given this, you are tasked to perform a specific experiment by adding missing code and executing code to get experiment results. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit json decodable string after running the experiment exactly as specified below.
-Here is the exact experiment:
-{experiment}
-
-The missing function {func_name} is in file {file_name}
+cot_prompt = """
+You are a research assistant that is tasked with running experiments to produce results for a scientific paper. 
 """
 
 base_prompt_PC_refsol = """
@@ -41,15 +31,6 @@ Relevant paper contents to fill in the missing function:
 
 Tips
 - First, fill in the missing function using the relevant context above.
-"""
-
-base_prompt_NC = """
-You are a research assistant that is tasked with running experiments to produce results for a scientific paper. In paper.txt, you can find the contents of the scientific paper including background information and implementation details of the code. The directory contains utility files and dataset. Also, some code structure is given and the environment is already set up. Given this, you are tasked to perform a specific experiment by writing necessary code following the structure of functions given and executing code to get experiment results. Some instructions on how to run each script can be found in README.md. The exact experiment to perform is described below. Submit a single numerical measurement after running the experiment exactly as specified below.
-Here is the exact experiment:
-"""
-
-refsol_prompt = """
-You can run the experiment by calling function 'run_experiment'
 """
 
 rp_prompt = """

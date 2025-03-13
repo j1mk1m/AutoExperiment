@@ -5,11 +5,13 @@ command:
 method: grid
 parameters:
   mode: PC+refsol
-  model: gpt-4o
-  agent: AutoAgent
-  retrieval: 'agent'
+  model: gpt-4o-mini
+  agent: refsol
+  retrieval: agent
   subtests:
     test:
       combined_id:
-      - '2309.05569_2'
-      - '2110.03485_0'
+        - '2309.05569_'
+        - '2110.03485_'
+        - '2303.11932_'
+        - '2205.00048_'

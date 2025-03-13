@@ -40,7 +40,7 @@ data_paths = {
     'babel': '/home'
 }
 rsync_cmd = '''
-rsync -av /work/gyeongwk/{project_name}/deploy gyeongwk@{server}:{data_path}/gyeongwk/{project_name}/
+rsync -av /work/gyeongwk/{project_name}/deploy gyeongwk@{server}:{data_path}/gyeongwk/{project_name}
 '''
 output_file=os.path.join(this_path, "tower.txt") # where std output is written
 
