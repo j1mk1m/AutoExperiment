@@ -103,7 +103,7 @@ else:
 ## Get sweeps
 sweeps = []
 for yml in all_ymls:
-    with open("./test.yml", 'w') as file:
+    with open("./tmp.yml", 'w') as file:
         file.write(yaml.dump(yml))
     # come up with two time based tags: one word, one hash
     current_time = datetime.now()
