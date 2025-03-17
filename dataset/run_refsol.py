@@ -6,8 +6,7 @@ import selectors
 
 def run_refsol(X):
     start = time.time()
-    refsol = os.path.join(X["path"], "refsol.sh")
-    command_line(f"export MKL_SERVICE_FORCE_INTEL=1 && bash {refsol}")
+    command_line(f"export MKL_SERVICE_FORCE_INTEL=1 && bash refsol.sh", X["path"])
     end = time.time()
     print(f"Run time: {end - start} seconds\n\n")
 

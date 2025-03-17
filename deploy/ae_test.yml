@@ -6,12 +6,10 @@ method: grid
 parameters:
   mode: PC+refsol
   model: gpt-4o-mini
-  agent: refsol
+  agent: refsol 
   retrieval: agent
   subtests:
     test:
       combined_id:
         - '2309.05569_'
         - '2110.03485_'
-        - '2303.11932_'
-        - '2205.00048_'
