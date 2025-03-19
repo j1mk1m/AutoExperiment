@@ -281,13 +281,12 @@ def main():
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
-    # if torch.cuda.is_available():
-    #     device = 0
-    # elif torch.backends.mps.is_available():
-    #     device = 'mps'
-    # else:
-    #     device = 'cpu'
-    device = 'cpu'
+    if torch.cuda.is_available():
+        device = 0
+    elif torch.backends.mps.is_available():
+        device = 'mps'
+    else:
+        device = 'cpu'
 
     model = model.to(device)
 

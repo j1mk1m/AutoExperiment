@@ -12,7 +12,7 @@ sys.path.append(this_dir)
 from llm import call_llm
 
 def add_env_args(parser):
-    parser.add_argument("--environment", type=str, choices=["MLAgentBench", "SWE-Agent"], required=True,
+    parser.add_argument("--environment", type=str, choices=["MLAgentBench", "SWE-Agent"], default="MLAgentBench",
                         help="Type of environment to use")
 
 class ACI:
@@ -121,10 +121,10 @@ class Environment:
     def final_answer(self, final_answer, **kwargs):
         return final_answer
 
-    def command_line(self, command, root_dir=None, **kwargs):
+    def command_line(self, command, **kwargs):
         command = command.strip()
         try:
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=root_dir if root_dir else self.cur_dir)
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=self.cur_dir)
 
             stdout_lines = []
             stderr_lines = []
@@ -531,6 +531,7 @@ class MLAgentBench_Env(Environment):
             return f"Directory not found in the root directory. Tip: use list_files to see contents of the current directory"
 
 
+# TODO
 class SWE_AGENT_Env(Environment):
     def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
         super().__init__(llm_manager, X, metadata, **kwargs)
