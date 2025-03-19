@@ -12,13 +12,30 @@ from torchvision import transforms
 import torchvision.models as models
 from torch.utils.tensorboard import SummaryWriter
 
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
-seed = 42
-torch.manual_seed(seed)
-np.random.seed(seed)
+def set_seed(seed=42):
+    # Set Python random seed
+    random.seed(seed)
+    
+    # Set NumPy random seed
+    np.random.seed(seed)
+    
+    # Set PyTorch random seed for CPU and GPU
+    torch.manual_seed(seed)
+    
+    # Set CUDA random seed for all devices (if available)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
+        
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+set_seed(42) 
 
 sys.path.insert(1, os.path.join(sys.path[0], "../"))
 
@@ -76,7 +93,8 @@ def main(
         save_files: bool, whether to save additional files (masks, images, etc.)
     """
     # Get device (use GPU if possible)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
 
     # Get classifier to explain
     if model == "VGG16":

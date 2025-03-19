@@ -1,9 +1,15 @@
 import os
 import wandb
-import argparse
-from dataset.dataset import *
-from agents.run_agent import run_agent
 this_path = os.path.dirname(__file__) 
+
+from dataset.dataset import *
+
+from agents.run import run_agent
+
+import argparse
+from agents.agent import add_agent_args 
+from agents.memory import add_memory_args
+from agents.environment import add_env_args
 
 def percent_loss(gold, pred):
     return abs(gold - pred) / gold
@@ -67,17 +73,15 @@ def calculate_loss(gold, pred, metric_fn=percent_loss):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--_tags", type=str, default="auto_exp_test")
-    parser.add_argument("--agent", type=str, default="AutoAgent", choices=["MLAgentBench", "AutoAgent", "BasicPromptAgent", "refsol"], help="agent")
-    parser.add_argument("--split", type=str, default="MLRC", choices=["MLRC", "super", "auto_experiment"])
-    parser.add_argument("--mode", type=str, default="main", choices=["FC", "FC+refsol", "NC", "PC", "PC+refsol", "main"], help="FC, NC, PC, PC+refsol")
     parser.add_argument("--combined_id", type=str, default="0000.00000_0,1,2", help="combined_id = paper_id + func_ids")
-    parser.add_argument("--retrieval", type=str, default="agent", choices=["no", "agent", "oracle"])
     parser.add_argument("--model", type=str, default="gpt-4o-mini")
     parser.add_argument("--verbose", action="store_true")
-    args = parser.parse_args()
 
-    if args.mode == "main":
-        args.mode = "PC+refsol"
+    add_env_args(parser)
+    add_agent_args(parser)
+    add_memory_args(parser)
+
+    args = parser.parse_args()
 
     # Initialize wandb
     tags = args._tags.split(',')
@@ -92,16 +96,19 @@ if __name__ == "__main__":
     )
     
     # set up
-    include_paper = args.retrieval != "no"
-    X, y, metadata = get_datapoint(args.split, args.mode, args.combined_id, workspace=os.path.join(this_path, "workspace"), verbose=args.verbose, include_paper=include_paper)
+    include_paper = True
+    workspace = os.path.join(this_path, "workspace")
+    X, y, metadata = get_datapoint("MLRC", "PC+refsol", args.combined_id, workspace=workspace, verbose=args.verbose, include_paper=include_paper)
     wandb.log(X)
     wandb.log(metadata)
     
     if args.verbose: print(f"Running {args.agent} ({args.model}) with Mode: {args.mode} on id {args.combined_id}")
 
     # Run agent and get result
-    pred = run_agent(agent=args.agent, X=X, metadata=metadata, model=args.model, retrieval=args.retrieval, tags=tags) 
+    pred = run_agent(args, model_engine=args.model, max_agent_steps=50, compute_budget=1, max_compute_time=60*30, X=X, metadata=metadata, tags=tags)
     wandb.log({"agent_output": str(pred), "gold_output": str(y)})
+
+    # Calculate loss
     loss_per_exp, correct_per_exp, correct_count, all_correct = calculate_loss(y, pred, percent_loss)
     print(f"Losses: {loss_per_exp}")
     print(f"Correct: {all_correct}")

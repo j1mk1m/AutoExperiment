@@ -1,0 +1,20 @@
+command:
+- bash
+- run_exp_from_env.sh
+- ${args}
+method: grid
+parameters:
+  _tags:
+    value: test
+  agent:
+    value: refsol
+  combined_id:
+    values:
+    - '2309.05569_'
+    - '2110.03485_'
+  mode:
+    value: PC+refsol
+  model:
+    value: gpt-4o-mini
+  retrieval:
+    value: agent

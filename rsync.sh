@@ -1,1 +1,1 @@
-rsync -av ./ atlas:/work/gyeongwk/auto_experiment --exclude "wandb" --exclude ".git"
+rsync -av ./ atlas:/work/gyeongwk/auto_experiment --exclude "wandb" --exclude ".git" --exclude "workspace"

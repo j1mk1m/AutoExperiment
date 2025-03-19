@@ -7,9 +7,26 @@ torch.backends.cudnn.enabled = True
 import time
 import numpy as np
 
-seed = 42
-torch.manual_seed(seed)
-np.random.seed(seed)
+import random
+def set_seed(seed=42):
+    # Set Python random seed
+    random.seed(seed)
+    
+    # Set NumPy random seed
+    np.random.seed(seed)
+    
+    # Set PyTorch random seed for CPU and GPU
+    torch.manual_seed(seed)
+    
+    # Set CUDA random seed for all devices (if available)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
+        
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+set_seed(42) 
 
 def parse_args():
     desc = "The hyperparameters for iti-gen"
@@ -31,12 +48,13 @@ def parse_args():
     parser.add_argument('--lam', type=float, default=0.8, help='lambda in Equation 7')
 
     args = parser.parse_args()
-    if torch.cuda.is_available():
-        args.device = 0
-    elif torch.backends.mps.is_available():
-        args.device = 'mps'
-    else:
-        args.device = 'cpu'
+    # if torch.cuda.is_available():
+    #     args.device = 0
+    # elif torch.backends.mps.is_available():
+    #     args.device = 'mps'
+    # else:
+    #     args.device = 'cpu'
+    args.device = 'cpu'
     return args
 
 if __name__ == '__main__':

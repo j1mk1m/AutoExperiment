@@ -172,7 +172,7 @@ def main(args):
     
     root = os.path.join(args.data_path, args.dataset, "processed")
     train_data = torch.utils.data.Subset(datasets.VOCDetectParsed(
-        root=root, image_set="train", transform=transformer, annotated_fraction=args.annotated_fraction), torch.arange(100))
+        root=root, image_set="train", transform=transformer, annotated_fraction=args.annotated_fraction), torch.arange(10))
     val_data = torch.utils.data.Subset(datasets.VOCDetectParsed(
         root=root, image_set="val", transform=transformer), torch.arange(100))
     test_data = torch.utils.data.Subset(datasets.VOCDetectParsed(
@@ -315,7 +315,7 @@ parser.add_argument("--learning_rate", type=float, default=1e-5, help="Learning 
 parser.add_argument("--log_path", type=str, default=None, help="Path to save TensorBoard logs.")
 parser.add_argument("--save_path", type=str, default="checkpoints/", help="Path to save trained models.")
 parser.add_argument("--seed", type=int, default=0, help="Random seed to use.")
-parser.add_argument("--train_batch_size", type=int, default=16, help="Batch size to use for training.")
+parser.add_argument("--train_batch_size", type=int, default=4, help="Batch size to use for training.")
 parser.add_argument("--dataset", type=str, required=True,
                     choices=["VOC2007", "COCO2014"], help="Dataset to train on.")
 parser.add_argument("--localization_loss_lambda", type=float, default=1.0, help="Lambda to use to weight localization loss.")
