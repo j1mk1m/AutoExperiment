@@ -15,9 +15,27 @@ import cv2
 import yaml
 import matplotlib.pyplot as plt
 
-seed = 42
-torch.manual_seed(seed)
-np.random.seed(seed)
+import random
+def set_seed(seed=42):
+    # Set Python random seed
+    random.seed(seed)
+    
+    # Set NumPy random seed
+    np.random.seed(seed)
+    
+    # Set PyTorch random seed for CPU and GPU
+    torch.manual_seed(seed)
+    
+    # Set CUDA random seed for all devices (if available)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
+        
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+set_seed(42) 
+
 
 sys.path.insert(1, os.path.join(sys.path[0], '../'))
 from cartoonx.cartoonX import CartoonX 
@@ -37,7 +55,8 @@ def get_attention_maps(imgdir, logdir, files):
     """
 
     # Get device (use GPU if possible)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
 
     # Get classifier
     model = timm.create_model('deit_tiny_patch16_224',

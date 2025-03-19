@@ -16,9 +16,27 @@ except ImportError:
     BICUBIC = Image.BICUBIC
 from cleanfid import fid
 
-seed = 42
-torch.manual_seed(seed)
-np.random.seed(seed)
+import random
+def set_seed(seed=42):
+    # Set Python random seed
+    random.seed(seed)
+    
+    # Set NumPy random seed
+    np.random.seed(seed)
+    
+    # Set PyTorch random seed for CPU and GPU
+    torch.manual_seed(seed)
+    
+    # Set CUDA random seed for all devices (if available)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
+        
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+set_seed(42) 
+
 
 def parse_args():
     desc = "Evaluation"
@@ -104,12 +122,13 @@ if __name__ == '__main__':
     CLASSES_prompts = args.class_list
     length = len(CLASSES_prompts)
 
-    if torch.cuda.is_available():
-        device_ = 0
-    elif torch.backends.mps.is_available():
-        device_ = 'mps'
-    else:
-        device_ = 'cpu'
+    # if torch.cuda.is_available():
+    #     device_ = 0
+    # elif torch.backends.mps.is_available():
+    #     device_ = 'mps'
+    # else:
+    #     device_ = 'cpu'
+    device = 'cpu'
 
 
     # evaluate

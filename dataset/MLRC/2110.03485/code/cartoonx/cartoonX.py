@@ -4,7 +4,27 @@ import numpy as np
 import torch
 from torchvision import transforms
 from pytorch_wavelets import DWTForward, DWTInverse
+import random
 
+def set_seed(seed=42):
+    # Set Python random seed
+    random.seed(seed)
+    
+    # Set NumPy random seed
+    np.random.seed(seed)
+    
+    # Set PyTorch random seed for CPU and GPU
+    torch.manual_seed(seed)
+    
+    # Set CUDA random seed for all devices (if available)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
+        
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+set_seed(42) 
 
 class CartoonX:
     def __init__(self, model, device, batch_size, num_steps, step_size, l1lambda, wave, mode, J,
