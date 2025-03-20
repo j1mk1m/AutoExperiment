@@ -1,7 +1,0 @@
-Experiment 1: Train a model on VOC2007 dataset with bcos as the model backbone, BCos attribution method, Energy localization loss, and optimizing explanations. Return the IoU after training for 1 epoch in this format {"IoU": 0.0}. Replace 0.0 with the actual value.
-Experiment 2: Train a model on VOC2007 dataset with bcos as the model backbone, GradCam attribution method, Energy localization loss, and optimizing explanations. Return the IoU after training for 1 epoch in this format {"IoU": 0.0}. Replace 0.0 with the actual value.
-Experiment 3: Train a model on VOC2007 dataset with bcos as the model backbone, IxG attribution method, Energy localization loss, and optimizing explanations. Return the IoU after training for 1 epoch in this format {"IoU": 0.0}. Replace 0.0 with the actual value.
-Return final answer as a json: {"Experiment 1": ..., "Experiment 2": ..., ...}
-
-Missing function(s): 
-- __call__ in file losses.py
