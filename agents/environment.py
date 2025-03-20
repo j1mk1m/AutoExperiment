@@ -123,6 +123,8 @@ class Environment:
 
     def command_line(self, command, **kwargs):
         command = command.strip()
+        if "bash" in command and "export MKL_SERVICE_FORCE_INTEL=1" not in command:
+            command = "export MKL_SERVICE_FORCE_INTEL=1 && " + command
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=self.cur_dir)
 

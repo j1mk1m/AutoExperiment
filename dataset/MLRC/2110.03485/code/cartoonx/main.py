@@ -93,8 +93,7 @@ def main(
         save_files: bool, whether to save additional files (masks, images, etc.)
     """
     # Get device (use GPU if possible)
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Get classifier to explain
     if model == "VGG16":

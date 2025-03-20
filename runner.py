@@ -5,6 +5,7 @@ this_path = os.path.dirname(__file__)
 from dataset.dataset import *
 
 from agents.run import run_agent
+from dataset.run_refsol import run_refsol
 
 import argparse
 from agents.agent import add_agent_args 
@@ -73,8 +74,12 @@ def calculate_loss(gold, pred, metric_fn=percent_loss):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--_tags", type=str, default="auto_exp_test")
-    parser.add_argument("--combined_id", type=str, default="0000.00000_0,1,2", help="combined_id = paper_id + func_ids")
-    parser.add_argument("--model", type=str, default="gpt-4o-mini")
+    parser.add_argument("--combined-id", type=str, default="0000.00000_0,1,2", help="combined_id = paper_id + func_ids")
+    parser.add_argument("--model-engine", type=str, default="gpt-4o-mini")
+    parser.add_argument("--max-agent-steps", type=int, default=50) # 50 action-taking steps
+    parser.add_argument("--compute-budget", type=float, default=1.0) # $1 
+    parser.add_argument("--max-compute-time", type=int, default=60*30) # 30 min
+
     parser.add_argument("--verbose", action="store_true")
 
     add_env_args(parser)
@@ -86,9 +91,10 @@ if __name__ == "__main__":
     # Initialize wandb
     tags = args._tags.split(',')
     tags.append(args.combined_id)
-    tags.append(args.mode)
     tags.append(args.agent)
-    tags.append(args.model)
+    tags.append(args.environment)
+    tags.append(args.memory)
+    tags.append(args.model_engine)
     wandb.init(
         project="AutoExperiment",
         entity="j1mk1m",
@@ -101,18 +107,28 @@ if __name__ == "__main__":
     X, y, metadata = get_datapoint("MLRC", "PC+refsol", args.combined_id, workspace=workspace, verbose=args.verbose, include_paper=include_paper)
     wandb.log(X)
     wandb.log(metadata)
-    
-    if args.verbose: print(f"Running {args.agent} ({args.model}) with Mode: {args.mode} on id {args.combined_id}")
 
-    # Run agent and get result
-    pred = run_agent(args, model_engine=args.model, max_agent_steps=50, compute_budget=1, max_compute_time=60*30, X=X, metadata=metadata, tags=tags)
-    wandb.log({"agent_output": str(pred), "gold_output": str(y)})
+    if args.agent == "refsol":
+        run_refsol(X)
+    else:
+        print("###############################")
+        print(f"Agent: {args.agent}\nMemory: {args.memory}\nEnvironment: {args.environment}\nModel Engine: {args.model_engine}\nDatapoint: {args.combined_id}")
+        print("###############################\n")
 
-    # Calculate loss
-    loss_per_exp, correct_per_exp, correct_count, all_correct = calculate_loss(y, pred, percent_loss)
-    print(f"Losses: {loss_per_exp}")
-    print(f"Correct: {all_correct}")
-    wandb.log({"losses": str(loss_per_exp), "correct": str(correct_per_exp), "correct_count": correct_count, "all_correct": all_correct})
+        # Run agent and get result
+        pred = run_agent(args, X=X, metadata=metadata, tags=tags)
+        print("###############################")
+        print(f"Agent output: {str(pred)}")
+        print(f"Gold output: {str(y)}")
+        wandb.log({"agent_output": str(pred), "gold_output": str(y)})
+
+        # Calculate loss
+        loss_per_exp, correct_per_exp, correct_count, all_correct = calculate_loss(y, pred, percent_loss)
+        print(f"Losses: {loss_per_exp}")
+        print(f"Correct: {correct_per_exp}")
+        print(f"All correct: {all_correct}")
+        print("###############################")
+        wandb.log({"losses": str(loss_per_exp), "correct": str(correct_per_exp), "correct_count": correct_count, "all_correct": all_correct})
 
     # clean up
     shutil.rmtree(X["path"])
