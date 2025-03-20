@@ -36,22 +36,25 @@ class Agent(ABC):
         # Thought prompting step
         prompt.append({"role": "user", "content": self.thought_prompt})
 
+        thought_prompt_num = 1
         for i in range(self.max_retries):
             llm_response = self.llm_manager.call_llm(prompt, None)
 
             if llm_response.error: # most likely token limit
-                print(llm_response.response)
+                prompt = prompt[0:1] + prompt[(i+1)*3+1:]
+                continue
             
             if self._is_valid_thought(llm_response.response.content):
                 thought = llm_response.response.content
                 print(f"### Thought ### \n{thought}\n")
                 self.memory.add_agent_thought(thought)
-                prompt = prompt[:-(1 + 2 * i)] # remove thought prompts
+                prompt = prompt[:-thought_prompt_num] # remove thought prompts
                 prompt.append({"role": "assistant", "content": thought})
                 break
 
             prompt.append(llm_response.reponse)    
             prompt.append({"role": "user", "content": self.thought_reprompt}) #add reprompt
+            thought_prompt_num += 2
 
 
         # Tool calling step

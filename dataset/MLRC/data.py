@@ -72,7 +72,6 @@ def generate_files(paper_ids):
                     experiment_string += f"Experiment {i+1}: " + exp["description"] + "\n"
                     bash_string += f"echo Experiment {i + 1}\n"+ exp["solution"] + "\n"
                     result = exp["result"].replace("'", "\"")
-                    print(result)
                     results[f"Experiment {i+1}"] = json.loads(result)
 
                 experiment_string += "Return final answer as a json: {\"Experiment 1\": ..., \"Experiment 2\": ..., ...}"
