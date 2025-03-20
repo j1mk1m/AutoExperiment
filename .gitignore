@@ -1,6 +1,7 @@
 # Agent 
 agents/openai_api_key.txt
 agents/__pycache__
+agents/workspace
 
 # Workspace, logs, and utils
 workspace/*
