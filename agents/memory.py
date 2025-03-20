@@ -45,7 +45,7 @@ class SlidingWindowMemory(Memory):
         prompt = []
         
         len_obs = len(self.observations)
-        for i in range(len_obs - self.lookback, len_obs):
+        for i in range(max(0, len_obs - self.lookback), len_obs):
             prompt.append({"role": "assistant", "content": self.thoughts[i]})
             prompt.append(self.tool_calls[i])
             prompt.append(self.observations[i])

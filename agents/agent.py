@@ -3,7 +3,7 @@ import prompts
 from abc import ABC, abstractmethod
 
 def add_agent_args(parser):
-    parser.add_argument("--agent", type=str, choices=["ReAct", "Planning", "MLAgentBench", "Reflexion"], required=True,
+    parser.add_argument("--agent", type=str, choices=["refsol", "ReAct", "Planning", "MLAgentBench", "Reflexion"], required=True,
                         help="Type of agent to use")
     parser.add_argument("--max_retries", type=int, default=3,
                         help="Maximum number of retries for LLM calls")
@@ -12,6 +12,7 @@ def add_agent_args(parser):
 class Agent(ABC):
     def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3) -> None:
         self.env = env
+        self.tools = self.env.get_tool_info()
         self.llm_manager = llm_manager
         self.memory = memory
 
@@ -23,9 +24,9 @@ class Agent(ABC):
         self.max_retries = max_retries
 
         # Prompts
-        self.tools = self.env.get_tool_descriptions()
+        self.tool_descriptions = self.env.get_tool_descriptions()
         experiment = self.env.get_exp_description()
-        self.system_prompt = prompts.system_prompt.format(experiment=experiment, tools=self.tools)
+        self.system_prompt = prompts.system_prompt.format(experiment=experiment, tools=self.tool_descriptions)
         self.thought_prompt = prompts.react_prompt 
         self.thought_reprompt = prompts.react_reprompt 
 
@@ -43,6 +44,7 @@ class Agent(ABC):
             
             if self._is_valid_thought(llm_response.response.content):
                 thought = llm_response.response.content
+                print(f"### Thought ### \n{thought}\n")
                 self.memory.add_agent_thought(thought)
                 prompt = prompt[:-(1 + 2 * i)] # remove thought prompts
                 prompt.append({"role": "assistant", "content": thought})
@@ -62,6 +64,7 @@ class Agent(ABC):
 
             tool_calls = llm_response.response.tool_calls
             if tool_calls is not None and len(tool_calls) == 1:
+                print(f"### Tool Call ### \n{tool_calls[0].function}\n")
                 self.memory.add_agent_tool_call(llm_response.response)
                 action = tool_calls[0].function.name
                 inputs = json.loads(tool_calls[0].function.arguments)
