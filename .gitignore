@@ -23,3 +23,5 @@ dataset/__pycache__
 
 *.def
 *.sif
+
+*.img
