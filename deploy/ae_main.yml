@@ -1,4 +1,13 @@
 command:
+- singularity
+- exec
+- --overlay
+- ae_overlay.img
+- --bind
+- /work/gyeongwk/auto_experiment
+- --bind
+- /work/gyeongwk/anaconda3
+- /work/gyeongwk/experiment_tools/base_img.sif
 - bash
 - run_exp_from_env.sh
 - ${args}

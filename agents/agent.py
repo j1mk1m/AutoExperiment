@@ -3,7 +3,7 @@ import prompts
 from abc import ABC, abstractmethod
 
 def add_agent_args(parser):
-    parser.add_argument("--agent", type=str, choices=["refsol", "ReAct", "Planning", "MLAgentBench", "Reflexion"], required=True,
+    parser.add_argument("--agent", type=str, choices=["refsol", "ReAct", "Planning", "MLAgentBench"], required=True,
                         help="Type of agent to use")
     parser.add_argument("--max_retries", type=int, default=3,
                         help="Maximum number of retries for LLM calls")
@@ -55,6 +55,9 @@ class Agent(ABC):
             prompt.append(llm_response.reponse)    
             prompt.append({"role": "user", "content": self.thought_reprompt}) #add reprompt
             thought_prompt_num += 2
+
+            if i == self.max_retries - 1:
+                return None, None
 
 
         # Tool calling step
@@ -126,6 +129,5 @@ class MLAgentBenchAgent(Agent):
         self.thought_reprompt = prompts.MLAgentBench_reprompt
 
     def _is_valid_thought(self, response):
-        # TODO: do parsing
-        return True
+        return "Thought" in response and "Research Plan and Status" in response and "Reflection" in response and "Fact Check" in response
 
