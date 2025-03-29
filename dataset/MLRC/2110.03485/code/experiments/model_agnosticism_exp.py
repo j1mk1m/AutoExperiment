@@ -55,7 +55,8 @@ def get_attention_maps(imgdir, logdir, files):
     """
 
     # Get device (use GPU if possible)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
 
     # Get classifier
     model = timm.create_model('deit_tiny_patch16_224',

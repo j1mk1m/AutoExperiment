@@ -1,26 +1,15 @@
 command:
-- singularity
-- exec
-- --overlay
-- ae_overlay.img
-- --bind
-- /work/gyeongwk/auto_experiment
-- --bind
-- /work/gyeongwk/anaconda3
-- /work/gyeongwk/experiment_tools/base_img.sif
 - bash
 - run_exp_from_env.sh
 - ${args}
 method: grid
 parameters:
-  model-engine: gpt-4o
-  agent: ReAct
+  model-engine: gpt-4o-mini
+  agent: Planning 
+  memory: Summary
   environment: MLAgentBench
   subtests:
     agent_architecture:
-      memory:
-        - 'Full'
-        - 'SlidingWindow'
       combined-id:
         - '2309.05569_0'
         - '2309.05569_1'
