@@ -105,8 +105,6 @@ if __name__ == "__main__":
     include_paper = True
     workspace = os.path.join(this_path, "workspace")
     X, y, metadata = get_datapoint("MLRC", "PC+refsol", args.combined_id, workspace=workspace, verbose=args.verbose, include_paper=include_paper)
-    wandb.log(X)
-    wandb.log(metadata)
 
     if args.agent == "refsol":
         run_refsol(X)

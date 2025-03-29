@@ -2,6 +2,7 @@ import os
 import shutil
 import csv
 import json
+import datetime
 
 this_dir = os.path.dirname(__file__)
 
@@ -72,11 +73,9 @@ def get_datapoint(split="MLRC", mode="PC+refsol", combined_id="0000.00000_0", wo
 
 def prepare_workspace(split, mode, combined_id, paper_id, experiment, workspace, verbose, include_paper=True):
     """ Set up workspace directory for paper_id, exp_id and returns path to workspace """
-    # Create a random hash string from current date/time
-    # timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-    # hash_str = hashlib.md5(timestamp.encode()).hexdigest()[:10]
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
-    workspace_dir = os.path.join(workspace, mode, combined_id)
+    workspace_dir = os.path.join(workspace, f"{mode}_{combined_id}_{timestamp}")
     paper_dir = os.path.join(this_dir, split, paper_id)
 
     if os.path.exists(workspace_dir):

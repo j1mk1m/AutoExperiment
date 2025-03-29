@@ -31,9 +31,11 @@ Please respond with a thought on what action to perform next.
 
 # Planning prompts
 planning_prompt = """
+Create a high level plan with current status and confirmed results.
 """
 
 planning_reprompt = """
+Please respond with a high level plan with current status and confirmed results.
 """
 
 

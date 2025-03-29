@@ -12,15 +12,23 @@ class LLMResponse:
 
 
 class LLM:
-    def __init__(self, model_backbone) -> None:
+    def __init__(self, model_backbone, compute_budget=None) -> None:
         self.cost = 0
         self.prompt_tokens = 0
         self.completion_tokens = 0
+
+        self.compute_budget = compute_budget
         self.model_backbone = model_backbone
+
+    def is_over_compute_budget(self):
+        return self.compute_budget is not None and self.cost > self.compute_budget
 
     def call_llm(self, messages, tools, model=None):
         if model is None:
             model = self.model_backbone
+
+        if self.compute_budget is not None and self.cost > self.compute_budget:
+            return LLMResponse(messages, response=f"Exceeded compute budget of {self.compute_budget}", prompt_tokens=0, completion_tokens=0, cost=0, error=True)
 
         response = call_llm(messages, tools, model)
 

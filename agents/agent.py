@@ -1,6 +1,9 @@
 import json
 import prompts
 from abc import ABC, abstractmethod
+import wandb
+
+import agents.logger as logger
 
 def add_agent_args(parser):
     parser.add_argument("--agent", type=str, choices=["refsol", "ReAct", "Planning", "MLAgentBench"], required=True,
@@ -29,6 +32,44 @@ class Agent(ABC):
         self.system_prompt = prompts.system_prompt.format(experiment=experiment, tools=self.tool_descriptions)
         self.thought_prompt = prompts.react_prompt 
         self.thought_reprompt = prompts.react_reprompt 
+    
+    def run(self, max_agent_steps, tags):
+        logfile = logger.create_log(tags)
+
+        for i in range(max_agent_steps):
+            print("###############################")
+            print(f"Step {i}\n")
+            is_last_step = self.llm_manager.is_over_compute_budget() or self.env.is_over_compute_time() or i == max_agent_steps - 1
+
+            action, inputs = self.step(is_last_step)
+
+            if action is None:
+                return "Agent did not provide a valid action response"
+
+            step = self.env.execute(action, inputs)
+            self.add_observation(step.observation)
+
+            observation = step.observation
+            if len(observation) > 10000:
+                observation = observation[:5000] + "\n... truncated ...\n" + observation[-5000:]
+            print(f"### Observation ###\n{observation}\n")
+            logger.write_log(logfile, i, self.system_prompt, self.memory, self.llm_manager, self.env)
+
+            if step.done:
+                return step.observation # return final answer
+
+            if is_last_step:
+                message = "Failed due to "
+                if self.llm_manager.is_over_compute_budget():
+                    message += "exceeding LLM compute budget"
+                elif self.env.is_over_compute_time():
+                    message += "exceeding maximum compute time"
+                else:
+                    message += "exceeding maximum number of agent steps"
+                return message
+        
+        return "Failed due to exceeding maximum number of agent steps"
+
 
     def step(self, last_step):
         prompt = self._build_prompt(last_step)
@@ -131,3 +172,15 @@ class MLAgentBenchAgent(Agent):
     def _is_valid_thought(self, response):
         return "Thought" in response and "Research Plan and Status" in response and "Reflection" in response and "Fact Check" in response
 
+
+class Agentless(Agent):
+    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3) -> None:
+        super().__init__(env, llm_manager, memory, X, metadata, max_retries)
+
+        self.thought_prompt = ""
+        self.thought_reprompt = ""
+    
+    def step(self, last_step):
+        return super().step(last_step)
+
+    

@@ -30,7 +30,8 @@ class EnvironmentStep:
     done: bool
 
 class Environment:
-    def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
+    def __init__(self, max_compute_time, llm_manager, X, metadata, **kwargs) -> None:
+        self.max_compute_time = max_compute_time
         self.llm_manager = llm_manager
         self.X = X
         self.metadata = metadata
@@ -100,6 +101,9 @@ class Environment:
 
     def get_tool_descriptions(self):
         return "\n".join([f"{aci.name}: {aci.description}" for aci in self.acis])
+
+    def is_over_compute_time(self):
+        return self.compute_time > self.max_compute_time
 
     def execute(self, action, inputs):
         if action not in self.action_to_function_mapper:

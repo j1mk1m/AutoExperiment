@@ -4,12 +4,15 @@ command:
 - ${args}
 method: grid
 parameters:
-  mode: PC+refsol
-  model: gpt-4o-mini
-  agent: refsol 
-  retrieval: agent
+  model-engine: gpt-4o-mini
+  agent: Planning 
+  memory: Summary
+  environment: MLAgentBench
   subtests:
-    test:
-      combined_id:
-        - '2309.05569_'
-        - '2110.03485_'
+    agent_architecture:
+      combined-id:
+        - '2303.11932_0'
+        - '2309.05569_0'
+        - '2110.03485_0'
+        - '2205.00048_0'
+                

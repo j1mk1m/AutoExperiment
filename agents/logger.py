@@ -1,5 +1,6 @@
 import datetime
 import os
+import wandb
 this_path = os.path.dirname(__file__)
 
 def create_log(tags):
@@ -8,7 +9,7 @@ def create_log(tags):
     print(f"Log file created at {logfile}\n")
     return logfile
 
-def write_log(logfile, system_prompt, memory, llm_manager, env):
+def write_log(logfile, step, system_prompt, memory, llm_manager, env):
     with open(logfile, 'w') as file:
         file.write("SYSTEM PROMPT\n")
         file.write(system_prompt)
@@ -26,3 +27,6 @@ def write_log(logfile, system_prompt, memory, llm_manager, env):
         file.write(f"Completion tokens: {llm_manager.completion_tokens} \n")
         file.write(f"Compute Time: {env.compute_time} \n")
         file.write("######################################\n")
+
+    wandb.log({"step": step, "compute_cost": llm_manager.cost, "prompt_tokens": llm_manager.prompt_tokens, 
+               "completion_tokens": llm_manager.completion_tokens, "compute_time": env.compute_time}) 
