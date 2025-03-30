@@ -179,8 +179,29 @@ class Agentless(Agent):
 
         self.thought_prompt = ""
         self.thought_reprompt = ""
+
+    def _retrieve_nl(self):
+        pass
+
+    def _retrieve_code(self):
+        pass
     
-    def step(self, last_step):
-        return super().step(last_step)
+    def run(self, max_agent_steps, tags):
+        paper_context = self._retrieve_nl()
+        code_context = self._retrieve_code()
+
+        prompt = f"Paper {paper_context} code {code_context}"
+
+        llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None)
+
+        self.env.write_file()
+
+        observation = self.env.run_bash()
+
+        # extract
+        llm_response = self.llm_manager.call_llm([{"role": "user", "content": f"Given observation, extract results {observation}"}], None)
+
+        return llm_response.response.content
+
 
     

@@ -6,6 +6,7 @@ import selectors
 import difflib
 import sys
 import datetime 
+import time
 this_dir = os.path.dirname(__file__)
 sys.path.append(this_dir)
 
@@ -129,6 +130,14 @@ class Environment:
         command = command.strip()
         if "bash" in command and "export MKL_SERVICE_FORCE_INTEL=1" not in command:
             command = "export MKL_SERVICE_FORCE_INTEL=1 && " + command
+
+
+        # Safety check
+        if "rm -rf" in command:
+            return "rm is not supported. Please do not delete any directories."
+        if "conda" in command or "pip" in command:
+            return "Environment is already set up. Do not run any conda or pip install commands."
+        
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True, cwd=self.cur_dir)
 
@@ -140,37 +149,49 @@ class Environment:
             selector.register(process.stdout, selectors.EVENT_READ)
             selector.register(process.stderr, selectors.EVENT_READ)
 
+            timeout = 60 * 20 # 20 minutes
+            start_time = time.time()
+            timed_out = False
             while process.poll() is None and selector.get_map():
-                events = selector.select(timeout=1)
+                elapsed_time = time.time() - start_time
+                if elapsed_time >= timeout:
+                    process.kill()
+                    timed_out = True
+                    break
+
+                remaining = max(0.1, min(1.0, timeout - elapsed_time))
+                events = selector.select(timeout=remaining)
+
 
                 for key, _ in events:
                     line = key.fileobj.readline()
                     if key.fileobj == process.stdout:
-                        # print("STDOUT:", line, end =" ")
                         stdout_lines.append(line)
                         lines.append(line)
                     else:
-                        # print("STDERR:", line, end =" ")
                         stderr_lines.append(line)
                         lines.append(line)
 
             for line in process.stdout:
-                line = line
-                # print("STDOUT:", line, end =" ")
                 stdout_lines.append(line)
                 lines.append(line)
             for line in process.stderr:
-                line = line
-                # print("STDERR:", line, end =" ")
                 stderr_lines.append(line)
                 lines.append(line)
+            
+            selector.close()
 
 
+            stdout_lines = [line for line in stdout_lines if "Error: mkl-service + Intel(R)" not in line and "MKL_SERVICE_FORCE_INTEL" not in line]
+            stderr_lines = [line for line in stderr_lines if "Error: mkl-service + Intel(R)" not in line and "MKL_SERVICE_FORCE_INTEL" not in line]
             lines = [line for line in lines if "Error: mkl-service + Intel(R)" not in line and "MKL_SERVICE_FORCE_INTEL" not in line]
+
 
             return_code = process.returncode
 
-            if return_code != 0:
+            if timed_out:
+                observation = "".join(stdout_lines) + f"\nProcess timed out after {timeout} seconds"
+            elif return_code != 0:
                 observation = "".join(stderr_lines)
             else:
                 observation = "".join(stdout_lines)
@@ -178,18 +199,14 @@ class Environment:
             if observation == "":
                 observation = "".join(lines)
             
-            # Tips
-            observation = observation.replace("Error: mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library.", "")
-            if "FileNotFoundError" in observation or "ModuleNotFoundError" in observation:
-                observation += "\nTip: Verify that the file/directory exists.You could be running the script in a wrong directory, If so, try changing directory. Refer to the README for examples."
             return observation
         except Exception as e:
             return f"Something went wrong in executing {command}: {e}."
 
 
 class MLAgentBench_Env(Environment):
-    def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
-        super().__init__(llm_manager, X, metadata, **kwargs)
+    def __init__(self, max_compute_time, llm_manager, X, metadata, **kwargs) -> None:
+        super().__init__(max_compute_time, llm_manager, X, metadata, **kwargs)
 
         tools = [
             ACI(name="inspect_file_lines", 
@@ -377,7 +394,7 @@ class MLAgentBench_Env(Environment):
         The description should reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
         """
             messages = [{"role": "system", "content": prompt}]
-            completion = call_llm(messages, None, self.model).content
+            completion = self.llm_manager.call_llm(messages, None).content
             descriptions.append(completion)
         if len(descriptions) == 1:
             return descriptions[0]
@@ -388,7 +405,7 @@ class MLAgentBench_Env(Environment):
                 """
  
         messages = [{"role": "system", "content": prompt}]
-        completion = call_llm(messages, None, self.model).content
+        completion = self.llm_manager.call_llm(messages, None).content
         return completion
 
     def inspect_file_lines(self, file_name, start_line_number=0, end_line_number=None, **kwargs):

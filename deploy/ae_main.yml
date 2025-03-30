@@ -4,12 +4,15 @@ command:
 - ${args}
 method: grid
 parameters:
-  model-engine: gpt-4o-mini
+  model-engine: gpt-4o
   agent: Planning 
-  memory: Summary
   environment: MLAgentBench
   subtests:
     agent_architecture:
+      memory:
+        - 'Summary'
+        - 'SlidingWindow'
+        - 'Full'
       combined-id:
         - '2309.05569_0'
         - '2309.05569_1'

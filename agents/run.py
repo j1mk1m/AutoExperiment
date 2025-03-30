@@ -8,7 +8,7 @@ from agents.memory import Memory, FullMemory, SlidingWindowMemory, Summary
 
 def get_env(env_args, llm_manager, X, metadata):
     if env_args.environment == "MLAgentBench":
-        return MLAgentBench_Env(llm_manager, X, metadata, **vars(env_args))
+        return MLAgentBench_Env(env_args.max_compute_time, llm_manager, X, metadata)
     elif env_args.environment == "SWE-Agent":
         return SWE_AGENT_Env(llm_manager, X, metadata, **vars(env_args))
     else:
@@ -37,7 +37,7 @@ def get_agent(agent_args, env, llm_manager, memory, X, metadata):
 
 def run_agent(args, X, metadata, tags):
     # initialize
-    llm_manager = LLM(args.model_engine) 
+    llm_manager = LLM(args.model_engine, args.compute_budget) 
     env = get_env(args, llm_manager, X, metadata)
     env.reset()
     memory = get_memory(args, llm_manager)
