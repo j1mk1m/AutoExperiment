@@ -25,7 +25,7 @@ def load_mlrc_data():
 def generate_files(paper_ids):
     mlrc_exps, mlrc_funcs = load_mlrc_data()
 
-    for num_removed in range(1, 6): # TODO: change this
+    for num_removed in range(0, 6): # TODO: change this
         print(f"Num removed n = {num_removed}")
         datapoints = []
 
@@ -58,8 +58,10 @@ def generate_files(paper_ids):
                 datapoint["func_ids"] = ",".join(func_ids)
                 datapoint["func_details"] = comb
 
-                # relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and set(func_ids).issubset(set(exp["func_dependencies"].split(",")))]
-                relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and len([func_id for func_id in func_ids if func_id in exp["func_dependencies"].split(",")]) > 0]
+                if num_removed == 0:
+                    relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and set(func_ids).issubset(set(exp["func_dependencies"].split(",")))]
+                else:
+                    relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and len([func_id for func_id in func_ids if func_id in exp["func_dependencies"].split(",")]) > 0]
                 print(f"Function IDs: {func_ids} / number of exps: {len(relevant_exps)}")
                 if len(relevant_exps) == 0:
                     continue
@@ -72,7 +74,7 @@ def generate_files(paper_ids):
                     experiment_string += f"Experiment {i+1}: " + exp["description"] + "\n"
                     bash_string += f"echo Experiment {i + 1}\n"+ exp["solution"] + "\n"
                     result = exp["result"].replace("'", "\"")
-                    print(result)
+                    # print(result)
                     results[f"Experiment {i+1}"] = json.loads(result)
 
                 experiment_string += "Return final answer as a json: {\"Experiment 1\": ..., \"Experiment 2\": ..., ...}"
