@@ -5,14 +5,14 @@ command:
 method: grid
 parameters:
   model-engine: gpt-4o-mini
-  agent: Planning 
+  agent: refsol
   memory: Summary
   environment: MLAgentBench
   subtests:
     agent_architecture:
       combined-id:
-        - '2303.11932_0'
-        - '2309.05569_0'
-        - '2110.03485_0'
-        - '2205.00048_0'
+        - '2303.11932_'
+        - '2309.05569_'
+        - '2110.03485_'
+        - '2205.00048_'
                 

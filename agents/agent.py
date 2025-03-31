@@ -36,6 +36,8 @@ class Agent(ABC):
     def run(self, max_agent_steps, tags):
         logfile = logger.create_log(tags)
 
+        self.env.reset()
+
         for i in range(max_agent_steps):
             print("###############################")
             print(f"Step {i}\n")
@@ -56,9 +58,11 @@ class Agent(ABC):
             logger.write_log(logfile, i, self.system_prompt, self.memory, self.llm_manager, self.env)
 
             if step.done:
+                self.env.cleanup()
                 return step.observation # return final answer
 
             if is_last_step:
+                self.env.cleanup()
                 message = "Failed due to "
                 if self.llm_manager.is_over_compute_budget():
                     message += "exceeding LLM compute budget"
@@ -68,6 +72,7 @@ class Agent(ABC):
                     message += "exceeding maximum number of agent steps"
                 return message
         
+        self.env.cleanup()
         return "Failed due to exceeding maximum number of agent steps"
 
 
