@@ -77,6 +77,10 @@ class Environment:
             shutil.rmtree(self.workspace_root)
 
         shutil.copytree(source, self.workspace_root, symlinks=True)
+    
+    def cleanup(self):
+        if os.path.exists(self.workspace_root):
+            shutil.rmtree(self.workspace_root)
 
     def get_exp_description(self):
         with open(os.path.join(self.source, "experiment.txt"), 'r') as file: 

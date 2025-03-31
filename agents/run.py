@@ -39,7 +39,6 @@ def run_agent(args, X, metadata, tags):
     # initialize
     llm_manager = LLM(args.model_engine, args.compute_budget) 
     env = get_env(args, llm_manager, X, metadata)
-    env.reset()
     memory = get_memory(args, llm_manager)
     agent = get_agent(args, env, llm_manager, memory, X, metadata)
 
