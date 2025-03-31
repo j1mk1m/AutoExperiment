@@ -6,6 +6,7 @@ def check_gpu_pytorch():
     
     # Print detailed GPU information if available
     if is_available:
+        print(torch.cuda.version)
         device_count = torch.cuda.device_count()
         device_names = [torch.cuda.get_device_name(i) for i in range(device_count)]
         

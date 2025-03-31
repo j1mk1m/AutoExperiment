@@ -122,13 +122,12 @@ if __name__ == '__main__':
     CLASSES_prompts = args.class_list
     length = len(CLASSES_prompts)
 
-    # if torch.cuda.is_available():
-    #     device_ = 0
-    # elif torch.backends.mps.is_available():
-    #     device_ = 'mps'
-    # else:
-    #     device_ = 'cpu'
-    device = 'cpu'
+    if torch.cuda.is_available():
+        device_ = 0
+    elif torch.backends.mps.is_available():
+        device_ = 'mps'
+    else:
+        device_ = 'cpu'
 
 
     # evaluate
