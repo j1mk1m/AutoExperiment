@@ -5,14 +5,15 @@ command:
 method: grid
 parameters:
   model-engine: gpt-4o
-  agent: Planning 
   environment: MLAgentBench
+  memory: SlidingWindow
+  lookback: 1
   subtests:
     agent_architecture:
-      memory:
-        - 'Summary'
-        - 'SlidingWindow'
-        - 'Full'
+      agent: 
+        - 'Planning'
+        - 'ReAct'
+        - 'MLAgentBench'
       combined-id:
         - '2309.05569_0'
         - '2309.05569_1'

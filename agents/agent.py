@@ -46,6 +46,7 @@ class Agent(ABC):
             action, inputs = self.step(is_last_step)
 
             if action is None:
+                self.env.cleanup()
                 return "Agent did not provide a valid action response"
 
             step = self.env.execute(action, inputs)
