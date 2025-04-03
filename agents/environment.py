@@ -32,6 +32,7 @@ class EnvironmentStep:
 
 class Environment:
     def __init__(self, max_compute_time, llm_manager, X, metadata, **kwargs) -> None:
+        self.workspace_root = None
         self.max_compute_time = max_compute_time
         self.llm_manager = llm_manager
         self.X = X
@@ -67,19 +68,21 @@ class Environment:
         ]
 
     def reset(self):
+        self.cleanup()
         self._setup_workspace(self.source)
         self.cur_dir = self.workspace_root
         self.action_to_function_mapper = {aci.name: aci.func for aci in self.acis}
  
     def _setup_workspace(self, source):
-        self.workspace_root = os.path.normpath(os.path.join(this_dir, "workspace", f"{self.mode}_{self.combined_id}"))
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        self.workspace_root = os.path.normpath(os.path.join(this_dir, "workspace", f"{self.mode}_{self.combined_id}_{timestamp}"))
         if os.path.exists(self.workspace_root):
             shutil.rmtree(self.workspace_root)
 
         shutil.copytree(source, self.workspace_root, symlinks=True)
     
     def cleanup(self):
-        if os.path.exists(self.workspace_root):
+        if self.workspace_root is not None and os.path.exists(self.workspace_root):
             shutil.rmtree(self.workspace_root)
 
     def get_exp_description(self):
@@ -111,6 +114,8 @@ class Environment:
         return self.compute_time > self.max_compute_time
 
     def execute(self, action, inputs):
+        if self.workspace_root is None:
+            raise Error("workspace not set up yet")
         if action not in self.action_to_function_mapper:
             return f"Tool {action} not supported", False
 
