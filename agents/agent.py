@@ -10,10 +10,11 @@ def add_agent_args(parser):
                         help="Type of agent to use")
     parser.add_argument("--max_retries", type=int, default=3,
                         help="Maximum number of retries for LLM calls")
+    parser.add_argument("--retrieval", default="agent", choices=["no", "agent", "oracle"])
 
 
 class Agent(ABC):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3) -> None:
+    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent") -> None:
         self.env = env
         self.tools = self.env.get_tool_info()
         self.llm_manager = llm_manager
@@ -25,11 +26,14 @@ class Agent(ABC):
 
         # agent configs
         self.max_retries = max_retries
+        self.retrieval = retrieval
 
         # Prompts
         self.tool_descriptions = self.env.get_tool_descriptions()
         experiment = self.env.get_exp_description()
-        self.system_prompt = prompts.system_prompt.format(experiment=experiment, tools=self.tool_descriptions)
+        tips = prompts.oracle_retrieval_tips.format(oracle=X["funcs_to_block"][0]["relevant_paper"]) if self.retrieval == "oracle" else prompts.agent_retrieval_tips
+        self.system_prompt = prompts.system_prompt.format(experiment=experiment, tools=self.tool_descriptions, tips=tips)
+        # prompting technique
         self.thought_prompt = prompts.react_prompt 
         self.thought_reprompt = prompts.react_reprompt 
     
@@ -148,8 +152,8 @@ class Agent(ABC):
 
 
 class ReActAgent(Agent):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3) -> None:
-        super().__init__(env, llm_manager, memory, X, metadata, max_retries)
+    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent") -> None:
+        super().__init__(env, llm_manager, memory, X, metadata, max_retries, retrieval)
 
         self.thought_prompt = prompts.react_prompt
         self.thought_reprompt = prompts.react_reprompt
@@ -158,8 +162,8 @@ class ReActAgent(Agent):
         return True
 
 class PlanningAgent(Agent):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3) -> None:
-        super().__init__(env, llm_manager, memory, X, metadata, max_retries)
+    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent") -> None:
+        super().__init__(env, llm_manager, memory, X, metadata, max_retries, retrieval)
 
         self.thought_prompt = prompts.planning_prompt
         self.thought_reprompt = prompts.planning_reprompt
@@ -169,8 +173,8 @@ class PlanningAgent(Agent):
 
 
 class MLAgentBenchAgent(Agent):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3) -> None:
-        super().__init__(env, llm_manager, memory, X, metadata, max_retries)
+    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent") -> None:
+        super().__init__(env, llm_manager, memory, X, metadata, max_retries, retrieval)
 
         self.thought_prompt = prompts.MLAgentBench_prompt
         self.thought_reprompt = prompts.MLAgentBench_reprompt
