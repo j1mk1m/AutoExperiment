@@ -26,11 +26,11 @@ def get_memory(memory_args, llm_manager):
 
 def get_agent(agent_args, env, llm_manager, memory, X, metadata):
     if agent_args.agent == "ReAct":
-        return ReActAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries)
+        return ReActAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries, agent_args.retrieval)
     elif agent_args.agent == "Planning":
-        return PlanningAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries)
+        return PlanningAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries, agent_args.retrieval)
     elif agent_args.agent == "MLAgentBench":
-        return MLAgentBenchAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries)
+        return MLAgentBenchAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries, agent_args.retrieval)
     else:
         raise NotImplementedError()
 

@@ -11,12 +11,18 @@ Your task is to write the missing functions in the code and running `bash refsol
 Here are the experiments you need to report:
 {experiment}
 
+{tips}
+"""
+
+agent_retrieval_tips = """
 Tips
-- First, reference the contents of the paper.txt in order to fill in the missing functions. 
+- First, reference the contents of the paper.txt and extract relevant information in order to fill in the missing functions. 
 - Running `bash refsol.sh` will run all the experiments.
 """
 
-demonstration = """
+oracle_retrieval_tips = """
+Relevant text from research paper to fill in the missing function:
+{oracle}
 """
 
 

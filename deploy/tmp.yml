@@ -8,7 +8,6 @@ parameters:
     value: agent_architecture
   agent:
     values:
-    - Planning
     - ReAct
     - MLAgentBench
   combined-id:

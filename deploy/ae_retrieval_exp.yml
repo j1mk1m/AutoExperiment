@@ -4,9 +4,10 @@ command:
 - ${args}
 method: grid
 parameters:
-  mode: PC+refsol
-  model: gpt-4o
-  agent: BasicPromptAgent
+  model-engine: gpt-4o
+  agent: 'ReAct'
+  memory: 'Full'
+  environment: 'MLAgentBench'
   subtests:
     retrieval:
       combined_id:
