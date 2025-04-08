@@ -95,6 +95,8 @@ class Environment:
     def get_tool_info(self):
         tools = []
         for aci in self.acis:
+            if aci.name in self.banned:
+                continue
             tool = {
                 "type": "function",
                 "function": {
