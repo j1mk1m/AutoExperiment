@@ -10,7 +10,7 @@ parameters:
   environment: 'MLAgentBench'
   subtests:
     retrieval:
-      combined_id:
+      combined-id:
       - '2205.00048_0'
       - '2205.00048_1'
       - '2205.00048_2'

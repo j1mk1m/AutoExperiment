@@ -158,7 +158,7 @@ class Environment:
             selector.register(process.stdout, selectors.EVENT_READ)
             selector.register(process.stderr, selectors.EVENT_READ)
 
-            timeout = 60 * 20 # 20 minutes
+            timeout = 60 * 10 # 20 minutes
             start_time = time.time()
             timed_out = False
             while process.poll() is None and selector.get_map():
@@ -175,9 +175,11 @@ class Environment:
                 for key, _ in events:
                     line = key.fileobj.readline()
                     if key.fileobj == process.stdout:
+                        print(line)
                         stdout_lines.append(line)
                         lines.append(line)
                     else:
+                        print(line)
                         stderr_lines.append(line)
                         lines.append(line)
 
