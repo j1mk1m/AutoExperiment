@@ -99,7 +99,7 @@ def prepare_workspace(split, mode, combined_id, paper_id, experiment, workspace,
         shutil.copyfile(os.path.join(paper_dir, "paper.txt"), os.path.join(workspace_dir, "paper.txt"))
 
     if "PC" in mode:
-        funcs_to_block = remove_functions(workspace_dir, funcs_to_block)
+        experiment["func_details"] = remove_functions(workspace_dir, funcs_to_block)
  
     if verbose: print(f"Workspace {workspace_dir} prepared")
     return workspace_dir

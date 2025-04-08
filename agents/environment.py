@@ -414,7 +414,7 @@ class MLAgentBench_Env(Environment):
         The description should reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
         """
             messages = [{"role": "system", "content": prompt}]
-            completion = self.llm_manager.call_llm(messages, None).content
+            completion = self.llm_manager.call_llm(messages, None).response.content
             descriptions.append(completion)
         if len(descriptions) == 1:
             return descriptions[0]
@@ -425,7 +425,7 @@ class MLAgentBench_Env(Environment):
                 """
  
         messages = [{"role": "system", "content": prompt}]
-        completion = self.llm_manager.call_llm(messages, None).content
+        completion = self.llm_manager.call_llm(messages, None).response.content
         return completion
 
     def inspect_file_lines(self, file_name, start_line_number=0, end_line_number=None, **kwargs):
@@ -478,7 +478,7 @@ class MLAgentBench_Env(Environment):
 {function_content}
 ```
 
-Please only output the edited version of this Python function inside ```python environment.
+Please only output the edited version of this Python function inside ```python environment. Make sure to use the right indentation.
 
 ### Edited Python function ###
 """
@@ -487,7 +487,7 @@ Please only output the edited version of this Python function inside ```python e
 
         response = self.llm_manager.call_llm([{"role": "system", "content": prompt}], None).response.content
 
-        new_func_body = response.split("```python")[1].split("```")[0].strip().split("\n")
+        new_func_body = response.split("```python")[1].split("```")[0].split("\n")
 
         new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line:]
         func_details["line_end"] = header_line + len(new_func_body)
