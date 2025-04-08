@@ -8,7 +8,7 @@ from agents.memory import Memory, FullMemory, SlidingWindowMemory, Summary
 
 def get_env(env_args, llm_manager, X, metadata):
     if env_args.environment == "MLAgentBench":
-        return MLAgentBench_Env(env_args.max_compute_time, llm_manager, X, metadata)
+        return MLAgentBench_Env(llm_manager, X, metadata, **vars(env_args))
     elif env_args.environment == "SWE-Agent":
         return SWE_AGENT_Env(llm_manager, X, metadata, **vars(env_args))
     else:
@@ -26,11 +26,11 @@ def get_memory(memory_args, llm_manager):
 
 def get_agent(agent_args, env, llm_manager, memory, X, metadata):
     if agent_args.agent == "ReAct":
-        return ReActAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries, agent_args.retrieval)
+        return ReActAgent(env, llm_manager, memory, X, metadata, **vars(agent_args))
     elif agent_args.agent == "Planning":
-        return PlanningAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries, agent_args.retrieval)
+        return PlanningAgent(env, llm_manager, memory, X, metadata, **vars(agent_args))
     elif agent_args.agent == "MLAgentBench":
-        return MLAgentBenchAgent(env, llm_manager, memory, X, metadata, agent_args.max_retries, agent_args.retrieval)
+        return MLAgentBenchAgent(env, llm_manager, memory, X, metadata, **vars(agent_args))
     else:
         raise NotImplementedError()
 
