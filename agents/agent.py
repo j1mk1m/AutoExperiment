@@ -14,19 +14,19 @@ def add_agent_args(parser):
 
 
 class Agent(ABC):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent", **kwargs) -> None:
+    def __init__(self, env, llm_manager, memory_module, X, metadata, **kwargs) -> None:
         self.env = env
         self.tools = self.env.get_tool_info()
         self.llm_manager = llm_manager
-        self.memory = memory
+        self.memory = memory_module
 
         # Datapoint
         self.X = X
         self.metadata = metadata
 
         # agent configs
-        self.max_retries = max_retries
-        self.retrieval = retrieval
+        self.max_retries = kwargs["max_retries"]
+        self.retrieval = kwargs["retrieval"]
 
         # Prompts
         self.tool_descriptions = self.env.get_tool_descriptions()
@@ -152,8 +152,8 @@ class Agent(ABC):
 
 
 class ReActAgent(Agent):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent", **kwargs) -> None:
-        super().__init__(env, llm_manager, memory, X, metadata, max_retries, retrieval, **kwargs)
+    def __init__(self, env, llm_manager, memory_module, X, metadata, **kwargs) -> None:
+        super().__init__(env, llm_manager, memory_module, X, metadata, **kwargs)
 
         self.thought_prompt = prompts.react_prompt
         self.thought_reprompt = prompts.react_reprompt
@@ -162,8 +162,8 @@ class ReActAgent(Agent):
         return True
 
 class PlanningAgent(Agent):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent", **kwargs) -> None:
-        super().__init__(env, llm_manager, memory, X, metadata, max_retries, retrieval, **kwargs)
+    def __init__(self, env, llm_manager, memory_module, X, metadata, **kwargs) -> None:
+        super().__init__(env, llm_manager, memory_module, X, metadata, **kwargs)
 
         self.thought_prompt = prompts.planning_prompt
         self.thought_reprompt = prompts.planning_reprompt
@@ -173,8 +173,8 @@ class PlanningAgent(Agent):
 
 
 class MLAgentBenchAgent(Agent):
-    def __init__(self, env, llm_manager, memory, X, metadata, max_retries=3, retrieval="agent", **kwargs) -> None:
-        super().__init__(env, llm_manager, memory, X, metadata, max_retries, retrieval, **kwargs)
+    def __init__(self, env, llm_manager, memory_module, X, metadata, **kwargs) -> None:
+        super().__init__(env, llm_manager, memory_module, X, metadata, **kwargs)
 
         self.thought_prompt = prompts.MLAgentBench_prompt
         self.thought_reprompt = prompts.MLAgentBench_reprompt

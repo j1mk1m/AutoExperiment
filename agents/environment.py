@@ -32,9 +32,9 @@ class EnvironmentStep:
     done: bool
 
 class Environment:
-    def __init__(self, max_compute_time, llm_manager, X, metadata, code_retrieval, retrieval, **kwargs) -> None:
+    def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
         self.workspace_root = None
-        self.max_compute_time = max_compute_time
+        self.max_compute_time = kwargs["max_compute_time"]
         self.llm_manager = llm_manager
         self.X = X
         self.metadata = metadata
@@ -45,8 +45,8 @@ class Environment:
         self.compute_time = 0
 
         # Experiments
-        self.retrieval = retrieval
-        self.code_retrieval = code_retrieval
+        self.retrieval = kwargs["retrieval"]
+        self.code_retrieval = kwargs["code_retrieval"]
 
         self.acis = [
             ACI(name="final_answer", 
@@ -176,11 +176,9 @@ class Environment:
                 for key, _ in events:
                     line = key.fileobj.readline()
                     if key.fileobj == process.stdout:
-                        print(line)
                         stdout_lines.append(line)
                         lines.append(line)
                     else:
-                        print(line)
                         stderr_lines.append(line)
                         lines.append(line)
 
@@ -217,8 +215,9 @@ class Environment:
 
 
 class MLAgentBench_Env(Environment):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
+        # Remove max_compute_time from kwargs if it exists to avoid duplicate argument
+        super().__init__(llm_manager, X, metadata, **kwargs)
 
         tools = [
             ACI(name="inspect_file_lines", 
@@ -280,7 +279,7 @@ class MLAgentBench_Env(Environment):
                         "type": "string",
                         "description": "a detailed description on how to implement/edit the function"
                     }
-                }
+                },
                 func=self.edit_function),
             ACI(name="edit_file",
                 description="Use this to do a relatively large but cohesive edit over a python script. Instead of editing the script directly, you should describe the edit instruction so that another AI can help you do this.",
@@ -446,7 +445,7 @@ class MLAgentBench_Env(Environment):
         return "File appended successfully"
 
     def edit_function(self, edit_instruction, **kwargs):
-        func_details = self.X["func_details"][0]
+        func_details = self.X["funcs_to_block"][0]
         file_name = func_details["file"]
         file_content = self.read_file(file_name)
 
@@ -464,22 +463,27 @@ class MLAgentBench_Env(Environment):
         else:
             raise NotImplementedError()
 
+        if self.retrieval == "oracle":
+            edit_instruction += self.X["funcs_to_block"][0]["relevant_paper"]
+
         prompt = f"""Given the following code snippet and edit instruction, write the Python function. ONLY output contents of the Python function.
-        ### CONTEXT ###
-        {context}
+### CONTEXT ###
+{context}
 
-        ### Edit instruction ###
-        {edit_instruction}
+### Edit instruction ###
+{edit_instruction}
 
-        ### Python function ###
-        ```python
-        {function_content}
-        ```
+### Python function ###
+```python
+{function_content}
+```
 
-        Please only output the edited version of this Python function inside ```python environment.
+Please only output the edited version of this Python function inside ```python environment.
 
-        ### Edited Python function ###
-        """
+### Edited Python function ###
+"""
+        
+        print("### PROMPT FOR edit function ###\n", prompt, "\n### END OF PROMPT ###")
 
         response = self.llm_manager.call_llm([{"role": "system", "content": prompt}], None).response.content
 
@@ -490,7 +494,7 @@ class MLAgentBench_Env(Environment):
 
         self.write_file(file_name, "\n".join(new_file_content)) 
 
-        return f"New function content\n```python\n{'\n'.join(new_func_body)}\n```"
+        return f"New function content\n```python\n" + "\n".join(new_func_body) + "\n```"
 
 
 
@@ -501,22 +505,14 @@ class MLAgentBench_Env(Environment):
             self.write_file(file_name, "")
             content = ""
 
-        if self.remove_code_context:
-            header_line = self.X["func_details"][0]["header_line"]
-            end_line = self.X["func_details"][0]["line_end"]
-            content = "\n".join(content.split("\n")[header_line-1:end_line])
-
-        if self.retrieval == "oracle":
-            edit_instruction += "\n" + self.X["funcs_to_block"][0]["relevant_paper"]
-
         prompt = f"""Given this script:
-        ```
-        {content}
-        ```
-        Edit the script by following the instruction:
-        {edit_instruction}
-        Provide the full code after the edit, making no other changes. Provide only the code in markdown format. E.g. ```python or ```bash
-        """
+```
+{content}
+```
+Edit the script by following the instruction:
+{edit_instruction}
+Provide the full code after the edit, making no other changes. Provide only the code in markdown format. E.g. ```python or ```bash
+"""
 
         completion = self.llm_manager.call_llm([{"role": "system", "content": prompt}], None).response.content
 

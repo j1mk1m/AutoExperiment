@@ -43,11 +43,12 @@ def generate_files(paper_ids):
                 func["header_line"] = int(func["header_line"])
                 func["line_start"] = int(func["line_start"])
                 func["line_end"] = int(func["line_end"])
-                matched_detail = [f["description"] for f in func_details if f["func_id"] == func["func_id"]]
+                matched_detail = [f for f in func_details if f["func_id"] == func["func_id"]]
                 if len(matched_detail) == 0:
                     print(f"None matched for {func['func_id']}")
                     continue
-                func["description"] = matched_detail[0]
+                func["description"] = matched_detail[0]["description"]
+                func["code_context"] = matched_detail[0]["code_context"]
                 new_funcs.append(func)
 
             funcs = new_funcs
