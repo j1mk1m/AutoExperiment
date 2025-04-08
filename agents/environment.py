@@ -48,6 +48,8 @@ class Environment:
         self.retrieval = kwargs["retrieval"]
         self.code_retrieval = kwargs["code_retrieval"]
 
+        self.banned = ["write_file", "edit_file", "command_line"]
+
         self.acis = [
             ACI(name="final_answer", 
                 description="Use this to submit the final answer to the current task", 
@@ -72,7 +74,7 @@ class Environment:
         self.cleanup()
         self._setup_workspace(self.source)
         self.cur_dir = self.workspace_root
-        self.action_to_function_mapper = {aci.name: aci.func for aci in self.acis}
+        self.action_to_function_mapper = {aci.name: aci.func for aci in self.acis if aci.name not in self.banned}
  
     def _setup_workspace(self, source):
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
@@ -464,7 +466,7 @@ class MLAgentBench_Env(Environment):
             raise NotImplementedError()
 
         if self.retrieval == "oracle":
-            edit_instruction += self.X["funcs_to_block"][0]["relevant_paper"]
+            edit_instruction = self.X["funcs_to_block"][0]["relevant_paper"]
 
         prompt = f"""Given the following code snippet and edit instruction, write the Python function. ONLY output contents of the Python function.
 ### CONTEXT ###
