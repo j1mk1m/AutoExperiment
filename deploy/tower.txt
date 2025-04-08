@@ -1,8 +1,8 @@
 --- Agent Commands ---
-wandb agent j1mk1m/AutoExperiment/o5fjse8q
+wandb agent j1mk1m/AutoExperiment/sp674qfn
 
 --- Sweep URLs ---
-https://wandb.ai/j1mk1m/AutoExperiment/sweeps/o5fjse8q
+https://wandb.ai/j1mk1m/AutoExperiment/sweeps/sp674qfn
 
 --- atlas ---
-sbatch /work/gyeongwk/auto_experiment/deploy/sbatches/ae_code_retrieval._Apr_08_code_retrieval_6fcf_atlas.sbatch
+sbatch /work/gyeongwk/auto_experiment/deploy/sbatches/ae_code_retrieval._Apr_08_code_retrieval_8c92_atlas.sbatch
