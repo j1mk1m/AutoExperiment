@@ -8,8 +8,9 @@ parameters:
   agent: 'ReAct'
   memory: 'Full'
   environment: 'MLAgentBench'
+  retrieval: 'oracle'
   subtests:
-    retrieval:
+    oracle_retrieval:
       combined-id:
       - '2205.00048_0'
       - '2205.00048_1'
@@ -29,7 +30,3 @@ parameters:
       - '2309.05569_2'
       - '2309.05569_4'
       - '2110.03485_0'
-      retrieval:
-      - 'no'
-      - 'agent'
-      - 'oracle'
