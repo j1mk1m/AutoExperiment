@@ -15,6 +15,7 @@ from llm import call_llm
 def add_env_args(parser):
     parser.add_argument("--environment", type=str, choices=["MLAgentBench", "SWE-Agent"], default="MLAgentBench",
                         help="Type of environment to use")
+    parser.add_argument("--code-retrieval", type=str, choices=["no", "agent", "oracle"], default="agent")
 
 class ACI:
     def __init__(self, name, description, args, func) -> None:
@@ -31,7 +32,7 @@ class EnvironmentStep:
     done: bool
 
 class Environment:
-    def __init__(self, max_compute_time, llm_manager, X, metadata, **kwargs) -> None:
+    def __init__(self, max_compute_time, llm_manager, X, metadata, code_retrieval, retrieval, **kwargs) -> None:
         self.workspace_root = None
         self.max_compute_time = max_compute_time
         self.llm_manager = llm_manager
@@ -44,8 +45,8 @@ class Environment:
         self.compute_time = 0
 
         # Experiments
-        self.retrieval = kwargs["retrieval"] if "retrieval"  in kwargs else "agent"
-        self.remove_code_context = "remove_code_context" in kwargs and kwargs["remove_code_context"]
+        self.retrieval = retrieval
+        self.code_retrieval = code_retrieval
 
         self.acis = [
             ACI(name="final_answer", 
@@ -216,8 +217,8 @@ class Environment:
 
 
 class MLAgentBench_Env(Environment):
-    def __init__(self, max_compute_time, llm_manager, X, metadata, **kwargs) -> None:
-        super().__init__(max_compute_time, llm_manager, X, metadata, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
         tools = [
             ACI(name="inspect_file_lines", 
@@ -272,6 +273,15 @@ class MLAgentBench_Env(Environment):
                     }
                 },
                 func=self.append_file),
+            ACI(name="edit_function",
+                description="Use this to edit the missing function",
+                args={
+                    "edit_instruction": {
+                        "type": "string",
+                        "description": "a detailed description on how to implement/edit the function"
+                    }
+                }
+                func=self.edit_function),
             ACI(name="edit_file",
                 description="Use this to do a relatively large but cohesive edit over a python script. Instead of editing the script directly, you should describe the edit instruction so that another AI can help you do this.",
                 args={
@@ -285,7 +295,7 @@ class MLAgentBench_Env(Environment):
                     },
                     "save_name": {
                         "type": "string",
-                        "description": "a valid file name with relative path to current directory if needed"
+                        "description": "a valid file name with relative path to current directory if needed. Use same name as file_name if you want to make edits in place"
                     }
                 },
                 func=self.edit_file),
@@ -434,6 +444,55 @@ class MLAgentBench_Env(Environment):
         with open(os.path.join(self.cur_dir, file_name), 'a') as file:
             file.write(content)
         return "File appended successfully"
+
+    def edit_function(self, edit_instruction, **kwargs):
+        func_details = self.X["func_details"][0]
+        file_name = func_details["file"]
+        file_content = self.read_file(file_name)
+
+        header_line = func_details["header_line"]
+        end_line = func_details["line_end"]
+
+        function_content = "\n".join(file_content.split("\n")[header_line-1:end_line])
+
+        if self.code_retrieval == "no":
+            context = ""
+        elif self.code_retrieval == "agent":
+            context = file_content
+        elif self.code_retrieval == "oracle": 
+            context = func_details["code_context"] 
+        else:
+            raise NotImplementedError()
+
+        prompt = f"""Given the following code snippet and edit instruction, write the Python function. ONLY output contents of the Python function.
+        ### CONTEXT ###
+        {context}
+
+        ### Edit instruction ###
+        {edit_instruction}
+
+        ### Python function ###
+        ```python
+        {function_content}
+        ```
+
+        Please only output the edited version of this Python function inside ```python environment.
+
+        ### Edited Python function ###
+        """
+
+        response = self.llm_manager.call_llm([{"role": "system", "content": prompt}], None).response.content
+
+        new_func_body = response.split("```python")[1].split("```")[0].strip().split("\n")
+
+        new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line:]
+        func_details["line_end"] = header_line + len(new_func_body)
+
+        self.write_file(file_name, "\n".join(new_file_content)) 
+
+        return f"New function content\n```python\n{'\n'.join(new_func_body)}\n```"
+
+
 
     def edit_file(self, file_name, edit_instruction, save_name=None, **kwargs):
         try:
