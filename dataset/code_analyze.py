@@ -251,7 +251,7 @@ if __name__ == "__main__":
             with open(functions_file, 'r') as f:
                 for line in f:
                     functions.append(json.loads(line))
-            print(f"Loaded {len(functions)} functions from {paper_id}")
+            # print(f"Loaded {len(functions)} functions from {paper_id}")
         
         for function in functions:
             target_function = function["name"]

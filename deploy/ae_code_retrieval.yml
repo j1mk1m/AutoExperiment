@@ -1,0 +1,33 @@
+command:
+- bash
+- run_exp_from_env.sh
+- ${args}
+method: grid
+parameters:
+  model-engine: gpt-4o
+  agent: 'ReAct'
+  memory: 'Full'
+  environment: 'MLAgentBench'
+  subtests:
+    code_retrieval:
+      combined-id:
+        - '2309.05569_0'
+        - '2309.05569_5'
+        - '2309.05569_6'
+        - '2309.05569_7'
+        - '2303.11932_4'
+        - '2303.11932_9'
+        - '2303.11932_10'
+        - '2303.11932_11'
+        - '2303.11932_12'
+        - '2303.11932_13'
+        - '2303.11932_14'
+        - '2110.03485_0'
+        - '2110.03485_3'
+        - '2110.03485_4'
+        - '2205.00048_6'
+        - '2205.00048_7'
+      code-retrieval:
+      - 'no'
+      - 'agent'
+      - 'oracle'
