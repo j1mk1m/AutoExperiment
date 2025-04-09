@@ -4,7 +4,7 @@ agent='ReAct'
 environment="MLAgentBench"
 memory="Full"
 model='gpt-4o-mini'
-retrieval='oracle'
+retrieval='agent'
 code_retrieval='oracle'
 
 ## Full Run $$

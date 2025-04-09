@@ -5,7 +5,7 @@ this_path = os.path.dirname(__file__)
 from dataset.dataset import *
 
 from agents.run import run_agent
-from dataset.run_refsol import run_refsol
+from agents.run_refsol import run_refsol
 
 import argparse
 from agents.agent import add_agent_args 

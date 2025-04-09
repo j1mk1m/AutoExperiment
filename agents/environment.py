@@ -48,7 +48,7 @@ class Environment:
         self.retrieval = kwargs["retrieval"]
         self.code_retrieval = kwargs["code_retrieval"]
 
-        self.banned = ["write_file", "edit_file", "command_line"]
+        self.banned = [] #["write_file", "edit_file", "command_line"]
 
         self.acis = [
             ACI(name="final_answer", 

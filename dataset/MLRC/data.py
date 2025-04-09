@@ -48,7 +48,7 @@ def generate_files(paper_ids):
                     print(f"None matched for {func['func_id']}")
                     continue
                 func["description"] = matched_detail[0]["description"]
-                func["code_context"] = matched_detail[0]["code_context"]
+                func["code_context"] = matched_detail[0]["code_context_embedding"]
                 new_funcs.append(func)
 
             funcs = new_funcs

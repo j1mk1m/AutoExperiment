@@ -1,10 +1,6 @@
 import json
 import os
-# import sys
-# import csv
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import ast
+
 this_dir = os.path.dirname(__file__)
 
 SCRIPT = """
@@ -95,13 +91,6 @@ def call_openai(messages, tools, model):
         print(e)
 
 
-import json
-
-# Load the super_pc_llama.jsonl file
-# super_pc_llama_data = []
-# with open('super_pc_llama.jsonl', 'r') as file:
-#     super_pc_llama_data = [json.loads(line) for line in file]
-
 def generate_code_comments(paper_id, split="MLRC"):
     print(f"Paper ID: {paper_id}")
     functions = []
@@ -128,7 +117,6 @@ def generate_code_comments(paper_id, split="MLRC"):
 
 # papers = ["2105.14761", "2203.07836", "2309.07045", "2305.15933", "2403.07088", "2305.17333", "2210.14102", "2304.13148", "2401.15535"]
 papers = ["2110.03485", "2205.00048", "2303.11932", "2309.05569"]
-# papers = ["2303.11932", "2309.05569"]
 print("Generating Comments for ", papers)
 for paper in papers:
     generate_code_comments(paper)
