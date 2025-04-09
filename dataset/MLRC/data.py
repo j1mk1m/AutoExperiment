@@ -25,7 +25,7 @@ def load_mlrc_data():
 def generate_files(paper_ids):
     mlrc_exps, mlrc_funcs = load_mlrc_data()
 
-    for num_removed in range(0, 6): # TODO: change this
+    for num_removed in range(0, 2): # TODO: change this
         print(f"Num removed n = {num_removed}")
         datapoints = []
 
