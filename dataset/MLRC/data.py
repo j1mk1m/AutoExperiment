@@ -109,4 +109,4 @@ def find_averages():
 paper_ids = ["2309.05569", "2303.11932", "2110.03485", "2205.00048"]
 generate_files(paper_ids)
 
-find_averages()
+# find_averages()

@@ -163,6 +163,7 @@ class CodeSearchEngine:
         res_string = ""
         
         for i, (chunk, similarity) in enumerate(results):
+            if i == 0: continue
             print(f"\nRESULT #{i+1} - Similarity: {similarity:.4f}")
             print(f"File: {chunk.filepath} (Lines {chunk.start_line}-{chunk.end_line})")
             # print("-" * 50)
@@ -174,7 +175,7 @@ class CodeSearchEngine:
 
 if __name__ == "__main__":
     top_k = 5
-    paper_ids = ["2303.11932", "2110.03485", "2309.05569"] #, "2205.00048"
+    paper_ids = ["2303.11932", "2110.03485", "2309.05569", "2205.00048"]
 
     for paper_id in paper_ids:
         print(f"Paper id: {paper_id}")
