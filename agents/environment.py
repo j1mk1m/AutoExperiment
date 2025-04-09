@@ -468,11 +468,16 @@ class MLAgentBench_Env(Environment):
             raise NotImplementedError()
 
         if self.retrieval == "oracle":
-            edit_instruction = self.X["funcs_to_block"][0]["relevant_paper"]
+            paper_context = self.X["funcs_to_block"][0]["relevant_paper"]
+        else:
+            paper_context = ""
 
-        prompt = f"""Given the following code snippet and edit instruction, write the Python function. ONLY output contents of the Python function.
-### CONTEXT ###
+        prompt = f"""Given the following code context, paper context, and edit instruction, write the Python function. ONLY output contents of the Python function.
+### CODE CONTEXT ###
 {context}
+
+### PAPER CONTEXT ###
+{paper_context}
 
 ### Edit instruction ###
 {edit_instruction}

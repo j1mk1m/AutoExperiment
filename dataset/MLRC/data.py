@@ -49,6 +49,7 @@ def generate_files(paper_ids):
                     continue
                 func["description"] = matched_detail[0]["description"]
                 func["code_context"] = matched_detail[0]["code_context_embedding"]
+                func["relevant_paper"] = matched_detail[0]["paper_context_embedding"]
                 new_funcs.append(func)
 
             funcs = new_funcs

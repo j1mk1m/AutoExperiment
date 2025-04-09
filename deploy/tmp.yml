@@ -9,10 +9,7 @@ parameters:
   agent:
     value: ReAct
   code-retrieval:
-    values:
-    - 'no'
-    - agent
-    - oracle
+    value: oracle
   combined-id:
     values:
     - '2309.05569_0'
