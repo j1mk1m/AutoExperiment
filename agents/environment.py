@@ -456,7 +456,7 @@ class MLAgentBench_Env(Environment):
         header_line = func_details["header_line"]
         end_line = func_details["line_end"]
 
-        function_content = "\n".join(file_content.split("\n")[header_line-1:end_line])
+        function_content = "\n".join(file_content.split("\n")[header_line-1:end_line-1])
 
         if self.code_retrieval == "no":
             context = ""
@@ -482,7 +482,7 @@ class MLAgentBench_Env(Environment):
 {function_content}
 ```
 
-Please only output the edited version of this Python function inside ```python environment. Make sure to use the right indentation.
+Please only output the edited version of this Python function inside ```python environment. Make sure to match the indentation of the current code.
 
 ### Edited Python function ###
 """
@@ -491,9 +491,10 @@ Please only output the edited version of this Python function inside ```python e
 
         response = self.llm_manager.call_llm([{"role": "system", "content": prompt}], None).response.content
 
+        print(f"### RESPONSE ###\n{response}\n### END RESPONSE ###")
         new_func_body = response.split("```python")[1].split("```")[0].split("\n")
 
-        new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line:]
+        new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line-1:]
         func_details["line_end"] = header_line + len(new_func_body)
 
         self.write_file(file_name, "\n".join(new_file_content)) 

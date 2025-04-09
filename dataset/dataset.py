@@ -165,7 +165,10 @@ def remove_functions(path, functions):
             new_lines += comments 
             line_end = len(new_lines) + 1
             last_line = func["line_end"] + 1
-            new_funcs.append({"name": func["name"], "file": func["file"], "header_line": header_line, "line_start": line_start, "line_end": line_end, "relevant_paper": func['relevant_paper'], "description": func["description"]})
+            func["header_line"] = header_line
+            func["line_start"] = line_start
+            func["line_end"] = line_end
+            new_funcs.append(func)
         
         new_lines += original_lines[last_line:]
 
