@@ -5,22 +5,11 @@ command:
 method: grid
 parameters:
   _tags:
-    value: oracle_retrieval
+    value: agentless
   agent:
-    value: ReAct
-  code-retrieval:
-    value: agent
+    value: Agentless
   combined-id:
     values:
-    - '2309.05569_0'
-    - '2309.05569_1'
-    - '2309.05569_2'
-    - '2309.05569_3'
-    - '2309.05569_4'
-    - '2309.05569_5'
-    - '2309.05569_6'
-    - '2309.05569_7'
-    - '2309.05569_9'
     - '2303.11932_0'
     - '2303.11932_1'
     - '2303.11932_2'
@@ -36,6 +25,15 @@ parameters:
     - '2303.11932_12'
     - '2303.11932_13'
     - '2303.11932_14'
+    - '2309.05569_0'
+    - '2309.05569_1'
+    - '2309.05569_2'
+    - '2309.05569_3'
+    - '2309.05569_4'
+    - '2309.05569_5'
+    - '2309.05569_6'
+    - '2309.05569_7'
+    - '2309.05569_9'
     - '2110.03485_0'
     - '2110.03485_1'
     - '2110.03485_2'
@@ -50,9 +48,9 @@ parameters:
     - '2205.00048_6'
   environment:
     value: MLAgentBench
+  max-completion-tokens:
+    value: 2024
   memory:
     value: Full
   model-engine:
-    value: gpt-4o
-  retrieval:
-    value: oracle
+    value: o3-mini

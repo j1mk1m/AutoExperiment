@@ -8,16 +8,16 @@ class Agentless(Agent):
     def __init__(self, env, llm_manager, memory_module, X, metadata, **kwargs) -> None:
         super().__init__(env, llm_manager, memory_module, X, metadata, **kwargs)
 
-        self.reasoning_effort = kwargs["reasoning_effort"]
+        self.max_completion_tokens = kwargs["max_completion_tokens"]
 
     def _retrieve_nl(self, query):
         text_search = SearchEngine(self.X["path"])
-        _, paper_context = text_search.search(query, top_k=5)
+        _, paper_context = text_search.search(query, top_k=2)
         return paper_context
 
     def _retrieve_code(self, query):
         code_search = CodeSearchEngine(self.X["path"], self.llm_manager)
-        _, code_context = code_search.search(query, top_k=5)
+        _, code_context = code_search.search(query, top_k=2)
         return code_context
     
     def run(self, max_agent_steps, tags):
@@ -38,22 +38,23 @@ class Agentless(Agent):
         paper_context = self._retrieve_nl(function_content)
 
         # Thinking
-        prompt = f"""
+        system_prompt = "You are a helpful coding assistant. You are given contents of a Python file with one missing function. Paper context contains snippets of a research paper that describes how to implement the code. Code context contains code snippets that are similar to the missing function."
+        prompt = f""" 
 ### Paper Context ###
 {paper_context}
 
 ### Code Context ###
 {code_context}
 
-### Python function ###
+### File Content ###
 ```python
-{function_content}
+{file_content}
 ```
 
-Think for maximum number of tokens how you want to implement this Python function.
+Think about how you want to implement the missing Python function.
 """
         print(f"### THOUGHT PROMPT ###\n{prompt}")
-        llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, reasoning_effort=self.reasoning_effort)
+        llm_response = self.llm_manager.call_llm([{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}], None, max_completion_tokens=self.max_completion_tokens)
         if llm_response.error:
             self.env.cleanup()
             wandb.log({"compute_cost": total_cost})
@@ -65,19 +66,19 @@ Think for maximum number of tokens how you want to implement this Python functio
 
         # Generate code
         write_prompt = f"""
+### Thought ###
 {thought}
 
-### Python function ###
+### File Content ###
 ```python
 {function_content}
 ```
 
-Please only output the edited version of this Python function inside ```python environment. Make sure to match the indentation of the current code.
-
-### Edited Python function ###
+Provide the full code after the edit, making no other changes. Provide only the code in markdown format. I.e. ```python
 """
 
-        llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, model="gpt-4o")
+        llm_response = self.llm_manager.call_llm([{"role": "system", "content": "You are a helpful coding assistant tasked to fill in a missing Python function. You have previously thought of a strategy."}, 
+                                                    {"role": "user", "content": prompt}], None, model="gpt-4o")
         if llm_response.error:
             self.env.cleanup()
             wandb.log({"compute_cost": total_cost})
