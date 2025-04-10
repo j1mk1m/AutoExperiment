@@ -1,11 +1,12 @@
 from agents.agent import Agent
 from agents.retrieval import CodeSearchEngine, SearchEngine
+import wandb
 
 from agents.llm import LLM
 
 class Agentless(Agent):
-    def __init__(self, env, llm_manager, memory, X, metadata, **kwargs) -> None:
-        super().__init__(env, llm_manager, memory, X, metadata, **kwargs)
+    def __init__(self, env, llm_manager, memory_module, X, metadata, **kwargs) -> None:
+        super().__init__(env, llm_manager, memory_module, X, metadata, **kwargs)
 
         self.reasoning_effort = kwargs["reasoning_effort"]
 
@@ -20,7 +21,8 @@ class Agentless(Agent):
         return code_context
     
     def run(self, max_agent_steps, tags):
-        self.env.setup()
+        total_cost = 0
+        self.env.reset()
 
         func_details = self.X["funcs_to_block"][0]
         file_name = func_details["file"]
@@ -32,8 +34,8 @@ class Agentless(Agent):
         function_content = "\n".join(file_content.split("\n")[header_line-1:end_line-1])
 
         # Retrieval
-        paper_context = self._retrieve_nl(function_content)
         code_context = self._retrieve_code(function_content)
+        paper_context = self._retrieve_nl(function_content)
 
         # Thinking
         prompt = f"""
@@ -50,11 +52,16 @@ class Agentless(Agent):
 
 Think for maximum number of tokens how you want to implement this Python function.
 """
+        print(f"### THOUGHT PROMPT ###\n{prompt}")
         llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, reasoning_effort=self.reasoning_effort)
         if llm_response.error:
+            self.env.cleanup()
+            wandb.log({"compute_cost": total_cost})
             return f"Calling llm for thought failed with {llm_response.response}"
-
         thought = llm_response.response.content
+        total_cost += llm_response.cost
+        wandb.log({"reasoning_tokens": llm_response.completion_tokens})
+        print(f"### THOUGHT (Cost: {llm_response.cost}) ###\n{thought}")
 
         # Generate code
         write_prompt = f"""
@@ -70,21 +77,31 @@ Please only output the edited version of this Python function inside ```python e
 ### Edited Python function ###
 """
 
-        llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None)
+        llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, model="gpt-4o")
         if llm_response.error:
+            self.env.cleanup()
+            wandb.log({"compute_cost": total_cost})
             return f"Calling llm for code generation failed with {llm_response.response}"
 
         # Write to file
         response = llm_response.response.content
-        new_func_body = response.split("```python")[1].split("```")[0].split("\n")
+        total_cost += llm_response.cost
+        print(f"### RESPONSE (Cost: {llm_response.cost}) ###\n{response}")
+        try:
+            new_func_body = response.split("```python")[1].split("```")[0].split("\n")
 
-        new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line-1:]
-        func_details["line_end"] = header_line + len(new_func_body)
+            new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line-1:]
+            func_details["line_end"] = header_line + len(new_func_body)
 
-        self.env.write_file(file_name, "\n".join(new_file_content)) 
+            self.env.write_file(file_name, "\n".join(new_file_content)) 
+        except Exception as e:
+            self.env.cleanup()
+            wandb.log({"compute_cost": total_cost})
+            return f"Calling llm for code generation failed because of error {e}"
 
         # run refsol
-        observation = self.env.run_bash("refsol.sh")
+        observation = self.env.execute_bash_script("refsol.sh")
+        print(f"### OBSERVATION ###\n{observation}")
 
         # extract
         experiment = self.env.get_exp_description()
@@ -95,14 +112,36 @@ Here are the experiment results you need:
 Here is the output:
 {observation}
 
-Extract the results from the output. Make sure to return a JSON string in the format specified.
+Extract the results from the output. Make sure to return a JSON string in the format specified inside ```json.
+Format:
+```json
+json string
+```
 """
 
         llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, model="gpt-4o")
         if llm_response.error:
+            self.env.cleanup()
+            wandb.log({"compute_cost": total_cost})
             return f"Calling llm to extract results failed with {llm_response.response}"
+        
+        response = llm_response.response.content
+        total_cost += llm_response.cost
+        print(f"### EXTRACTION (Cost: {llm_response.cost}) ###\n{response}")
 
-        return llm_response.response.content
+        try:
+            response = response.split("```json")[1].split("```")[0].strip()
+        except Exception as e:
+            self.env.cleanup()
+            wandb.log({"compute_cost": total_cost})
+            return f"Got error extracting json string ouput {e}"
+        wandb.log({"compute_cost": total_cost})
+
+        self.env.cleanup()
+        return response
+
+    def _is_valid_thought(self, thought):
+        pass
 
 
     

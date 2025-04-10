@@ -23,7 +23,7 @@ class Chunk:
 class CodeChunk(Chunk):
     """Class to represent a code chunk with its metadata.""" 
     def __init__(self, code: str, filepath: str, start_line: int, end_line: int):
-        super.__init__(self, code)
+        super().__init__(code)
         self.filepath = filepath
         self.start_line = start_line
         self.end_line = end_line
@@ -33,7 +33,7 @@ class CodeChunk(Chunk):
 
 class TextChunk(Chunk):
     def __init__(self, text):
-        super.__init__(self, text)
+        super().__init__(text)
         self.embedding = None
     
     def __repr__(self):
@@ -43,12 +43,13 @@ class TextChunk(Chunk):
 class CodeParser:
     """Parser to extract code chunks from Python files."""
     
-    def parse_file(self, filepath: str) -> List[CodeChunk]:
+    def parse_file(self, filepath: str, root_path) -> List[CodeChunk]:
         """Parse a single Python file and extract code chunks."""
         chunks = []
+        full_path = os.path.join(root_path, filepath)
         
         try:
-            with open(filepath, 'r', encoding='utf-8') as file:
+            with open(full_path, 'r', encoding='utf-8') as file:
                 content = file.read()
                 
             tree = ast.parse(content)
@@ -74,7 +75,7 @@ class CodeParser:
                     end_line=len(content.splitlines())
                 ))
                 
-        except (SyntaxError, UnicodeDecodeError) as e:
+        except Exception as e:
             print(f"Error parsing {filepath}: {str(e)}")
         
         return chunks
@@ -84,7 +85,7 @@ class CodeParser:
         all_chunks = []
         
         for filepath in glob.glob(os.path.join(repo_path, "**", "*.py"), recursive=True):
-            all_chunks.extend(self.parse_file(filepath))
+            all_chunks.extend(self.parse_file(filepath, repo_path))
             
         print(f"Extracted {len(all_chunks)} code chunks from repository")
         return all_chunks
@@ -137,7 +138,7 @@ class EmbeddingEngine:
         for i, chunk in enumerate(chunks):
             if i == len(chunks) - 1 or i % 100 == 0 and i > 0:
                 print(f"Processed {i}/{len(chunks)} chunks. Total Cumulative Cost: {self.total_tokens / 1000000 * 0.02}")
-            chunk.embedding = self.compute_embedding(chunk.text)
+            chunk.embedding = self.compute_embedding(chunk.content)
             
     def find_similar(self, query, chunks, top_k=5) :
         """Find top_k similar code chunks to the query code."""
@@ -168,16 +169,17 @@ class CodeSearchEngine:
     
     def get_top_files(self, query):
         _, output_str = traverse_repository(self.repo_path)
-        prompt = f"Given repository structure, return top 10 file paths related to the code. Repository structure: \n{output_str}\nCode: \n{query}\n\nReturn:\nrelative/path/to/file1\nrelative/path/to/file2\n..."
-        print(prompt)
+        prompt = f"Given repository structure, return top 10 file paths related to the code. Repository structure: \n{output_str}\nCode: \n{query}\n\nReturn only a new line-separated list of paths like this:\n```\n./relative/path/to/file1\n./relative/path/to/file2\n...\n./relative/path/to/file10\n```"
+        print(f"### PROMPT ### \n{prompt}")
         response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, model="gpt-4o-mini").response.content
-        filepaths = response.split("\n")
+        print(f"### Response ###\n{response}")
+        filepaths = response.split("```")[1].strip().split("\n")
         real_files = []
         for filepath in filepaths:
             if filepath in self.chunks:
                 real_files.append(filepath)
             else:
-                chunks = self.parser.parse_file(filepath)
+                chunks = self.parser.parse_file(filepath, self.repo_path)
                 if len(chunks) > 0:
                     # if real file, save chunks and compute embeddings
                     self.chunks[filepath] = chunks
@@ -205,7 +207,7 @@ class CodeSearchEngine:
             if i == 0: continue
             print(f"\nRESULT #{i+1} - Similarity: {similarity:.4f}")
             print(f"File: {chunk.filepath} (Lines {chunk.start_line}-{chunk.end_line})")
-            res_string += f"File: {chunk.filepath.split('code/')[1]}" + "\n" + "-" * 50 + "\n" + chunk.code + "\n" + "-"*50 + "\n\n"
+            res_string += f"File: {chunk.filepath}" + "\n" + "-" * 50 + "\n" + chunk.content + "\n" + "-"*50 + "\n\n"
         return res_string
 
              
@@ -214,9 +216,16 @@ class SearchEngine:
         self.repo_path = repo_path 
         self.parser = TextParser()
         self.embedding_engine = EmbeddingEngine(model_name)
-        paper_path = os.path.join(self.repo_path, "paper.txt")
-        self.chunks = self.parser.parse_file(paper_path)
-        self.embedding_engine.compute_embeddings(self.chunks)
+        index_file = os.path.join(self.repo_path, "paper_index.pkl")
+        if os.path.exists(index_file):
+            print("Loading index file")
+            with open(index_file, "rb") as f:
+                self.chunks = pickle.load(f)
+        else:
+            print("Creating new index")
+            paper_path = os.path.join(self.repo_path, "paper.txt")
+            self.chunks = self.parser.parse_file(paper_path)
+            self.embedding_engine.compute_embeddings(self.chunks)
  
     def search(self, query, top_k=5):
         results = self.embedding_engine.find_similar(query, self.chunks, top_k)
@@ -229,7 +238,7 @@ class SearchEngine:
         
         for i, (chunk, similarity) in enumerate(results):
             print(f"\nRESULT #{i+1} - Similarity: {similarity:.4f}")
-            res_string += f"{chunk.text}\n\n"
+            res_string += f"{chunk.content}\n\n"
         return res_string
      
     
