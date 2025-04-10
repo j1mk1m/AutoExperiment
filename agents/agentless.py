@@ -71,7 +71,7 @@ Think about how you want to implement the missing Python function.
 
 ### File Content ###
 ```python
-{function_content}
+{file_content}
 ```
 
 Provide the full code after the edit, making no other changes. Provide only the code in markdown format. I.e. ```python
@@ -89,12 +89,12 @@ Provide the full code after the edit, making no other changes. Provide only the 
         total_cost += llm_response.cost
         print(f"### RESPONSE (Cost: {llm_response.cost}) ###\n{response}")
         try:
-            new_func_body = response.split("```python")[1].split("```")[0].split("\n")
+            new_content = response.split("```python")[1].split("```")[0].split("\n")
 
-            new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line-1:]
-            func_details["line_end"] = header_line + len(new_func_body)
+            # new_file_content = file_content.split("\n")[:header_line-1] + new_func_body + file_content.split("\n")[end_line-1:]
+            # func_details["line_end"] = header_line + len(new_func_body)
 
-            self.env.write_file(file_name, "\n".join(new_file_content)) 
+            self.env.write_file(file_name, "\n".join(new_content)) 
         except Exception as e:
             self.env.cleanup()
             wandb.log({"compute_cost": total_cost})

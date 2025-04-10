@@ -8,7 +8,7 @@ parameters:
   agent: 'Agentless'
   memory: 'Full'
   environment: 'MLAgentBench'
-  max-completion-tokens: 2024
+  max-completion-tokens: 8192
   subtests:
     agentless:
       combined-id:

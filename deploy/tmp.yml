@@ -49,7 +49,7 @@ parameters:
   environment:
     value: MLAgentBench
   max-completion-tokens:
-    value: 2024
+    value: 8192
   memory:
     value: Full
   model-engine:
