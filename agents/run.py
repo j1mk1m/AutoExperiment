@@ -2,6 +2,7 @@ import wandb
 
 from agents.environment import Environment, MLAgentBench_Env, SWE_AGENT_Env
 from agents.agent import Agent, ReActAgent, PlanningAgent, MLAgentBenchAgent
+# from agents.agentless import Agentless
 from agents.llm import LLM 
 from agents.memory import Memory, FullMemory, SlidingWindowMemory, Summary
 
@@ -31,6 +32,8 @@ def get_agent(agent_args, env, llm_manager, memory, X, metadata):
         return PlanningAgent(env, llm_manager, memory, X, metadata, **vars(agent_args))
     elif agent_args.agent == "MLAgentBench":
         return MLAgentBenchAgent(env, llm_manager, memory, X, metadata, **vars(agent_args))
+    # elif agent_args.agent == "Agentless":
+    #     return Agentless(env, llm_manager, memory, X, metadata, **vars(agent_args))
     else:
         raise NotImplementedError()
 

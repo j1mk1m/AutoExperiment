@@ -8,6 +8,7 @@ parameters:
   agent: 'ReAct'
   memory: 'Full'
   environment: 'MLAgentBench'
+  code-retrieval: 'agent'
   retrieval: 'oracle'
   subtests:
     oracle_retrieval:

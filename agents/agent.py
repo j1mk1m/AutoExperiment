@@ -6,11 +6,12 @@ import wandb
 import agents.logger as logger
 
 def add_agent_args(parser):
-    parser.add_argument("--agent", type=str, choices=["refsol", "ReAct", "Planning", "MLAgentBench"], required=True,
+    parser.add_argument("--agent", type=str, choices=["refsol", "ReAct", "Planning", "MLAgentBench", "Agentless"], required=True,
                         help="Type of agent to use")
     parser.add_argument("--max_retries", type=int, default=3,
                         help="Maximum number of retries for LLM calls")
     parser.add_argument("--retrieval", default="agent", choices=["no", "agent", "oracle"])
+    parser.add_argument("--reasoning-effort", default="medium", choices=["low", "medium", "high"])
 
 
 class Agent(ABC):

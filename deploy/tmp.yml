@@ -5,11 +5,11 @@ command:
 method: grid
 parameters:
   _tags:
-    value: code_retrieval
+    value: oracle_retrieval
   agent:
     value: ReAct
   code-retrieval:
-    value: oracle
+    value: agent
   combined-id:
     values:
     - '2309.05569_0'
@@ -54,3 +54,5 @@ parameters:
     value: Full
   model-engine:
     value: gpt-4o
+  retrieval:
+    value: oracle

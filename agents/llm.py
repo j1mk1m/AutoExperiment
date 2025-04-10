@@ -23,14 +23,14 @@ class LLM:
     def is_over_compute_budget(self):
         return self.compute_budget is not None and self.cost > self.compute_budget
 
-    def call_llm(self, messages, tools, model=None):
+    def call_llm(self, messages, tools, model=None, **kwargs):
         if model is None:
             model = self.model_backbone
 
         if self.compute_budget is not None and self.cost > self.compute_budget:
             return LLMResponse(messages, response=f"Exceeded compute budget of {self.compute_budget}", prompt_tokens=0, completion_tokens=0, cost=0, error=True)
 
-        response = call_llm(messages, tools, model)
+        response = call_llm(messages, tools, model, **kwargs)
 
         self.cost += response.cost
         self.prompt_tokens += response.prompt_tokens
@@ -38,9 +38,9 @@ class LLM:
         return response
 
 
-def call_llm(messages, tools, model):
+def call_llm(messages, tools, model, **kwargs):
     try:
-        response = completion(model=model, messages=messages, tools=tools)
+        response = completion(model=model, messages=messages, tools=tools, **kwargs)
         cost = completion_cost(completion_response=response, model=model, messages=messages)
         return LLMResponse(prompt=messages,
                         response=response.choices[0].message, 

@@ -469,8 +469,11 @@ class MLAgentBench_Env(Environment):
 
         if self.retrieval == "oracle":
             paper_context = self.X["funcs_to_block"][0]["relevant_paper"]
+        elif self.retrieval == "agent":
+            paper_context = "None"
         else:
-            paper_context = ""
+            paper_context = "None"
+            edit_instruction = "Write the following Python function"
 
         prompt = f"""Given the following code context, paper context, and edit instruction, write the Python function. ONLY output contents of the Python function.
 ### CODE CONTEXT ###
