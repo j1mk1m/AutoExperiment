@@ -48,7 +48,7 @@ class Environment:
         self.retrieval = kwargs["retrieval"]
         self.code_retrieval = kwargs["code_retrieval"]
 
-        self.banned = [] #["write_file", "edit_file", "command_line"]
+        self.banned = ["edit_function"] #["write_file", "edit_file", "command_line"]
 
         self.acis = [
             ACI(name="final_answer", 
@@ -113,7 +113,7 @@ class Environment:
         return tools
 
     def get_tool_descriptions(self):
-        return "\n".join([f"{aci.name}: {aci.description}" for aci in self.acis])
+        return "\n".join([f"{aci.name}: {aci.description}" for aci in self.acis if aci.name not in self.banned])
 
     def is_over_compute_time(self):
         return self.compute_time > self.max_compute_time

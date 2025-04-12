@@ -4,11 +4,10 @@ command:
 - ${args}
 method: grid
 parameters:
-  model-engine: 'o3-mini'
+  model-engine: 'o1'
   agent: 'Agentless'
   memory: 'Full'
   environment: 'MLAgentBench'
-  max-completion-tokens: 8192
   subtests:
     agentless:
       combined-id:
@@ -47,5 +46,9 @@ parameters:
         - '2205.00048_3'
         - '2205.00048_4'
         - '2205.00048_5'
-        - '2205.00048_6'  
-      
+        - '2205.00048_6'      
+      max-completion-tokens: 
+        - 2048
+        - 4096
+        - 8192
+        - 16384

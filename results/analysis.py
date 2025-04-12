@@ -5,74 +5,128 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 # from statsmodels.formula.api import logit
 
+
+def create_heatmap(df):
+    plt.figure(figsize=(10, 6))
+    for _, row in df.iterrows():
+        line_count = row['line_count']
+        func_count = row['func_call_count']
+        all_correct = row['all_correct'] 
+    
+        # Plot checkmark (✓) for correct solutions, x mark (x) for incorrect
+        marker = 'o' if all_correct else 'x'  # Using plain 'x' instead of '×'
+        color = 'green' if all_correct else 'red'
+        plt.scatter(func_count, line_count, marker=marker, c=color, s=100)
+
+    plt.xlabel('Number of Function Calls')
+    plt.ylabel('Number of Lines')
+    plt.title('Solution Complexity vs Correctness')
+
+    # Add legend
+    plt.scatter([], [], marker='o', c='green', s=100, label='Correct')
+    plt.scatter([], [], marker='x', c='red', s=100, label='Incorrect')
+    plt.legend()
+    plt.savefig('heatmap.png')
+    plt.close()
+
 # Read the CSV file
-df = pd.read_csv("results.csv")
+df = pd.read_csv("main.csv")
 
+# Calculate success rate by step
+step_correct = {}
+for k in range(0, 22, 2):
+    if k <= 20:  # Only include steps up to 20
+        total_runs = len(df)
+        correct_runs = len(df[(df['step'] <= k) & (df['all_correct'])])
+        step_correct[k] = correct_runs / total_runs
+
+# Plot success rate as a line plot with larger labels and title
+plt.rcParams.update({'font.size': 14})  # Increase base font size
+plt.rcParams['axes.titlesize'] = 16     # Increase title font size
+plt.rcParams['axes.labelsize'] = 14     # Increase axis label font size
+plt.figure(figsize=(10, 6))
+plt.plot(list(step_correct.keys()), list(step_correct.values()), marker='o')
+plt.xlabel('Step')
+plt.ylabel('Success Rate')
+plt.title('Success Rate Over Time')
+plt.xticks(range(0, 22, 2))  # Set x-axis ticks from 0 to 20 in increments of 2
+plt.ylim(0, 1.0)  # Set y-axis limits from 0 to 1.0
+plt.savefig('step_correct.png')
+plt.close()
+
+
+# create_heatmap(df)
+
+
+
+
+
+### DEPRECATED ###
 # Create lists to store successful and failed runs for each metric
-metrics = {
-    'Number of lines': ([], []),
-    'Number test cases': ([], []),
-    'Number of function calls': ([], []),
-    'Runtime': ([], []),
-    'Steps': ([], [])
-}
+# metrics = {
+#     'Number of lines': ([], []),
+#     'Number test cases': ([], []),
+#     'Number of function calls': ([], []),
+#     'Runtime': ([], []),
+#     'Steps': ([], [])
+# }
 
-# For each row, add metrics to success/fail lists based on each run
-for _, row in df.iterrows():
-    for run in range(1, 6):
-        success = row[f'run{run}'] == 1
-        runtime = row[f'runtime {run}']
-        steps = row[f'steps {run}']
+# # For each row, add metrics to success/fail lists based on each run
+# for _, row in df.iterrows():
+#     for run in range(1, 6):
+#         success = row[f'run{run}'] == 1
+#         runtime = row[f'runtime {run}']
+#         steps = row[f'steps {run}']
         
-        target = metrics['Number of lines'][0 if success else 1]
-        target.append(row['Number of lines'])
+#         target = metrics['Number of lines'][0 if success else 1]
+#         target.append(row['Number of lines'])
         
-        target = metrics['Number test cases'][0 if success else 1]
-        target.append(row['Number test cases'])
+#         target = metrics['Number test cases'][0 if success else 1]
+#         target.append(row['Number test cases'])
         
-        target = metrics['Number of function calls'][0 if success else 1]
-        target.append(row['Number of function calls'])
+#         target = metrics['Number of function calls'][0 if success else 1]
+#         target.append(row['Number of function calls'])
         
-        target = metrics['Runtime'][0 if success else 1]
-        target.append(runtime)
+#         target = metrics['Runtime'][0 if success else 1]
+#         target.append(runtime)
         
-        target = metrics['Steps'][0 if success else 1]
-        target.append(steps)
+#         target = metrics['Steps'][0 if success else 1]
+#         target.append(steps)
 
 
-# 1. Visualize the data
-# plt.figure(figsize=(10, 6))
-# sns.boxplot(x='successful', y='lines_of_code', data=data)
-# plt.title('Lines of Code by Success Status')
-# plt.xlabel('Successful (1) vs Unsuccessful (0)')
-# plt.ylabel('Lines of Code')
-# plt.show()
+# # 1. Visualize the data
+# # plt.figure(figsize=(10, 6))
+# # sns.boxplot(x='successful', y='lines_of_code', data=data)
+# # plt.title('Lines of Code by Success Status')
+# # plt.xlabel('Successful (1) vs Unsuccessful (0)')
+# # plt.ylabel('Lines of Code')
+# # plt.show()
 
-# 2. Independent samples t-test
-successful_loc, unsuccessful_loc = metrics["Number of lines"]
+# # 2. Independent samples t-test
+# successful_loc, unsuccessful_loc = metrics["Number of lines"]
 
-t_stat, p_value_ttest = stats.ttest_ind(successful_loc, unsuccessful_loc, equal_var=False)
-print(f"Independent t-test results:")
-print(f"t-statistic: {t_stat:.4f}")
-print(f"p-value: {p_value_ttest:.4f}")
-print(f"Mean lines of code (successful): {successful_loc.mean():.2f}")
-print(f"Mean lines of code (unsuccessful): {unsuccessful_loc.mean():.2f}")
-print()
+# t_stat, p_value_ttest = stats.ttest_ind(successful_loc, unsuccessful_loc, equal_var=False)
+# print(f"Independent t-test results:")
+# print(f"t-statistic: {t_stat:.4f}")
+# print(f"p-value: {p_value_ttest:.4f}")
+# print(f"Mean lines of code (successful): {successful_loc.mean():.2f}")
+# print(f"Mean lines of code (unsuccessful): {unsuccessful_loc.mean():.2f}")
+# print()
 
-# 3. Logistic regression
-# model = logit('successful ~ lines_of_code', data=data).fit()
-# print("Logistic Regression Results:")
-# print(model.summary())
+# # 3. Logistic regression
+# # model = logit('successful ~ lines_of_code', data=data).fit()
+# # print("Logistic Regression Results:")
+# # print(model.summary())
 
-# Get the p-value for the 'lines_of_code' coefficient
-# p_value_logit = model.pvalues['lines_of_code']
-# print(f"P-value for lines_of_code coefficient: {p_value_logit:.4f}")
+# # Get the p-value for the 'lines_of_code' coefficient
+# # p_value_logit = model.pvalues['lines_of_code']
+# # print(f"P-value for lines_of_code coefficient: {p_value_logit:.4f}")
 
-# 4. Mann-Whitney U test (non-parametric alternative if data is not normally distributed)
-u_stat, p_value_mw = stats.mannwhitneyu(successful_loc, unsuccessful_loc)
-print(f"\nMann-Whitney U test results:")
-print(f"U-statistic: {u_stat:.4f}")
-print(f"p-value: {p_value_mw:.4f}")
+# # 4. Mann-Whitney U test (non-parametric alternative if data is not normally distributed)
+# u_stat, p_value_mw = stats.mannwhitneyu(successful_loc, unsuccessful_loc)
+# print(f"\nMann-Whitney U test results:")
+# print(f"U-statistic: {u_stat:.4f}")
+# print(f"p-value: {p_value_mw:.4f}")
 
 # 5. Plot the logistic regression model
 # plt.figure(figsize=(10, 6))
@@ -84,12 +138,12 @@ print(f"p-value: {p_value_mw:.4f}")
 # plt.show()
 
 # Interpretation
-alpha = 0.05
-print("\nInterpretation:")
-if p_value_ttest < alpha or p_value_mw < alpha:
-    print(f"There is a statistically significant relationship between lines of code and success status (p < {alpha}).")
-else:
-    print(f"There is no statistically significant relationship between lines of code and success status (p > {alpha}).")
+# alpha = 0.05
+# print("\nInterpretation:")
+# if p_value_ttest < alpha or p_value_mw < alpha:
+#     print(f"There is a statistically significant relationship between lines of code and success status (p < {alpha}).")
+# else:
+#     print(f"There is no statistically significant relationship between lines of code and success status (p > {alpha}).")
 
 # # Perform t-tests and print results
 # print("T-test Results (Success vs Failure):")

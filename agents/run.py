@@ -40,6 +40,9 @@ def get_agent(agent_args, env, llm_manager, memory, X, metadata):
 
 def run_agent(args, X, metadata, tags):
     # initialize
+    if args.agent == "Agentless":
+        args.compute_budget = None
+    
     llm_manager = LLM(args.model_engine, args.compute_budget) 
     env = get_env(args, llm_manager, X, metadata)
     memory = get_memory(args, llm_manager)

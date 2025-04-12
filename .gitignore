@@ -13,6 +13,7 @@ deploy/sbatches/*.sbatch
 
 # dataset
 dataset/__pycache__
+dataset/MLRC/*.jsonl
 *.pt
 *.zip
 *.tar
