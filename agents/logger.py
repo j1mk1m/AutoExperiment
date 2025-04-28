@@ -5,6 +5,7 @@ this_path = os.path.dirname(__file__)
 
 def create_log(tags):
     timestr = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tags = [tag.split("/")[-1] for tag in tags]
     logfile = os.path.join(this_path, "logs", f"{timestr}_{'_'.join(tags)}.txt")
     print(f"Log file created at {logfile}\n")
     return logfile

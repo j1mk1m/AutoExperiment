@@ -4,13 +4,13 @@ command:
 - ${args}
 method: grid
 parameters:
-  model: gpt-4o
-  mode: PC+refsol
-  retrieval: agent 
-  agent: AutoAgent 
+  model-engine: gpt-4o
+  agent: ReAct 
+  environment: MLAgentBench
+  memory: Full
   subtests:
     leave-2-out:
-      combined_id:
+      combined-id:
       - 2110.03485_3,4
       - 2110.03485_0,3
       - 2110.03485_0,2

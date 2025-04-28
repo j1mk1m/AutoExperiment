@@ -1,5 +1,7 @@
 from litellm import completion, completion_cost
+import anthropic
 
+client = anthropic.Anthropic()
 
 class LLMResponse:
     def __init__(self, prompt, response, prompt_tokens, completion_tokens, cost, error) -> None:
@@ -40,6 +42,15 @@ class LLM:
 
 def call_llm(messages, tools, model, **kwargs):
     try:
+        # if "anthropic" in model:
+        #     response = client.messages.create(model=model, messages=messages, max_tokens=8096, tools=tools, **kwargs)
+        #     return LLMResponse(prompt=messages,
+        #                     response=response.content[0].text,
+        #                     prompt_tokens=response.usage.input_tokens,
+        #                     completion_tokens=response.usage.output_tokens,
+        #                     cost=0,
+        #                     error=False)
+        # else:
         response = completion(model=model, messages=messages, tools=tools, **kwargs)
         cost = completion_cost(completion_response=response, model=model, messages=messages)
         return LLMResponse(prompt=messages,

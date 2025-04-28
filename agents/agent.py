@@ -32,7 +32,7 @@ class Agent(ABC):
         # Prompts
         self.tool_descriptions = self.env.get_tool_descriptions()
         experiment = self.env.get_exp_description()
-        tips = prompts.oracle_retrieval_tips.format(oracle=X["funcs_to_block"][0]["relevant_paper"]) if self.retrieval == "oracle" else prompts.agent_retrieval_tips
+        tips = prompts.oracle_retrieval_tips.format(oracle="\n\n".join([func["relevant_paper"] for func in X["funcs_to_block"]])) if self.retrieval == "oracle" else prompts.agent_retrieval_tips
         self.system_prompt = prompts.system_prompt.format(experiment=experiment, tools=self.tool_descriptions, tips=tips)
         # prompting technique
         self.thought_prompt = prompts.react_prompt 

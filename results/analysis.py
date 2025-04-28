@@ -39,6 +39,7 @@ for k in range(0, 22, 2):
         total_runs = len(df)
         correct_runs = len(df[(df['step'] <= k) & (df['all_correct'])])
         step_correct[k] = correct_runs / total_runs
+print(step_correct)
 
 # Plot success rate as a line plot with larger labels and title
 plt.rcParams.update({'font.size': 14})  # Increase base font size

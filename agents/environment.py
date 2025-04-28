@@ -418,8 +418,10 @@ class MLAgentBench_Env(Environment):
         The description should reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
         """
             messages = [{"role": "system", "content": prompt}]
-            completion = self.llm_manager.call_llm(messages, None).response.content
-            descriptions.append(completion)
+            completion = self.llm_manager.call_llm(messages, None)
+            if completion.error:
+                print(completion.response)
+            descriptions.append(completion.response.content)
         if len(descriptions) == 1:
             return descriptions[0]
         else:

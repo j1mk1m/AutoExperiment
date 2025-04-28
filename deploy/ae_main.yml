@@ -4,15 +4,18 @@ command:
 - ${args}
 method: grid
 parameters:
-  model-engine: gpt-4o
+  model-engine: anthropic/claude-3-5-sonnet-20240620
   environment: MLAgentBench
-  memory: SlidingWindow
-  lookback: 1
   subtests:
     agent_architecture:
-      agent: 
+      agent:
         - 'ReAct'
+        - 'Planning'
         - 'MLAgentBench'
+      memory:
+        - 'Full'
+        - 'SlidingWindow'
+        - 'Summary'
       combined-id:
         - '2309.05569_0'
         - '2309.05569_1'

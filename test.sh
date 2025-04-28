@@ -1,10 +1,10 @@
 # Test script
-combined_id='2303.11932_0,1' # 2110.03485, 2205.00048, 2303.11932, 2309.05569
+combined_id="2205.00048_0,1" # 2110.03485, 2205.00048, 2303.11932, 2309.05569
 agent='ReAct' 
 environment="MLAgentBench"
 memory="Full"
 model='gpt-4o-mini'
-retrieval='agent'
+retrieval='oracle'
 code_retrieval='agent'
 
 ## Full Run $$

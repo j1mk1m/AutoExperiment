@@ -70,8 +70,8 @@ Think about how you want to implement the missing Python function.
             reasoning_tokens += llm_response.completion_tokens
             total_cost += llm_response.cost
 
-        wandb.log({"reasoning_tokens": reasoning_tokens})
-        print(f"### THOUGHT (Cost: {llm_response.cost}) ###\n{thought}")
+        wandb.log({"reasoning_tokens": reasoning_tokens}) 
+        print(f"### THOUGHT (Cost: {total_cost}) ###\n{thought}")
 
         # Generate code
         write_prompt = f"""
