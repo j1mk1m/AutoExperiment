@@ -2,10 +2,12 @@
 agents/openai_api_key.txt
 agents/__pycache__
 agents/workspace
+agents/traces
 
 # Workspace, logs, and utils
 workspace/*
 logs
+traces
 wandb
 deploy/*.sbatch
 deploy/sbatches/*.sbatch
