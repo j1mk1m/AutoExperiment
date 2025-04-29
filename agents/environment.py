@@ -217,6 +217,9 @@ class Environment:
         except Exception as e:
             return f"Something went wrong in executing {command}: {e}."
 
+    def verifiy_solution(self):
+        pass
+
 
 class MLAgentBench_Env(Environment):
     def __init__(self, llm_manager, X, metadata, **kwargs) -> None:

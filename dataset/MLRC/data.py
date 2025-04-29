@@ -25,7 +25,7 @@ def load_mlrc_data():
 def generate_files(paper_ids):
     mlrc_exps, mlrc_funcs = load_mlrc_data()
 
-    for num_removed in range(3, 6): # TODO: change this
+    for num_removed in range(1, 6): # TODO: change this
         print(f"Num removed n = {num_removed}")
         datapoints = []
 
@@ -40,16 +40,18 @@ def generate_files(paper_ids):
             funcs = [func for func in mlrc_funcs if func["paper_id"] == paper_id]
             new_funcs = []
             for func in funcs:
-                func["header_line"] = int(func["header_line"])
-                func["line_start"] = int(func["line_start"])
-                func["line_end"] = int(func["line_end"])
                 matched_detail = [f for f in func_details if f["func_id"] == func["func_id"]]
                 if len(matched_detail) == 0:
                     print(f"None matched for {func['func_id']}")
                     continue
-                func["description"] = matched_detail[0]["description"]
-                func["code_context"] = matched_detail[0]["code_context_embedding"]
-                func["relevant_paper"] = matched_detail[0]["relevant_paper"]
+                detail = matched_detail[0]
+                func["header_line"] = int(detail["header_line"])
+                func["line_start"] = int(detail["line_start"])
+                func["line_end"] = int(detail["line_end"])
+
+                func["description"] = detail["description"]
+                func["code_context"] = detail["code_context_embedding"]
+                func["relevant_paper"] = detail["relevant_paper"]
                 new_funcs.append(func)
 
             funcs = new_funcs

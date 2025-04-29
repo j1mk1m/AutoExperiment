@@ -152,7 +152,7 @@ def remove_functions(path, functions):
         for func in funcs:
             new_lines += original_lines[last_line:func["line_start"]-1]
             header_line = len(new_lines) + 1 + func["header_line"] - func["line_start"]
-            func["gold_standard_code"] = "\n".join(original_lines[func["line_start"]-1:func["line_end"]])
+            func["gold_standard_code"] = "".join(original_lines[func["header_line"]-1:func["line_end"]])
             
             header = original_lines[(func["header_line"])-1].replace("\t", "    ")
             num_space = 0
