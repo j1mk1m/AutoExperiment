@@ -48,7 +48,7 @@ class Environment:
         self.retrieval = kwargs["retrieval"]
         self.code_retrieval = kwargs["code_retrieval"]
 
-        self.banned = ["edit_function"] #["write_file", "edit_file", "command_line"]
+        self.banned = [] #["write_file", "edit_file", "command_line"]
 
         self.acis = [
             ACI(name="final_answer", 
@@ -478,7 +478,7 @@ class MLAgentBench_Env(Environment):
             paper_context = "None"
         else:
             paper_context = "None"
-            edit_instruction = "Write the following Python function"
+            # edit_instruction = "Write the following Python function"
 
         prompt = f"""Given the following code context, paper context, and edit instruction, write the Python function. ONLY output contents of the Python function.
 ### CODE CONTEXT ###
@@ -495,7 +495,10 @@ class MLAgentBench_Env(Environment):
 {function_content}
 ```
 
-Please only output the edited version of this Python function inside ```python environment. Make sure to match the indentation of the current code.
+Please only output the edited version of this Python function inside ```python environment. 
+Tips
+- FOCUS on the PAPER CONTEXT to fill in the missing code.
+- Make sure to match the indentation of the current code.
 
 ### Edited Python function ###
 """
