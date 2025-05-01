@@ -43,6 +43,10 @@ class Agent(ABC):
 
         self.env.reset()
 
+        print("###############################")
+        print("SYSTEM PROMPT")
+        print(self.system_prompt)
+
         for i in range(max_agent_steps):
             print("###############################")
             print(f"Step {i}\n")

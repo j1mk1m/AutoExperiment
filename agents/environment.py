@@ -48,7 +48,7 @@ class Environment:
         self.retrieval = kwargs["retrieval"]
         self.code_retrieval = kwargs["code_retrieval"]
 
-        self.banned = [] #["write_file", "edit_file", "command_line"]
+        self.banned = ["edit_function"] #["write_file", "edit_file", "command_line"]
 
         self.acis = [
             ACI(name="final_answer", 
@@ -280,7 +280,7 @@ class MLAgentBench_Env(Environment):
                 },
                 func=self.append_file),
             ACI(name="edit_function",
-                description="Use this to edit the missing function",
+                description="Use this to edit the missing function.",
                 args={
                     "edit_instruction": {
                         "type": "string",
@@ -456,7 +456,8 @@ class MLAgentBench_Env(Environment):
     def edit_function(self, edit_instruction, **kwargs):
         func_details = self.X["funcs_to_block"][0]
         file_name = func_details["file"]
-        file_content = self.read_file(file_name)
+
+        file_content = open(os.path.join(self.workspace_root, file_name)).read()
 
         header_line = func_details["header_line"]
         end_line = func_details["line_end"]
@@ -480,7 +481,7 @@ class MLAgentBench_Env(Environment):
             paper_context = "None"
             # edit_instruction = "Write the following Python function"
 
-        prompt = f"""Given the following code context, paper context, and edit instruction, write the Python function. ONLY output contents of the Python function.
+        prompt = f"""Given the following code context, paper context, and edit instruction, write the Python function. 
 ### CODE CONTEXT ###
 {context}
 
@@ -495,7 +496,8 @@ class MLAgentBench_Env(Environment):
 {function_content}
 ```
 
-Please only output the edited version of this Python function inside ```python environment. 
+Think about how to implement this function by understanding the PAPER CONTEXT.
+Please output the edited version of this Python function inside ```python environment. 
 Tips
 - FOCUS on the PAPER CONTEXT to fill in the missing code.
 - Make sure to match the indentation of the current code.

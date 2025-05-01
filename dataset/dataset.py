@@ -7,7 +7,7 @@ import datetime
 this_dir = os.path.dirname(__file__)
 
 
-def get_datapoint(split="MLRC", mode="PC+refsol", combined_id="0000.00000_0", workspace="workspace", verbose=False, only_metadata=False, include_paper=True):
+def get_datapoint(split="MLRC", mode="PC+refsol", combined_id="0000.00000_0", workspace="workspace", verbose=False, only_metadata=False, include_paper=True, retrieval="agent"):
     """ Parse experiment_csv and gather experiment information """
     if "PC" in mode:
         paper_id, func_ids_string = combined_id.split("_")
@@ -134,7 +134,7 @@ def group_functions(functions):
         all_groups[func["file"]].append(func)
     return all_groups
 
-def remove_functions(path, functions):
+def remove_functions(path, functions, oracle=True):
     all_groups = group_functions(functions)
     new_funcs = []
 
@@ -160,7 +160,11 @@ def remove_functions(path, functions):
                 num_space += 1
             num_space = num_space + 4
 
-            comments = ['"""'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
+            if oracle:
+                comments = ['"""'] + func["relevant_paper"] + "\n" + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
+            else: 
+                comments = ['"""'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
+
             comments = [num_space * ' ' + line + "\n" for line in comments]
             line_start = len(new_lines) + 1
             new_lines += comments 

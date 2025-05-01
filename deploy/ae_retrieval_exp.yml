@@ -8,6 +8,7 @@ parameters:
   agent: 'ReAct'
   memory: 'Full'
   environment: 'MLAgentBench'
+  retrieval: 'oracle'
   code-retrieval: 'agent'
   subtests:
     oracle_retrieval_prompting_1:
@@ -18,19 +19,3 @@ parameters:
         - "2205.00048_3"
         - "2205.00048_4"
         - "2205.00048_5"
-        - "2303.11932_0"
-        - "2303.11932_9"
-        - "2303.11932_10"
-        - "2303.11932_1"
-        - "2303.11932_11"
-        - "2303.11932_12"
-        - "2303.11932_2"
-        - "2303.11932_13"
-        - "2303.11932_14"
-        - "2309.05569_2"
-        - "2309.05569_4"
-        - "2110.03485_0"
-      retrieval:
-        - "no"
-        - "agent"
-        - "oracle"

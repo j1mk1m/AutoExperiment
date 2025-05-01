@@ -5,31 +5,19 @@ command:
 method: grid
 parameters:
   _tags:
-    value: oracle_retrieval_n3r3
+    value: oracle_retrieval_prompting_1
   agent:
     value: ReAct
   code-retrieval:
     value: agent
   combined-id:
     values:
-    - 2205.00048_0,1,2
-    - 2205.00048_0,1,4
-    - 2205.00048_0,1,5
-    - 2205.00048_0,2,4
-    - 2205.00048_0,2,5
-    - 2205.00048_1,2,4
-    - 2205.00048_1,2,5
-    - 2205.00048_2,4,5
-    - 2303.11932_0,1,2
-    - 2303.11932_0,1,9
-    - 2303.11932_0,1,10
-    - 2303.11932_0,2,9
-    - 2303.11932_0,2,10
-    - 2303.11932_0,9,10
-    - 2303.11932_1,2,9
-    - 2303.11932_1,2,10
-    - 2303.11932_1,9,10
-    - 2303.11932_2,9,10
+    - '2205.00048_0'
+    - '2205.00048_1'
+    - '2205.00048_2'
+    - '2205.00048_3'
+    - '2205.00048_4'
+    - '2205.00048_5'
   environment:
     value: MLAgentBench
   memory:
@@ -37,7 +25,4 @@ parameters:
   model-engine:
     value: gpt-4o
   retrieval:
-    values:
-    - 'no'
-    - agent
-    - oracle
+    value: oracle
