@@ -528,15 +528,19 @@ Tips
             self.write_file(file_name, "")
             content = ""
 
+        if self.retrieval == "oracle":
+            edit_instruction += f"Context from research paper: {self.X['funcs_to_block'][0]['relevant_paper']}"
+
         prompt = f"""Given this script:
 ```
 {content}
 ```
-Edit the script by following the instruction:
+Edit the script according to these edit instructions:
 {edit_instruction}
 Provide the full code after the edit, making no other changes. Provide only the code in markdown format. E.g. ```python or ```bash
 """
 
+        print("### PROMPT FOR edit file###\n", prompt, "\n### END OF PROMPT ###")
         completion = self.llm_manager.call_llm([{"role": "system", "content": prompt}], None).response.content
 
         new_content = completion.strip()
