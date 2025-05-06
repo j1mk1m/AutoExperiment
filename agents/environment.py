@@ -48,7 +48,7 @@ class Environment:
         self.retrieval = kwargs["retrieval"]
         self.code_retrieval = kwargs["code_retrieval"]
 
-        self.banned = ["edit_function"] #["write_file", "edit_file", "command_line"]
+        self.banned = [] #["write_file", "edit_file", "command_line"]
 
         self.acis = [
             ACI(name="final_answer", 
@@ -528,8 +528,8 @@ Tips
             self.write_file(file_name, "")
             content = ""
 
-        if self.retrieval == "oracle":
-            edit_instruction += f"Context from research paper: {self.X['funcs_to_block'][0]['relevant_paper']}"
+        # if self.retrieval == "oracle":
+            # edit_instruction += f"Context from research paper: {self.X['funcs_to_block'][0]['relevant_paper']}"
 
         prompt = f"""Given this script:
 ```

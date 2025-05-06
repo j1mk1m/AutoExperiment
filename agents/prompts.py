@@ -23,6 +23,9 @@ Tips
 oracle_retrieval_tips = """
 Relevant text from research paper to fill in the missing function:
 {oracle}
+
+Tips
+- Call `edit_file` action with instruction "edit the missing function according to the relevant text from the research paper in the docstring"
 """
 
 

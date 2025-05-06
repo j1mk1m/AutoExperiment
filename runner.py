@@ -95,6 +95,7 @@ if __name__ == "__main__":
     tags.append(args.environment)
     tags.append(args.memory)
     tags.append(args.model_engine)
+    tags.append(args.retrieval)
     wandb.init(
         project="AutoExperiment",
         entity="j1mk1m",

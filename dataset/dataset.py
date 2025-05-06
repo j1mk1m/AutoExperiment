@@ -168,11 +168,11 @@ def remove_functions(path, functions, oracle=True):
             comments = [num_space * ' ' + line + "\n" for line in comments]
             line_start = len(new_lines) + 1
             new_lines += comments 
-            line_end = len(new_lines) + 1
+            line_end = len(new_lines) - 1
             last_line = func["line_end"] + 1
             func["header_line"] = header_line
             func["line_start"] = line_start
-            func["line_end"] = line_end
+            func["line_end"] = line_end 
             new_funcs.append(func)
         
         new_lines += original_lines[last_line:]
