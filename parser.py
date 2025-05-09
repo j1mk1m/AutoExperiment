@@ -161,6 +161,7 @@ def classify(log_dir, setting):
             #     continue
 
             final_answer = contents.split("Observation:\n")[-1].split("\n")[0]
+            print(f"Final answer: {final_answer}")
             final_answer = json.loads(final_answer)
 
             gold_code, gold_output, gold_context = get_gold_output_and_code(combined_id)
@@ -168,21 +169,22 @@ def classify(log_dir, setting):
             loss_per_exp, correct_per_exp, correct_count, all_correct = calculate_loss(gold_output, final_answer)
             if any([loss != 0.0 and loss != 1.0 for loss in loss_per_exp.values()]) and not all_correct:
                 incorrect_dir = os.path.join("agents", "traces", setting, "incorrect")
-                shutil.move(filepath, os.path.join(incorrect_dir, filename))
+                shutil.copy(filepath, os.path.join(incorrect_dir, filename))
             elif all_correct:
                 correct_dir = os.path.join("agents", "traces", setting, "correct")
-                shutil.move(filepath, os.path.join(correct_dir, filename))
+                shutil.copy(filepath, os.path.join(correct_dir, filename))
             else:
-                failed_dir = os.path.join("agents", "traces", setting, "failed")
-                shutil.move(filepath, os.path.join(failed_dir, filename))
+                pass
+                # failed_dir = os.path.join("agents", "traces", setting, "failed")
+                # shutil.copy(filepath, os.path.join(failed_dir, filename))
 
         except Exception as e:
             # Copy failed file to traces directory
             print(e)
-            failed_dir = os.path.join("agents", "traces", setting, "failed")
-            shutil.move(filepath, os.path.join(failed_dir, filename))
+            # failed_dir = os.path.join("agents", "traces", setting, "failed")
+            # shutil.copy(filepath, os.path.join(failed_dir, filename))
 
-def main_analysis(trace_dir, model, delimeter="retrieval_"):
+def main_analysis(trace_dir, model):
     filepath = os.path.join(trace_dir, "analysis.csv")
     if os.path.exists(filepath):
         with open(filepath, 'r') as csvfile:
@@ -194,16 +196,20 @@ def main_analysis(trace_dir, model, delimeter="retrieval_"):
     # Walk through all files in directory
     for root, dirs, files in os.walk(trace_dir):
         for filename in files:
-            filepath = os.path.join(root, filename)
+            tracepath = os.path.join(root, filename)
             print(f"Processing {filename}...")
             if len([res for res in results if res['filename'] == filename]) > 0: 
                 print("Already analyzed")
                 continue
 
             try:
-                combined_id = "_".join(filename.split(delimeter)[1].split("_")[0:2])
+                if "agent_architecture_" in filename:
+                    combined_id = "_".join(filename.split("agent_architecture_")[1].split("_")[0:2])
+                else:
+                    combined_id = "_".join(filename.split("retrieval_")[1].split("_")[0:2])
 
-                with open(filepath, 'r') as f:
+
+                with open(tracepath,'r') as f:
                     contents = f.read()
 
                 final_answer = contents.split("Observation:\n")[-1].split("\n")[0]
@@ -212,7 +218,10 @@ def main_analysis(trace_dir, model, delimeter="retrieval_"):
                 gold_code, gold_output, gold_context = get_gold_output_and_code(combined_id)
 
                 generated_code = extract_generated_code(contents, gold_code, model)
-                analysis = run_analysis(generated_code, gold_code, model)
+                if "incorrect" in trace_dir:
+                    analysis = run_analysis(generated_code, gold_code, model)
+                else:
+                    analysis = "Code is correct"
 
                 results.append({"filename": filename, "combined_id": combined_id, "gold_code": gold_code, "generated_code": generated_code, "analysis": analysis, "gold_context": gold_context})
 
@@ -233,14 +242,19 @@ def main_analysis(trace_dir, model, delimeter="retrieval_"):
 
 if __name__=="__main__":
     # for setting in ["no", "full", "oracle"]:
-    #     log_dir = os.path.join("agents", "logs", "nl_retrieval", setting)
-    #     classify(log_dir, setting)
+    # log_dir = os.path.join("agents", "logs", "code_retrieval")
+    # classify(log_dir, "code_retrieval")
+
+    trace_dir = os.path.join("agents", "traces", "code_retrieval", "correct")
+    main_analysis(trace_dir, "gpt-4o")
+    trace_dir = os.path.join("agents", "traces", "code_retrieval", "incorrect")
+    main_analysis(trace_dir, "gpt-4o")
     
-    for setting in ["full", "oracle"]:
-        trace_dir = os.path.join("agents", "traces", setting, "correct")
-        main_analysis(trace_dir, "gpt-4o", delimeter="retrieval_")
-        trace_dir = os.path.join("agents", "traces", setting, "incorrect")
-        main_analysis(trace_dir, "gpt-4o", delimeter="retrieval_")
+    # for setting in ["full", "oracle"]:
+    #     trace_dir = os.path.join("agents", "traces", setting, "correct")
+    #     main_analysis(trace_dir, "gpt-4o")
+    #     trace_dir = os.path.join("agents", "traces", setting, "incorrect")
+    #     main_analysis(trace_dir, "gpt-4o")
     # trace_dir = os.path.join("agents", "traces", "oracle", "correct")
     # main_analysis(trace_dir, "gpt-4o", delimeter="retrieval_")
     # trace_dir = os.path.join("agents", "traces", "full", "failed")

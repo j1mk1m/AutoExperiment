@@ -161,6 +161,7 @@ def remove_functions(path, functions, oracle=True):
             num_space = num_space + 4
 
             if oracle:
+                # comments = ['"""'] + func["relevant_paper"].split("\n") + ['\n'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
                 comments = ['"""', 'IMPLEMENT THIS FUNCTION ACCORDING TO THE FOLLOWING CONTEXT FROM RESEARCH PAPER:'] + func["relevant_paper"].split("\n") + ['\n'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
             else: 
                 comments = ['"""'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 

@@ -17,6 +17,7 @@ Here are the experiments you need to report:
 agent_retrieval_tips = """
 Tips
 - First, reference the contents of the paper.txt and extract relevant information in order to fill in the missing functions. 
+- Make use of the `edit_file` action to edit the code.
 - Running `bash refsol.sh` will run all the experiments.
 """
 
@@ -31,7 +32,7 @@ Tips
 
 # ReAct prompts
 react_prompt = """
-Think about what action to perform next.
+Think about what action to perform next. Output the thought and the tool call.
 """
 
 react_reprompt = """
@@ -40,7 +41,7 @@ Please respond with a thought on what action to perform next.
 
 # Planning prompts
 planning_prompt = """
-Create a high level plan with current status and confirmed results.
+Create a high level plan with current status and confirmed results. Output the plan and the tool call.
 """
 
 planning_reprompt = """
@@ -55,6 +56,7 @@ Reflection: What does the observation mean? If there is an error, what caused th
 Research Plan and Status: The full high level research plan, with current status and confirmed results of each step briefly annotated. It must only include progress that has been made by previous steps. If there is any update, enclose the new update text in double asterisks **like this**. If there is no update, just copy the previous step Research Plan and Status. The high level plan from the previous step should be fully retained, unless it is intentionally revised.
 Fact Check: List all objective statements in the updates to Research Plan and Status one by one and point out whether it is guessed versus directly confirmed by the previous observation directly above. Performance numbers can only be confirmed by running the code and observing the output.
 Thought: What you are currently doing, what actions to perform and why
+Tool Call: The tool call to perform the next action.
 """
 
 MLAgentBench_reprompt = """

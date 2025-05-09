@@ -11,7 +11,7 @@ parameters:
   code-retrieval: 'agent'
   retrieval: 'oracle'
   subtests:
-    oracle_retrieval_strat_r2:
+    oracle_retrieval_strat2_r2:
       combined-id:
         - "2205.00048_0"
         - "2205.00048_1"
@@ -31,7 +31,7 @@ parameters:
         - "2309.05569_2"
         - "2309.05569_4"
         - "2110.03485_0"
-    oracle_retrieval_strat_r3:
+    oracle_retrieval_strat2_r3:
       combined-id:
         - "2205.00048_0"
         - "2205.00048_1"
@@ -51,7 +51,7 @@ parameters:
         - "2309.05569_2"
         - "2309.05569_4"
         - "2110.03485_0"
-    oracle_retrieval_strat_r4:
+    oracle_retrieval_strat2_r4:
       combined-id:
         - "2205.00048_0"
         - "2205.00048_1"
@@ -71,7 +71,7 @@ parameters:
         - "2309.05569_2"
         - "2309.05569_4"
         - "2110.03485_0"
-    oracle_retrieval_strat_r5:
+    oracle_retrieval_strat2_r5:
       combined-id:
         - "2205.00048_0"
         - "2205.00048_1"

@@ -7,6 +7,7 @@ import difflib
 import sys
 import datetime 
 import time
+import wandb
 this_dir = os.path.dirname(__file__)
 sys.path.append(this_dir)
 
@@ -48,7 +49,7 @@ class Environment:
         self.retrieval = kwargs["retrieval"]
         self.code_retrieval = kwargs["code_retrieval"]
 
-        self.banned = [] #["write_file", "edit_file", "command_line"]
+        self.banned = ["edit_function"] #["write_file", "edit_file", "command_line"]
 
         self.acis = [
             ACI(name="final_answer", 
@@ -163,7 +164,7 @@ class Environment:
             selector.register(process.stdout, selectors.EVENT_READ)
             selector.register(process.stderr, selectors.EVENT_READ)
 
-            timeout = 60 * 10 # 20 minutes
+            timeout = 60 * 10 # 10 minutes
             start_time = time.time()
             timed_out = False
             while process.poll() is None and selector.get_map():
@@ -185,6 +186,9 @@ class Environment:
                     else:
                         stderr_lines.append(line)
                         lines.append(line)
+            if timed_out:
+                observation = "".join(stdout_lines) + f"\nProcess timed out after {timeout} seconds"
+                return observation
 
             for line in process.stdout:
                 stdout_lines.append(line)
@@ -195,17 +199,13 @@ class Environment:
             
             selector.close()
 
-
             stdout_lines = [line for line in stdout_lines if "Error: mkl-service + Intel(R)" not in line and "MKL_SERVICE_FORCE_INTEL" not in line]
             stderr_lines = [line for line in stderr_lines if "Error: mkl-service + Intel(R)" not in line and "MKL_SERVICE_FORCE_INTEL" not in line]
             lines = [line for line in lines if "Error: mkl-service + Intel(R)" not in line and "MKL_SERVICE_FORCE_INTEL" not in line]
 
-
             return_code = process.returncode
 
-            if timed_out:
-                observation = "".join(stdout_lines) + f"\nProcess timed out after {timeout} seconds"
-            elif return_code != 0:
+            if return_code != 0:
                 observation = "".join(stderr_lines)
             else:
                 observation = "".join(stdout_lines)
@@ -216,9 +216,6 @@ class Environment:
             return observation
         except Exception as e:
             return f"Something went wrong in executing {command}: {e}."
-
-    def verifiy_solution(self):
-        pass
 
 
 class MLAgentBench_Env(Environment):
@@ -528,8 +525,8 @@ Tips
             self.write_file(file_name, "")
             content = ""
 
-        # if self.retrieval == "oracle":
-            # edit_instruction += f"Context from research paper: {self.X['funcs_to_block'][0]['relevant_paper']}"
+        if self.retrieval == "oracle":
+            edit_instruction += f"Context from research paper: {self.X['funcs_to_block'][0]['relevant_paper']}"
 
         prompt = f"""Given this script:
 ```

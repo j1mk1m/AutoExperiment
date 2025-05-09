@@ -52,7 +52,7 @@ class Agent(ABC):
             print(f"Step {i}\n")
             is_last_step = self.llm_manager.is_over_compute_budget() or self.env.is_over_compute_time() or i == max_agent_steps - 1
 
-            action, inputs = self.step(is_last_step)
+            action, inputs = self.step_claude(is_last_step)
 
             if action is None:
                 self.env.cleanup()
@@ -137,6 +137,42 @@ class Agent(ABC):
                 prompt.append({"role": "user", "content": "Please select a tool call and make sure to select EXACTLY one"})
 
         return None, None 
+    
+    def step_claude(self, last_step):
+        prompt = self._build_prompt(last_step)
+
+        # Thought prompting step
+        prompt.append({"role": "user", "content": self.thought_prompt})
+
+        for i in range(self.max_retries):
+            llm_response = self.llm_manager.call_llm(prompt, self.tools)
+
+            if llm_response.error: # most likely token limit
+                prompt = prompt[0:1] + prompt[(i+1)*3+1:]
+                continue
+            
+            if llm_response.response is not None and llm_response.response.content is not None and self._is_valid_thought(llm_response.response.content):
+                thought = llm_response.response.content
+                print(f"### Thought ### \n{thought}\n")
+                self.memory.add_agent_thought(thought)
+                prompt.append({"role": "assistant", "content": thought})
+
+            tool_calls = llm_response.response.tool_calls
+            if tool_calls is not None and len(tool_calls) == 1:
+                print(f"### Tool Call ### \n{tool_calls[0].function}\n")
+                self.memory.add_agent_tool_call(llm_response.response)
+                action = tool_calls[0].function.name
+                inputs = json.loads(tool_calls[0].function.arguments)
+                return action, inputs 
+
+            prompt.append(llm_response.reponse)    
+            prompt.append({"role": "user", "content": self.thought_reprompt}) #add reprompt
+
+            if i == self.max_retries - 1:
+                return None, None
+
+        return None, None
+
 
     @abstractmethod
     def _is_valid_thought(self, response):
