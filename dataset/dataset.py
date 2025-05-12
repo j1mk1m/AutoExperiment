@@ -7,7 +7,7 @@ import datetime
 this_dir = os.path.dirname(__file__)
 
 
-def get_datapoint(split="MLRC", mode="PC+refsol", combined_id="0000.00000_0", workspace="workspace", verbose=False, only_metadata=False, include_paper=True, oracle=False):
+def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", workspace="workspace", verbose=False, only_metadata=False, include_paper=True, oracle=False):
     """ Parse experiment_csv and gather experiment information """
     if "PC" in mode:
         paper_id, func_ids_string = combined_id.split("_")
@@ -50,6 +50,8 @@ def get_datapoint(split="MLRC", mode="PC+refsol", combined_id="0000.00000_0", wo
         "paper_id": paper_id, 
         "func_ids": func_ids,
         "environment": experiment["environment"] if "environment" in experiment else environment,
+        "experiment_description": experiment["experiments"],
+        "func_details": experiment["func_details"]
     }
     if only_metadata:
         return metadata

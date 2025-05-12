@@ -5,7 +5,7 @@ command:
 method: grid
 parameters:
   _tags:
-    value: agent_architecture
+    value: gpt4o_main_r5
   agent:
     value: ReAct
   combined-id:
@@ -51,4 +51,4 @@ parameters:
   memory:
     value: Full
   model-engine:
-    value: anthropic/claude-3-5-sonnet-20240620
+    value: gpt-4o

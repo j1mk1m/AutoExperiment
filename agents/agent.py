@@ -20,6 +20,7 @@ class Agent(ABC):
         self.tools = self.env.get_tool_info()
         self.llm_manager = llm_manager
         self.memory = memory_module
+        self.step_fn = self.step if "claude" not in llm_manager.model_engine else self.step_claude
 
         # Datapoint
         self.X = X
@@ -52,7 +53,7 @@ class Agent(ABC):
             print(f"Step {i}\n")
             is_last_step = self.llm_manager.is_over_compute_budget() or self.env.is_over_compute_time() or i == max_agent_steps - 1
 
-            action, inputs = self.step_claude(is_last_step)
+            action, inputs = self.step_fn(is_last_step)
 
             if action is None:
                 self.env.cleanup()
