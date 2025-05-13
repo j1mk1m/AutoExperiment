@@ -106,7 +106,7 @@ if __name__ == "__main__":
     include_paper = args.retrieval != "no"
     oracle = args.retrieval == "oracle"
     workspace = os.path.join(this_path, "workspace")
-    X, y, metadata = get_datapoint("MLRC", "PC+refsol", args.combined_id, workspace=workspace, verbose=args.verbose, include_paper=include_paper, oracle=oracle)
+    X, y, metadata = get_datapoint(combined_id=args.combined_id, workspace=workspace, verbose=args.verbose, include_paper=include_paper, oracle=oracle)
 
     if args.agent == "refsol":
         run_refsol(X)

@@ -20,7 +20,7 @@ class Agent(ABC):
         self.tools = self.env.get_tool_info()
         self.llm_manager = llm_manager
         self.memory = memory_module
-        self.step_fn = self.step if "claude" not in llm_manager.model_engine else self.step_claude
+        self.step_fn = self.step if "claude" not in llm_manager.model_backbone else self.step_claude
 
         # Datapoint
         self.X = X

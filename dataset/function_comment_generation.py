@@ -4,6 +4,38 @@ import os
 this_dir = os.path.dirname(__file__)
 
 SCRIPT = """
+Given this Python function, generate a Python docstring that describes the following:
+- simple one-line description of the function
+- arguments that the function takes in and their types
+- return value(s) and their types
+
+Here is an example
+Python function: 
+def get_scaled_mask(self, mask, size, epsilon):
+    if isinstance(size, int):
+        size = (size, size)
+    s = transforms.ToTensor()(mask).to(self.device)
+    s = transforms.Resize(size=size)(s)
+    s = (s > 0).to(torch.float32)
+    s = torch.where(s == 0, epsilon, s)
+    return s
+
+Docstring:
+\"\"\"
+Returns a scaled mask of the same size as the input mask 
+:param size: An integer or a tuple 
+:param mask: A tensor 
+:return: A tensor of type float32
+\"\"\"
+
+Now let's try
+Python function:
+{code}
+
+Docstring:
+"""
+
+OLD_SCRIPT = """
 Given this Python function, generate a Python docstring that contain all information necessary to rewrite the code. 
 You should include the following:
 - arguments that the function takes in
@@ -93,30 +125,36 @@ def call_openai(messages, tools, model):
 
 def generate_code_comments(paper_id, split="MLRC"):
     print(f"Paper ID: {paper_id}")
-    functions = []
-    with open(os.path.join(this_dir, split, paper_id, "functions.json"), 'r') as file:
-        functions = json.load(file)["functions"]
-    for func in functions:
+    with open(os.path.join(this_dir, split, paper_id, "all_functions.jsonl"), 'r') as file:
+        functions = [json.loads(line) for line in file]
+
+    for i, func in enumerate(functions):
+        if "description" in func:
+            continue
         print(f"Generating comments for {func['name']}")
         with open(os.path.join(this_dir, "MLRC", paper_id, "code", func["file"]), 'r') as file:
             lines = file.readlines()
         code = "\n".join(lines[int(func["line_start"])-1:int(func["line_end"])])
-        # matches = [data["paper_content"] for data in super_pc_llama_data if data["script"] == func["script"] and data["function_name"] == func["name"]]
-        # if len(matches) == 0:
-        #     continue
-        # text = matches[0]
+
         message = SCRIPT.format(code=code)
-        # message = REVERSE_PROMPT.format(code=code, text=text)
-        response = call_openai([{"role": "user", "content": message}], None, "gpt-4o")
+        response = call_openai([{"role": "user", "content": message}], None, "gpt-4o-mini")
         print(response.content)
+
         func["description"] = response.content.split('"""')[1].strip()
-    with open(os.path.join(this_dir, split, paper_id, "functions_new.jsonl"), 'w') as file:
+
+        if (i+1) % 100 == 0:
+            print(f"Saving {i+1} functions")
+            with open(os.path.join(this_dir, split, paper_id, "all_functions.jsonl"), 'w') as file:
+                for func in functions:
+                    json.dump(func, file)
+                    file.write('\n')
+
+    with open(os.path.join(this_dir, split, paper_id, "all_functions.jsonl"), 'w') as file:
         for func in functions:
             json.dump(func, file)
             file.write('\n')
 
-# papers = ["2105.14761", "2203.07836", "2309.07045", "2305.15933", "2403.07088", "2305.17333", "2210.14102", "2304.13148", "2401.15535"]
-papers = ["2110.03485", "2205.00048", "2303.11932", "2309.05569"]
+papers = ["2309.05569"]
 print("Generating Comments for ", papers)
 for paper in papers:
     generate_code_comments(paper)

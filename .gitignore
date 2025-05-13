@@ -8,6 +8,7 @@ agents/traces
 workspace/*
 logs
 traces
+generated_code
 wandb
 deploy/*.sbatch
 deploy/sbatches/*.sbatch
@@ -16,6 +17,8 @@ deploy/sbatches/*.sbatch
 # dataset
 dataset/__pycache__
 dataset/MLRC/*.jsonl
+dataset/MLRC/*/*.jsonl
+dataset/workspace
 *.pt
 *.zip
 *.tar

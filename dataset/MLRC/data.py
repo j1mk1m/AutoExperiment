@@ -22,37 +22,58 @@ def load_mlrc_data():
             
     return mlrc_exps, mlrc_funcs
 
-def generate_files(paper_ids):
-    mlrc_exps, mlrc_funcs = load_mlrc_data()
+def load_more_data(paper_ids):
+    mlrc_funcs = {paper_id: [] for paper_id in paper_ids}
 
-    for num_removed in range(1, 6): # TODO: change this
+    for paper_id in paper_ids:
+        repo_path = os.path.join(this_dir, paper_id)
+        if os.path.isdir(repo_path):
+            # all_functions_path = os.path.join(repo_path, "all_functions.jsonl")
+            sampled_functions_path = os.path.join(repo_path, "sampled_functions.jsonl")
+            with open(sampled_functions_path, 'r') as f:
+                for line in f:
+                    func = json.loads(line)
+                    mlrc_funcs[paper_id].append(func)
+            
+    return mlrc_funcs
+
+
+def generate_files(paper_ids):
+    mlrc_exps, _ = load_mlrc_data()
+    mlrc_funcs = load_more_data(paper_ids)
+
+    for num_removed in range(1, 4): # TODO: change this
         print(f"Num removed n = {num_removed}")
         datapoints = []
 
         for paper_id in paper_ids:
             print(f"Paper id: {paper_id}")
-            func_details = []
-            with open(os.path.join(this_dir, paper_id, "functions.jsonl"), 'r') as func_file:
-                for line in func_file:
-                    details = json.loads(line)
-                    func_details.append(details)
+            # func_details = []
+            # with open(os.path.join(this_dir, paper_id, "functions.jsonl"), 'r') as func_file:
+            #     for line in func_file:
+            #         details = json.loads(line)
+            #         func_details.append(details)
             
-            funcs = [func for func in mlrc_funcs if func["paper_id"] == paper_id]
+            # funcs = [func for func in mlrc_funcs if func["paper_id"] == paper_id]
+            funcs = mlrc_funcs[paper_id]
             new_funcs = []
             for func in funcs:
-                matched_detail = [f for f in func_details if f["func_id"] == func["func_id"]]
-                if len(matched_detail) == 0:
-                    print(f"None matched for {func['func_id']}")
-                    continue
-                detail = matched_detail[0]
-                func["header_line"] = int(detail["header_line"])
-                func["line_start"] = int(detail["line_start"])
-                func["line_end"] = int(detail["line_end"])
+                # matched_detail = [f for f in func_details if f["func_id"] == func["func_id"]]
+                # if len(matched_detail) == 0:
+                #     print(f"None matched for {func['func_id']}")
+                #     continue
+                # detail = matched_detail[0]
+                # func["header_line"] = int(detail["header_line"])
+                # func["line_start"] = int(detail["line_start"])
+                # func["line_end"] = int(detail["line_end"])
 
-                func["description"] = detail["description"]
-                func["code_context"] = detail["code_context_embedding"]
-                func["relevant_paper"] = detail["relevant_paper"]
-                new_funcs.append(func)
+                # func["description"] = detail["description"]
+                # func["code_context"] = detail["code_context_embedding"]
+                func["code_context"] = ""
+                # func["relevant_paper"] = detail["relevant_paper"]
+                func["relevant_paper"] = ""
+                if "exp_dependencies" in func and len(func["exp_dependencies"]) > 0:
+                    new_funcs.append(func)
 
             funcs = new_funcs
 
@@ -62,10 +83,12 @@ def generate_files(paper_ids):
                 datapoint["func_ids"] = ",".join(func_ids)
                 datapoint["func_details"] = comb
 
-                if num_removed == 0:
-                    relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and set(func_ids).issubset(set(exp["func_dependencies"].split(",")))]
-                else:
-                    relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and len([func_id for func_id in func_ids if func_id in exp["func_dependencies"].split(",")]) > 0]
+                # if num_removed == 0:
+                #     relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and set(func_ids).issubset(set(exp["func_dependencies"].split(",")))]
+                # else:
+                #     relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and len([func_id for func_id in func_ids if func_id in exp["func_dependencies"].split(",")]) > 0]
+                exp_dependencies = set([exp_id for func in comb for exp_id in func["exp_dependencies"]])
+                relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and exp["exp_id"] in exp_dependencies]
                 print(f"Function IDs: {func_ids} / number of exps: {len(relevant_exps)}")
                 if len(relevant_exps) == 0:
                     continue
@@ -78,7 +101,6 @@ def generate_files(paper_ids):
                     experiment_string += f"Experiment {i+1}: " + exp["description"] + "\n"
                     bash_string += f"echo Experiment {i + 1}\n"+ exp["solution"] + "\n"
                     result = exp["result"].replace("'", "\"")
-                    # print(result)
                     results[f"Experiment {i+1}"] = json.loads(result)
 
                 experiment_string += "Return final answer as a json: {\"Experiment 1\": ..., \"Experiment 2\": ..., ...}"
@@ -90,7 +112,7 @@ def generate_files(paper_ids):
                 datapoints.append(datapoint)
             
         # Write mlrc_funcs to jsonl file
-        with open(f'mlrc_n={num_removed}.jsonl', 'w') as f:
+        with open(f'mlrc_n={num_removed}_full.jsonl', 'w') as f:
             for function in datapoints:
                 json.dump(function, f)
                 f.write('\n')
