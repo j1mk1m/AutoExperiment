@@ -183,7 +183,7 @@ class Agent(ABC):
         self.memory.add_env_step(observation)
 
     def _build_prompt(self, last_step):
-        prompt = [{"role": "system", "content": self.system_prompt}]
+        prompt = [{"role": "user", "content": self.system_prompt}]
 
         prompt += self.memory.retrieve_memory()
                 

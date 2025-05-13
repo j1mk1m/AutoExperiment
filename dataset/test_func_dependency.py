@@ -25,8 +25,6 @@ def exp_depends_on_func(experiment, X):
         process = subprocess.run(experiment["solution"], shell=True, capture_output=True, text=True, timeout=5)
         
         # Check if NotImplementedError was raised
-        print(process.stderr)
-        print(process.stdout)
         if "NotImplementedError" in process.stderr:
             return True
             

@@ -42,7 +42,10 @@ class LLM:
 
 def call_llm(messages, tools, model, **kwargs):
     try:
-        response = completion(model=model, messages=messages, tools=tools, **kwargs)
+        if tools is None:
+            response = completion(model=model, messages=messages, **kwargs)
+        else:
+            response = completion(model=model, messages=messages, tools=tools, **kwargs)
         cost = completion_cost(completion_response=response, model=model, messages=messages)
         return LLMResponse(prompt=messages,
                         response=response.choices[0].message, 

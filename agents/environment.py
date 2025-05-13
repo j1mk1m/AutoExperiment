@@ -419,7 +419,7 @@ class MLAgentBench_Env(Environment):
         Here is a detailed description on what to look for and what should be returned: {things_to_look_for}
         The description should reference crtical lines in the script relevant to what is being looked for. Only describe what is objectively confirmed by the file content. Do not include guessed numbers. If you cannot find the answer to certain parts of the request, you should say "In this segment, I cannot find ...".
         """
-            messages = [{"role": "system", "content": prompt}]
+            messages = [{"role": "user", "content": prompt}]
             completion = self.llm_manager.call_llm(messages, None)
             if completion.error:
                 print(completion.response)
@@ -540,9 +540,12 @@ Provide the full code after the edit, making no other changes. Provide only the 
 """
 
         print("### PROMPT FOR edit file###\n", prompt, "\n### END OF PROMPT ###")
-        completion = self.llm_manager.call_llm([{"role": "system", "content": prompt}], None).response.content
+        completion = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None)
 
-        new_content = completion.strip()
+        if completion.error:
+            return f"Error: {completion.response}"
+
+        new_content = completion.response.content.strip()
         if "```python" in new_content:
             new_content = new_content.split("```python")[1].split("```")[0].strip()
         if "```bash" in new_content:

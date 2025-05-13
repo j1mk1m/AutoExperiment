@@ -86,9 +86,9 @@ def sample_functions():
     Returns dict mapping repository names to their sampled function information.
     """
     mlrc_path = 'MLRC'
-    combined_ids = ["2205.00048"]#, "2110.03485", "2303.11932", "2309.05569"]
+    combined_ids = ["2110.03485", "2303.11932", "2309.05569"]
     # num_functions = {"2110.03485": 45, "2205.00048": 42, "2303.11932": 38, "2309.05569": 40}
-    num_functions = 50
+    num_functions = 100
 
     for repo in combined_ids:
         repo_path = os.path.join(mlrc_path, repo)

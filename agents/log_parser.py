@@ -3,6 +3,8 @@ import json
 import csv
 import shutil
 from litellm import completion, completion_cost
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset.dataset import get_datapoint
 
 class LLMResponse:
@@ -205,6 +207,8 @@ def main_analysis(trace_dir, model):
             try:
                 if "agent_architecture_" in filename:
                     combined_id = "_".join(filename.split("agent_architecture_")[1].split("_")[0:2])
+                elif "main_" in filename:
+                    combined_id = "_".join(filename.split("main_")[1][3:].split("_")[0:2])
                 else:
                     combined_id = "_".join(filename.split("retrieval_")[1].split("_")[0:2])
 
@@ -212,8 +216,8 @@ def main_analysis(trace_dir, model):
                 with open(tracepath,'r') as f:
                     contents = f.read()
 
-                final_answer = contents.split("Observation:\n")[-1].split("\n")[0]
-                final_answer = json.loads(final_answer)
+                # final_answer = contents.split("Observation:\n")[-1].split("\n")[0]
+                # final_answer = json.loads(final_answer)
 
                 gold_code, gold_output, gold_context = get_gold_output_and_code(combined_id)
 
@@ -241,14 +245,17 @@ def main_analysis(trace_dir, model):
  
 
 if __name__=="__main__":
+    trace_dir = os.path.join("logs", "main_gpt4o")
+    main_analysis(trace_dir, "gpt-4o-mini")
     # for setting in ["no", "full", "oracle"]:
     # log_dir = os.path.join("agents", "logs", "code_retrieval")
     # classify(log_dir, "code_retrieval")
 
-    trace_dir = os.path.join("agents", "traces", "code_retrieval", "correct")
-    main_analysis(trace_dir, "gpt-4o")
-    trace_dir = os.path.join("agents", "traces", "code_retrieval", "incorrect")
-    main_analysis(trace_dir, "gpt-4o")
+
+    # trace_dir = os.path.join("agents", "traces", "code_retrieval", "correct")
+    # main_analysis(trace_dir, "gpt-4o")
+    # trace_dir = os.path.join("agents", "traces", "code_retrieval", "incorrect")
+    # main_analysis(trace_dir, "gpt-4o")
     
     # for setting in ["full", "oracle"]:
     #     trace_dir = os.path.join("agents", "traces", setting, "correct")
