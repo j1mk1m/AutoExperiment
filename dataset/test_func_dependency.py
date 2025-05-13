@@ -13,16 +13,9 @@ def get_experiments(paper_id):
     return experiments
 
 def exp_depends_on_func(experiment, X):
-
-    # Save current working directory
-    orig_dir = os.getcwd()
-
-    try:
-        # Change to workspace directory containing the code
-        os.chdir(X["path"])
-        
+    try: 
         # Run the experiment command
-        process = subprocess.run(experiment["solution"], shell=True, capture_output=True, text=True, timeout=5)
+        process = subprocess.run(experiment["solution"], shell=True, capture_output=True, text=True, cwd=X["path"], timeout=60)
         
         # Check if NotImplementedError was raised
         if "NotImplementedError" in process.stderr:
@@ -32,10 +25,6 @@ def exp_depends_on_func(experiment, X):
 
     except Exception as e:
         return False
-
-    finally:
-        # Restore original working directory
-        os.chdir(orig_dir)
 
 
 def test_func_dependency(paper_id):
@@ -56,6 +45,9 @@ def test_func_dependency(paper_id):
         for experiment in tqdm.tqdm(experiments):
             if exp_depends_on_func(experiment, X):
                 exp_dependencies.append(experiment["exp_id"])
+                print(experiment["exp_id"])
+                if len(exp_dependencies) > 2:
+                    break
         
         func["exp_dependencies"] = exp_dependencies
         print(f"Found {len(exp_dependencies)} experiments that depend on {combined_id}")

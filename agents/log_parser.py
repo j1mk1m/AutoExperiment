@@ -104,9 +104,12 @@ def extract_generated_code(contents, gold_code, model):
     diffs = contents.split("+++")[1:]
     diffs = [diff.split("######################################")[0] for diff in diffs]
     if len(diffs) == 0:
-        print("No diff found. Using last edit_function body")
-        code = contents.split("```python")[-1].split("```")[0]
-        return code
+        print("No diff found. Using last write_file contents")
+        generated_code = contents.split("name='write_file'")[-2].split('"content": ')[-1][1:-4]
+        return generated_code
+
+        # code = contents.split("```python")[-1].split("```")[0]
+        # return code
     diffs = '\n'.join(diffs)
     header = gold_code.split('\n')[0]
 
@@ -219,7 +222,8 @@ def main_analysis(trace_dir, model):
                 # final_answer = contents.split("Observation:\n")[-1].split("\n")[0]
                 # final_answer = json.loads(final_answer)
 
-                gold_code, gold_output, gold_context = get_gold_output_and_code(combined_id)
+                # gold_code, gold_output, gold_context = get_gold_output_and_code(combined_id)
+                gold_code, gold_output, gold_context = "", "", ""
 
                 generated_code = extract_generated_code(contents, gold_code, model)
                 if "incorrect" in trace_dir:
@@ -245,7 +249,7 @@ def main_analysis(trace_dir, model):
  
 
 if __name__=="__main__":
-    trace_dir = os.path.join("logs", "main_gpt4o")
+    trace_dir = os.path.join("logs", "claude_main")
     main_analysis(trace_dir, "gpt-4o-mini")
     # for setting in ["no", "full", "oracle"]:
     # log_dir = os.path.join("agents", "logs", "code_retrieval")

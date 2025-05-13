@@ -7,7 +7,7 @@ parameters:
   environment: MLAgentBench
   agent: 'ReAct'
   memory: 'Full'
-  model-engine: 'o1'
+  model-engine: 'o3-mini'
   subtests:
     main_o1:
       combined-id:

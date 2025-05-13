@@ -51,4 +51,4 @@ parameters:
   memory:
     value: Full
   model-engine:
-    value: o1
+    value: o3-mini

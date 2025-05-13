@@ -18,7 +18,7 @@ def get_combined_ids():
 def get_generated_codes():
     combined_ids = get_combined_ids()
     runs = ["r1", "r2", "r3", "r4", "r5"]
-    codes = {combined_id: {run: None for run in runs} for combined_id in combined_ids}
+    codes = {combined_id: {} for combined_id in combined_ids}
 
     print("Getting generated codes...")
     log_dir = os.path.join("logs", "main_gpt4o", "analysis.csv")
