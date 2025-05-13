@@ -131,5 +131,4 @@ if __name__ == "__main__":
         wandb.log({"losses": str(loss_per_exp), "correct": str(correct_per_exp), "correct_count": correct_count, "all_correct": all_correct})
 
     # clean up
-    shutil.copy(os.path.join(X["path"], X["funcs_to_block"][0]["file"]), os.path.join(this_path, "generated_code", "_".join(tags).replace("/", "_")))
     shutil.rmtree(X["path"])

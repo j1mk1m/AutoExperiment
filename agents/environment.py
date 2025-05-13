@@ -33,7 +33,7 @@ class EnvironmentStep:
     done: bool
 
 class Environment:
-    def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
+    def __init__(self, llm_manager, X, metadata, tags, **kwargs) -> None:
         self.workspace_root = None
         self.max_compute_time = kwargs["max_compute_time"]
         self.llm_manager = llm_manager
@@ -42,6 +42,7 @@ class Environment:
         self.combined_id = metadata["combined_id"]
         self.mode = metadata["mode"]
         self.source = X["path"]
+        self.tags = tags
 
         self.compute_time = 0
 
@@ -86,6 +87,7 @@ class Environment:
         shutil.copytree(source, self.workspace_root, symlinks=True)
     
     def cleanup(self):
+        # shutil.copy(os.path.join(self.workspace_root, self.X["funcs_to_block"][0]["file"]), os.path.join(this_dir, "generated_code", "_".join(self.tags).replace("/", "_")))
         if self.workspace_root is not None and os.path.exists(self.workspace_root):
             shutil.rmtree(self.workspace_root)
 
@@ -219,9 +221,9 @@ class Environment:
 
 
 class MLAgentBench_Env(Environment):
-    def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
+    def __init__(self, llm_manager, X, metadata, tags, **kwargs) -> None:
         # Remove max_compute_time from kwargs if it exists to avoid duplicate argument
-        super().__init__(llm_manager, X, metadata, **kwargs)
+        super().__init__(llm_manager, X, metadata, tags, **kwargs)
 
         tools = [
             ACI(name="inspect_file_lines", 
@@ -646,8 +648,8 @@ Provide the full code after the edit, making no other changes. Provide only the 
 
 # TODO
 class SWE_AGENT_Env(Environment):
-    def __init__(self, llm_manager, X, metadata, **kwargs) -> None:
-        super().__init__(llm_manager, X, metadata, **kwargs)
+    def __init__(self, llm_manager, X, metadata, tags, **kwargs) -> None:
+        super().__init__(llm_manager, X, metadata, tags, **kwargs)
 
         self.action_to_function_mapper["find_file"] = self.find_file
         self.action_to_function_mapper["search_file"] = self.search_file

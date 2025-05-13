@@ -28,27 +28,22 @@ def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", wo
     experiment = None
 
     if "PC" in mode: 
-        with open(os.path.join(this_dir, "MLRC", f"mlrc_n={n}.jsonl"), "r") as file:
+        with open(os.path.join(this_dir, "MLRC", paper_id, f"all_functions.jsonl"), "r") as file:
             for line in file:
                 row = json.loads(line)
-                if row["paper_id"] == paper_id and row["func_ids"] == func_ids_string:
+                if row["func_id"] == func_ids_string:
                     experiment = row
-                    break
-        with open(os.path.join(this_dir, "MLRC", f"mlrc_n={n}_full.jsonl"), "r") as file:
-            for line in file:
-                row = json.loads(line)
-                if row["paper_id"] == paper_id and row["func_ids"] == func_ids_string:
-                    experiment = row
-                    break 
-
+                    experiment["experiments"] = ""
+                    experiment["results"] = ""
+                    experiment["func_details"] = [experiment]
+ 
     # Get conda environment
     environment = "None"
-    if split == "MLRC":
-        with open(os.path.join(this_dir, "MLRC", "mlrc_main.csv"), 'r') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                if row["paper_id"] == paper_id:
-                    environment = row["conda_env"]
+    with open(os.path.join(this_dir, "MLRC", "mlrc_main.csv"), 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if row["paper_id"] == paper_id:
+                environment = row["conda_env"]
 
     metadata = {
         "split": split,

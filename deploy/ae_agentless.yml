@@ -7,14 +7,10 @@ parameters:
   agent: 'Agentless'
   memory: 'Full'
   environment: 'MLAgentBench'
+  max-completion-tokens: 16384
+  model-engine: 'gpt-4o'
   subtests:
     agentless:
-      model-engine: 
-        - 'o3-mini'
-        - 'o1'
-      max-completion-tokens:
-        - 0
-        - 512
       combined-id:
         - '2303.11932_0'
         - '2303.11932_1'

@@ -4,7 +4,7 @@ import os
 import subprocess
 import shutil
 import tqdm
-from dataset import get_datapoint
+from dataset_tmp import get_datapoint
 
 def get_experiments(paper_id):
     with open(os.path.join("MLRC", paper_id, "experiments.jsonl"), "r") as f:
@@ -25,6 +25,8 @@ def exp_depends_on_func(experiment, X):
         process = subprocess.run(experiment["solution"], shell=True, capture_output=True, text=True, timeout=5)
         
         # Check if NotImplementedError was raised
+        print(process.stderr)
+        print(process.stdout)
         if "NotImplementedError" in process.stderr:
             return True
             

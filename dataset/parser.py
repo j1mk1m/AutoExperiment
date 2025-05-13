@@ -86,7 +86,7 @@ def sample_functions():
     Returns dict mapping repository names to their sampled function information.
     """
     mlrc_path = 'MLRC'
-    combined_ids = ["2205.00048", "2303.11932", "2309.05569"]
+    combined_ids = ["2205.00048"]#, "2110.03485", "2303.11932", "2309.05569"]
     # num_functions = {"2110.03485": 45, "2205.00048": 42, "2303.11932": 38, "2309.05569": 40}
     num_functions = 50
 
@@ -102,7 +102,7 @@ def sample_functions():
                 sampled_functions = [json.loads(line) for line in f]
                 func_ids = [f["func_id"] for f in sampled_functions]
             
-            filtered_functions = [func for func in repo_functions if "pytorch_wavelets" not in func["file"] and "description" in func]
+            filtered_functions = [func for func in repo_functions if "description" in func]
             new_sampled_functions = random.sample(filtered_functions, min(num_functions, len(filtered_functions)))
             for func in new_sampled_functions:
                 if func["func_id"] in func_ids:

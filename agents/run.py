@@ -7,11 +7,11 @@ from agents.llm import LLM
 from agents.memory import Memory, FullMemory, SlidingWindowMemory, Summary
 
 
-def get_env(env_args, llm_manager, X, metadata):
+def get_env(env_args, llm_manager, X, metadata, tags):
     if env_args.environment == "MLAgentBench":
-        return MLAgentBench_Env(llm_manager, X, metadata, **vars(env_args))
+        return MLAgentBench_Env(llm_manager, X, metadata, tags, **vars(env_args))
     elif env_args.environment == "SWE-Agent":
-        return SWE_AGENT_Env(llm_manager, X, metadata, **vars(env_args))
+        return SWE_AGENT_Env(llm_manager, X, metadata, tags, **vars(env_args))
     else:
         raise NotImplementedError()
 
@@ -44,7 +44,7 @@ def run_agent(args, X, metadata, tags):
         args.compute_budget = None
     
     llm_manager = LLM(args.model_engine, args.compute_budget) 
-    env = get_env(args, llm_manager, X, metadata)
+    env = get_env(args, llm_manager, X, metadata, tags)
     memory = get_memory(args, llm_manager)
     agent = get_agent(args, env, llm_manager, memory, X, metadata)
 

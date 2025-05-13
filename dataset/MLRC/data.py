@@ -5,7 +5,7 @@ from itertools import combinations
 
 this_dir = os.path.dirname(__file__)
 
-def load_mlrc_data():
+def load_mlrc_exps():
     # Load experiment data
     mlrc_exps = []
     with open('mlrc_exps.csv', 'r') as f:
@@ -13,23 +13,16 @@ def load_mlrc_data():
         for row in reader:
             mlrc_exps.append(row)
             
-    # Load function data
-    mlrc_funcs = []
-    with open('mlrc_funcs.csv', 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            mlrc_funcs.append(row)
-            
-    return mlrc_exps, mlrc_funcs
+    return mlrc_exps
 
-def load_more_data(paper_ids):
+def load_mlrc_funcs(paper_ids):
     mlrc_funcs = {paper_id: [] for paper_id in paper_ids}
 
     for paper_id in paper_ids:
         repo_path = os.path.join(this_dir, paper_id)
         if os.path.isdir(repo_path):
-            # all_functions_path = os.path.join(repo_path, "all_functions.jsonl")
             sampled_functions_path = os.path.join(repo_path, "sampled_functions.jsonl")
+            # sampled_functions_path = os.path.join(repo_path, "functions.jsonl")
             with open(sampled_functions_path, 'r') as f:
                 for line in f:
                     func = json.loads(line)
@@ -39,8 +32,8 @@ def load_more_data(paper_ids):
 
 
 def generate_files(paper_ids):
-    mlrc_exps, _ = load_mlrc_data()
-    mlrc_funcs = load_more_data(paper_ids)
+    mlrc_exps = load_mlrc_exps()
+    mlrc_funcs = load_mlrc_funcs(paper_ids)
 
     for num_removed in range(1, 4): # TODO: change this
         print(f"Num removed n = {num_removed}")
@@ -48,31 +41,17 @@ def generate_files(paper_ids):
 
         for paper_id in paper_ids:
             print(f"Paper id: {paper_id}")
-            # func_details = []
-            # with open(os.path.join(this_dir, paper_id, "functions.jsonl"), 'r') as func_file:
-            #     for line in func_file:
-            #         details = json.loads(line)
-            #         func_details.append(details)
-            
-            # funcs = [func for func in mlrc_funcs if func["paper_id"] == paper_id]
             funcs = mlrc_funcs[paper_id]
+
+            # Filter functions that have no experiments
             new_funcs = []
             for func in funcs:
-                # matched_detail = [f for f in func_details if f["func_id"] == func["func_id"]]
-                # if len(matched_detail) == 0:
-                #     print(f"None matched for {func['func_id']}")
-                #     continue
-                # detail = matched_detail[0]
-                # func["header_line"] = int(detail["header_line"])
-                # func["line_start"] = int(detail["line_start"])
-                # func["line_end"] = int(detail["line_end"])
-
-                # func["description"] = detail["description"]
-                # func["code_context"] = detail["code_context_embedding"]
-                func["code_context"] = ""
-                # func["relevant_paper"] = detail["relevant_paper"]
-                func["relevant_paper"] = ""
                 if "exp_dependencies" in func and len(func["exp_dependencies"]) > 0:
+                    if "code_context" not in func:
+                        func["code_context"] = ""
+                    if "relevant_paper" not in func:
+                        func["relevant_paper"] = ""
+
                     new_funcs.append(func)
 
             funcs = new_funcs
@@ -83,10 +62,6 @@ def generate_files(paper_ids):
                 datapoint["func_ids"] = ",".join(func_ids)
                 datapoint["func_details"] = comb
 
-                # if num_removed == 0:
-                #     relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and set(func_ids).issubset(set(exp["func_dependencies"].split(",")))]
-                # else:
-                #     relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and len([func_id for func_id in func_ids if func_id in exp["func_dependencies"].split(",")]) > 0]
                 exp_dependencies = set([exp_id for func in comb for exp_id in func["exp_dependencies"]])
                 relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and exp["exp_id"] in exp_dependencies]
                 print(f"Function IDs: {func_ids} / number of exps: {len(relevant_exps)}")

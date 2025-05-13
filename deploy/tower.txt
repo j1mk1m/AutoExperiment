@@ -1,14 +1,8 @@
 --- Agent Commands ---
-wandb agent j1mk1m/AutoExperiment/73pmifqp
-wandb agent j1mk1m/AutoExperiment/81qkmt0f
-wandb agent j1mk1m/AutoExperiment/gsblrn8q
+wandb agent j1mk1m/AutoExperiment/3jupkegd
 
 --- Sweep URLs ---
-https://wandb.ai/j1mk1m/AutoExperiment/sweeps/73pmifqp
-https://wandb.ai/j1mk1m/AutoExperiment/sweeps/81qkmt0f
-https://wandb.ai/j1mk1m/AutoExperiment/sweeps/gsblrn8q
+https://wandb.ai/j1mk1m/AutoExperiment/sweeps/3jupkegd
 
 --- atlas ---
-sbatch /work/gyeongwk/auto_experiment/deploy/sbatches/ae_main._May_12_gpt4o_main_r3_be6e_atlas.sbatch
-sbatch /work/gyeongwk/auto_experiment/deploy/sbatches/ae_main._May_12_gpt4o_main_r4_0326_atlas.sbatch
-sbatch /work/gyeongwk/auto_experiment/deploy/sbatches/ae_main._May_12_gpt4o_main_r5_8838_atlas.sbatch
+sbatch /work/gyeongwk/auto_experiment/deploy/sbatches/ae_agentless._May_13_agentless_9cf8_atlas.sbatch
