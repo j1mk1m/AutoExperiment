@@ -29,36 +29,69 @@ def create_heatmap(df):
     plt.savefig('heatmap.png')
     plt.close()
 
-# Read the CSV file
-df = pd.read_csv("main.csv")
+def get_step_correct(df):
+    # Calculate success rate by step
+    step_correct = {}
+    for k in range(0, 22, 2):
+        if k <= 20:  # Only include steps up to 20
+            total_runs = len(df)
+            correct_runs = len(df[(df['step'] <= k) & (df['all_correct'])])
+            step_correct[k] = correct_runs / total_runs
+    print(step_correct)
+    return step_correct
 
-# Calculate success rate by step
-step_correct = {}
-for k in range(0, 22, 2):
-    if k <= 20:  # Only include steps up to 20
-        total_runs = len(df)
-        correct_runs = len(df[(df['step'] <= k) & (df['all_correct'])])
-        step_correct[k] = correct_runs / total_runs
-print(step_correct)
+def plot_step_correct():
+    # Read the CSV file
+    df = pd.read_csv("dynamic_o3_mini.csv")
+    step_correct_o3_mini = get_step_correct(df)
+    df = pd.read_csv("dynamic_gpt_4o.csv")
+    step_correct_gpt_4o = get_step_correct(df)
+    df = pd.read_csv("dynamic_gpt_4o_mini.csv")
+    step_correct_gpt_4o_mini = get_step_correct(df)
+    df = pd.read_csv("dynamic_claude_3_5.csv")
+    step_correct_claude_3_5 = get_step_correct(df)
 
-# Plot success rate as a line plot with larger labels and title
-plt.rcParams.update({'font.size': 14})  # Increase base font size
-plt.rcParams['axes.titlesize'] = 16     # Increase title font size
-plt.rcParams['axes.labelsize'] = 14     # Increase axis label font size
-plt.figure(figsize=(10, 6))
-plt.plot(list(step_correct.keys()), list(step_correct.values()), marker='o')
-plt.xlabel('Step')
-plt.ylabel('Success Rate')
-plt.title('Success Rate Over Time')
-plt.xticks(range(0, 22, 2))  # Set x-axis ticks from 0 to 20 in increments of 2
-plt.ylim(0, 1.0)  # Set y-axis limits from 0 to 1.0
-plt.savefig('step_correct.png')
-plt.close()
+    # Plot success rate as a line plot with larger labels and title
+    plt.rcParams.update({'font.size': 14})  # Increase base font size
+    plt.rcParams['axes.titlesize'] = 16     # Increase title font size
+    plt.rcParams['axes.labelsize'] = 14     # Increase axis label font size
+    plt.figure(figsize=(10, 6))
+    plt.plot(list(step_correct_o3_mini.keys()), list(step_correct_o3_mini.values()), marker='o', label='o3-mini')
+    plt.plot(list(step_correct_gpt_4o.keys()), list(step_correct_gpt_4o.values()), marker='o', label='gpt-4o')
+    plt.plot(list(step_correct_gpt_4o_mini.keys()), list(step_correct_gpt_4o_mini.values()), marker='o', label='gpt-4o-mini')
+    plt.plot(list(step_correct_claude_3_5.keys()), list(step_correct_claude_3_5.values()), marker='o', label='claude-3.5-sonnet')
+    plt.xlabel('Max Interactions')
+    plt.ylabel('Success Rate')
+    plt.title('Performance vs Max Interactions')
+    plt.xticks(range(0, 22, 2))  # Set x-axis ticks from 0 to 20 in increments of 2
+    plt.ylim(0, 0.5)  # Set y-axis limits from 0 to 1.0
+    plt.legend()
+    plt.savefig('performance_vs_max_interactions.png')
+    plt.close()
 
 
-# create_heatmap(df)
+def plot_success_across_max_token():
+    df = pd.read_csv("fixed_across_max_tokens.csv")
+    max_tokens = [tokens for tokens in df.keys() if tokens.isnumeric()]
+    success_rates = {"o1": [], "o3-mini": []}
+    for token in max_tokens:
+        # print(df[token])
+        success_rates["o1"].append(df[token][1])
+        success_rates["o3-mini"].append(df[token][0])
 
+    plt.figure(figsize=(10, 6))
+    plt.plot(max_tokens, success_rates["o1"], marker='o', label='o1')
+    plt.plot(max_tokens, success_rates["o3-mini"], marker='o', label='o3-mini')
+    plt.xlabel('Max Tokens')
+    plt.ylabel('Success Rate')
+    plt.title('Performance vs Max Tokens')
+    plt.ylim(0, 0.5)  # Set y-axis limits from 0 to 1.0
+    plt.legend()
+    plt.savefig('performance_vs_max_tokens.png')
+    plt.close() 
 
+plot_step_correct()
+plot_success_across_max_token()
 
 
 

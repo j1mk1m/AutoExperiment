@@ -15,7 +15,7 @@ def get_experiments(paper_id):
 def exp_depends_on_func(experiment, X):
     try: 
         # Run the experiment command
-        process = subprocess.run(experiment["solution"], shell=True, capture_output=True, text=True, cwd=X["path"], timeout=60)
+        process = subprocess.run(experiment["solution"], shell=True, capture_output=True, text=True, cwd=X["path"], timeout=30)
         
         # Check if NotImplementedError was raised
         if "NotImplementedError" in process.stderr:
