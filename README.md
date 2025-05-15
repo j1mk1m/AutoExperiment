@@ -2,9 +2,16 @@
 Neurips 2025 Submission
 
 ### Downloading the Dataset
-[Huggingface Link]()
+[Huggingface Link](https://huggingface.co/datasets/j1mk1m/AutoExperiment)
 
-Datapoint
+Download the above dataset and put contents in `dataset/MLRC` directory. Each subdirectory represents a research paper and its code repository. Untar each code.tar file inside these subdirectories.
+
+Then, run 
+```
+cd dataset
+python process_dataset.py
+```
+
 
 ### Running the Agent
 Basic example of running the agent.
@@ -21,12 +28,15 @@ Optional arguments
 - `--max-agent-steps 50`: maximum number of action-taking steps allowed
 - `--compute-budget 1.0`: compute budget allowed in dollars
 - `--max-compute-time 1800`: maximum time (in seconds) allowed for the agent
-- `--retrieval agent`: options are "no" and "agent"
+- `--retrieval agent`: options are "no" and "full"
 - `--code-retrieval agent`: options are "no", "full", "ast", and "embedding"
 
 
 ### Experiments
 These are instructions on how to reproduce the experiments in the paper.
+
+#### Function removal $n \ge 1$
+
 
 #### Verifier
 Run the verifier with the following command

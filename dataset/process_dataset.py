@@ -5,6 +5,14 @@ from itertools import combinations
 
 this_dir = os.path.dirname(__file__)
 
+def get_paper_ids():
+    paper_ids = []
+    for file in os.listdir(os.path.join(this_dir, "MLRC")):
+        if os.path.isdir(os.path.join(this_dir, file)):
+            paper_ids.append(file)
+    return paper_ids
+
+
 def load_mlrc_exps():
     # Load experiment data
     mlrc_exps = []
@@ -15,17 +23,13 @@ def load_mlrc_exps():
             
     return mlrc_exps
 
+
 def load_mlrc_funcs(paper_ids):
     mlrc_funcs = {paper_id: [] for paper_id in paper_ids}
 
     for paper_id in paper_ids:
         repo_path = os.path.join(this_dir, paper_id)
         if os.path.isdir(repo_path):
-            # sampled_functions_path = os.path.join(repo_path, "sampled_functions.jsonl")
-            # with open(sampled_functions_path, 'r') as f:
-            #     for line in f:
-            #         func = json.loads(line)
-            #         mlrc_funcs[paper_id].append(func)
             functions_path = os.path.join(repo_path, "functions.jsonl")
             with open(functions_path, 'r') as f:
                 for line in f:
@@ -35,17 +39,18 @@ def load_mlrc_funcs(paper_ids):
     return mlrc_funcs
 
 
-def generate_files(paper_ids):
+def generate_files():
+    paper_ids = get_paper_ids()
     mlrc_exps = load_mlrc_exps()
     mlrc_funcs = load_mlrc_funcs(paper_ids)
 
-    for num_removed in range(4, 6): # TODO: change this
-        print(f"Num removed n = {num_removed}")
+    for num_removed in range(1, 6): # TODO: change this
+        print(f"Generating jsonl file for num removed n = {num_removed}")
         datapoints = []
         total_exps = 0
 
         for paper_id in paper_ids:
-            # print(f"Paper id: {paper_id}")
+            print(f"Paper id: {paper_id}")
             funcs = mlrc_funcs[paper_id]
 
             # Filter functions that have no experiments
@@ -100,22 +105,5 @@ def generate_files(paper_ids):
                 json.dump(function, f)
                 f.write('\n')
 
-def find_averages():
-    # Calculate average number of experiments for each n
-    for n in range(6):
-        total_exps = 0
-        count = 0
-        with open(f'mlrc_n={n}.jsonl', 'r') as f:
-            for line in f:
-                data = json.loads(line)
-                total_exps += len(data['results'].keys())
-                count += 1
-        avg = total_exps / count if count > 0 else 0
-        print(count)
-        print(f"Average experiments for n={n}: {avg:.2f}")
 
-
-paper_ids = ["2309.05569", "2303.11932", "2110.03485", "2205.00048"]
-generate_files(paper_ids)
-
-# find_averages()
+generate_files()
