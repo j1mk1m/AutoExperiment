@@ -74,10 +74,6 @@ def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", wo
 
     # If +refsol mode, create refsol.sh and include refsol in X
     X["refsol"] = create_ref_sol(experiment, workspace_dir) if "refsol" in mode else None
-
-    # If -README mode, remove README from code base
-    if "-README" in mode:
-        remove_readme(X["path"])
     
     return X, experiment["results"], metadata
     

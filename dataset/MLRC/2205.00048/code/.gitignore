@@ -1,0 +1,15 @@
+# Private overview files
+*.ods
+*.dat
+*.png
+*.txt
+
+# Metadata
+*.aliases
+*.lvlps
+.cache/
+
+# Folders
+save_exp/
+__pycache__/
+*.pyc

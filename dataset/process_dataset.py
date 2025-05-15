@@ -16,10 +16,10 @@ def get_paper_ids():
 def load_mlrc_exps():
     # Load experiment data
     mlrc_exps = []
-    with open('mlrc_exps.csv', 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            mlrc_exps.append(row)
+    with open(os.path.join(this_dir, "MLRC", "experiments.jsonl"), 'r') as f:
+        for line in f:
+            exp = json.loads(line)
+            mlrc_exps.append(exp)
             
     return mlrc_exps
 
@@ -27,14 +27,11 @@ def load_mlrc_exps():
 def load_mlrc_funcs(paper_ids):
     mlrc_funcs = {paper_id: [] for paper_id in paper_ids}
 
-    for paper_id in paper_ids:
-        repo_path = os.path.join(this_dir, paper_id)
-        if os.path.isdir(repo_path):
-            functions_path = os.path.join(repo_path, "functions.jsonl")
-            with open(functions_path, 'r') as f:
-                for line in f:
-                    func = json.loads(line)
-                    mlrc_funcs[paper_id].append(func)
+    functions_path = os.path.join(this_dir, "MLRC", "functions.jsonl")
+    with open(functions_path, 'r') as f:
+        for line in f:
+            func = json.loads(line)
+            mlrc_funcs[func["paper_id"]].append(func)
  
     return mlrc_funcs
 
@@ -44,7 +41,7 @@ def generate_files():
     mlrc_exps = load_mlrc_exps()
     mlrc_funcs = load_mlrc_funcs(paper_ids)
 
-    for num_removed in range(1, 6): # TODO: change this
+    for num_removed in range(1, 4):  # TODO: change this to generate files for different n
         print(f"Generating jsonl file for num removed n = {num_removed}")
         datapoints = []
         total_exps = 0
@@ -52,19 +49,6 @@ def generate_files():
         for paper_id in paper_ids:
             print(f"Paper id: {paper_id}")
             funcs = mlrc_funcs[paper_id]
-
-            # Filter functions that have no experiments
-            new_funcs = []
-            for func in funcs:
-                if "exp_dependencies" in func and len(func["exp_dependencies"]) > 0:
-                    if "code_context" not in func:
-                        func["code_context"] = ""
-                    if "relevant_paper" not in func:
-                        func["relevant_paper"] = ""
-
-                    new_funcs.append(func)
-
-            funcs = new_funcs
 
             for comb in combinations(funcs, num_removed):
                 datapoint = {"paper_id": paper_id}
@@ -96,11 +80,12 @@ def generate_files():
                 datapoint["results"] = results
                 
                 datapoints.append(datapoint)
-        print(len(datapoints))
+
+        print(f"Number of datapoints: {len(datapoints)}")
         print(f"average experiments: {total_exps/len(datapoints)}")
             
         # Write mlrc_funcs to jsonl file
-        with open(f'mlrc_n={num_removed}.jsonl', 'w') as f:
+        with open(os.path.join(this_dir, "MLRC", f"mlrc_n={num_removed}.jsonl"), 'w') as f:
             for function in datapoints:
                 json.dump(function, f)
                 f.write('\n')

@@ -15,7 +15,8 @@ deploy/sbatches/*.sbatch
 
 # dataset
 dataset/__pycache__
-dataset/MLRC
+dataset/MLRC/mlrc_*.jsonl
+dataset/MLRC/*/*.jsonl
 dataset/workspace
 *.pt
 *.zip
