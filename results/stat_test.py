@@ -1,0 +1,121 @@
+import json
+import csv 
+import pandas as pd
+from scipy.stats import chi2
+
+from paired_bootstrap import eval_with_paired_bootstrap
+
+# McNemar's test
+
+def mcnemar_test(sys1, sys2):
+    a, b, c, d = 0, 0, 0, 0
+    for i in range(len(sys1)):
+        if sys1[i] == 1 and sys2[i] == 1:
+            a += 1
+        elif sys1[i] == 1 and sys2[i] == 0:
+            b += 1
+        elif sys1[i] == 0 and sys2[i] == 1:
+            c += 1
+        elif sys1[i] == 0 and sys2[i] == 0:
+            d += 1
+
+    chi_squared = ((abs(a - d) - 1) ** 2) / (a + d)
+    p_value = 1 - chi2.cdf(chi_squared, 1)
+
+    print(f"p-value: {p_value:.4f}")
+    if p_value < 0.05:
+        print("The difference is statistically significant (p < 0.05)")
+    else:
+        print("The difference is not statistically significant (p >= 0.05)")
+    return p_value
+
+def load_data(file_path):
+    with open(file_path, 'r') as file:
+        reader = csv.DictReader(file)
+        data = list(reader)
+    results = {}
+    for row in data:
+        results[row["combined-id"]] = row["all_correct"]
+    return results
+
+def load_csv(file_path):
+    return pd.read_csv(file_path)
+
+def convert_to_binary(data):
+    return [1 if result == "TRUE" or result == "true" else 0 for result in data]
+
+def convert_dict_to_binary(data1, data2):
+    sys1 = []
+    sys2 = []
+    for combined_id, result1 in data1.items():
+        if combined_id in data2:
+            result2 = data2[combined_id]
+            sys1.append(1 if result1 == "TRUE" or result1 == "true" else 0)
+            sys2.append(1 if result2 == "TRUE" or result2 == "true" else 0)
+    return sys1, sys2
+    
+
+def main_results():
+    files = {
+        # "GPT-4o": "dynamic_gpt_4o.csv",
+        # "GPT-4o-mini": "dynamic_gpt_4o_mini.csv",
+        # "Claude-3.5-sonnet": "dynamic_claude_3_5.csv",
+        # "Claude-3.7-sonnet": "dynamic_claude_3_7.csv",
+        "GPT-4o": "gpt_4o_n_2.csv",
+        "GPT-4o-mini": "gpt_4o_mini_n_2.csv",
+        "Claude-3.5-sonnet": "claude_3_5_n_2.csv",
+        "Claude-3.7-sonnet": "claude_3_7_n_2.csv",
+    }
+
+    data = {}
+    for model, file in files.items():
+        data[model] = load_data(file)
+
+
+    # Perform McNemar's test for each pair of models
+    models = list(data.keys())
+    for i in range(len(models)):
+        for j in range(i+1, len(models)):
+            print("########################")
+            model1 = models[i]
+            model2 = models[j]
+
+            sys1, sys2 = convert_dict_to_binary(data[model1], data[model2])
+            gold = [1 for _ in range(len(sys1))]
+            
+            print(f"\nMcNemar's test results for {model1} vs {model2}:")
+            p_value = mcnemar_test(sys1, sys2)  
+            
+            print(f"\nPaired bootstrap results for {model1} vs {model2}:")
+            eval_with_paired_bootstrap(gold, sys1, sys2)
+        
+
+def verifier_results(data):
+    pass_1 = convert_to_binary(data["Run 1"])
+    pass_5 = convert_to_binary(data["Pass@5"])
+    verifier = convert_to_binary(data["Verifier Correct"])
+
+    gold = [1 for _ in range(len(pass_1))]
+
+    print(f"\nPaired bootstrap results for pass@1 and pass@5:")
+    eval_with_paired_bootstrap(gold, pass_1, pass_5)
+
+    print(f"\nPaired bootstrap results for pass@1 and verifier:")
+    eval_with_paired_bootstrap(gold, pass_1, verifier)
+
+    print(f"\nPaired bootstrap results for pass@5 and verifier:")
+    eval_with_paired_bootstrap(gold, pass_5, verifier)
+
+
+def run_verifier_results():
+    gpt_data = load_csv("data/verifier_gpt4o.csv")
+    claude_data = load_csv("data/verifier_claude_3_5.csv")
+    print("GPT-4o")
+    verifier_results(gpt_data)
+    print("Claude 3.5")
+    verifier_results(claude_data)
+
+run_verifier_results()
+
+
+                

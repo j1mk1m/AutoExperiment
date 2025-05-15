@@ -1,12 +1,10 @@
 # Paper Name 
 Neurips 2025 Submission
 
-### Downloading the Dataset
+### Dataset
 [Huggingface Link](https://huggingface.co/datasets/j1mk1m/AutoExperiment)
 
-Download the above dataset and put contents in `dataset/MLRC` directory. Each subdirectory represents a research paper and its code repository. Untar each code.tar file inside these subdirectories.
-
-Then, run 
+Or run 
 ```
 cd dataset
 python process_dataset.py
@@ -28,8 +26,8 @@ Optional arguments
 - `--max-agent-steps 50`: maximum number of action-taking steps allowed
 - `--compute-budget 1.0`: compute budget allowed in dollars
 - `--max-compute-time 1800`: maximum time (in seconds) allowed for the agent
-- `--retrieval agent`: options are "no" and "full"
-- `--code-retrieval agent`: options are "no", "full", "ast", and "embedding"
+- `--retrieval full`: options are "no" and "full"
+- `--code-retrieval full`: options are "no", "full", "ast", and "embedding"
 
 
 ### Experiments
@@ -43,3 +41,6 @@ Run the verifier with the following command
 
 #### Fixed vs Dynamic
 We reproduce the "agentless" harness.
+
+### Natural Language Context
+No vs Full settings are set using `--retrieval [full, no]` flag. By default "full" setting is used.

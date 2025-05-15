@@ -42,13 +42,13 @@ def get_step_correct(df):
 
 def plot_step_correct():
     # Read the CSV file
-    df = pd.read_csv("dynamic_o3_mini.csv")
+    df = pd.read_csv("data/dynamic_o3_mini.csv")
     step_correct_o3_mini = get_step_correct(df)
-    df = pd.read_csv("dynamic_gpt_4o.csv")
+    df = pd.read_csv("data/dynamic_gpt_4o.csv")
     step_correct_gpt_4o = get_step_correct(df)
-    df = pd.read_csv("dynamic_gpt_4o_mini.csv")
+    df = pd.read_csv("data/dynamic_gpt_4o_mini.csv")
     step_correct_gpt_4o_mini = get_step_correct(df)
-    df = pd.read_csv("dynamic_claude_3_5.csv")
+    df = pd.read_csv("data/dynamic_claude_3_5.csv")
     step_correct_claude_3_5 = get_step_correct(df)
 
     # Plot success rate as a line plot with larger labels and title
@@ -66,12 +66,12 @@ def plot_step_correct():
     plt.xticks(range(0, 18, 2))  # Set x-axis ticks from 0 to 20 in increments of 2
     plt.ylim(0, 0.5)  # Set y-axis limits from 0 to 1.0
     plt.legend()
-    plt.savefig('performance_vs_max_interactions.png')
+    plt.savefig('plots/performance_vs_max_interactions.png')
     plt.close()
 
 
 def plot_success_across_max_token():
-    df = pd.read_csv("fixed_across_max_tokens.csv")
+    df = pd.read_csv("data/fixed_across_max_tokens.csv")
     max_tokens = [tokens for tokens in df.keys() if tokens.isnumeric()]
     success_rates = {"o1": [], "o3-mini": []}
     for token in max_tokens:
@@ -87,11 +87,11 @@ def plot_success_across_max_token():
     plt.title('Performance vs Max Tokens')
     plt.ylim(0, 0.5)  # Set y-axis limits from 0 to 1.0
     plt.legend()
-    plt.savefig('performance_vs_max_tokens.png')
+    plt.savefig('plots/performance_vs_max_tokens.png')
     plt.close() 
 
 def plot_main_results():
-    df = pd.read_csv("main_results.csv")
+    df = pd.read_csv("data/main_results.csv")
     num_removed = df["N"]
     plt.figure(figsize=(10, 6))
     plt.plot(num_removed, df["gpt-4o"], marker='o', label='GPT-4o')
@@ -100,13 +100,15 @@ def plot_main_results():
     plt.plot(num_removed, df["claude-3.7-sonnet"], marker='o', label='Claude 3.7 Sonnet')
     plt.xlabel('n')
     plt.ylabel('Pass Rate (%)')
+    plt.xlim(0.5, 5.5)
+    plt.xticks(range(1, 6))  
     plt.legend()
-    plt.savefig('main_results.png')
+    plt.savefig('plots/main_results.png')
     plt.close()
 
 
-plot_step_correct()
-plot_success_across_max_token()
+# # plot_step_correct()
+# plot_success_across_max_token()
 plot_main_results()
 
 

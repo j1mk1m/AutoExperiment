@@ -8,8 +8,9 @@ this_dir = os.path.dirname(__file__)
 def get_paper_ids():
     paper_ids = []
     for file in os.listdir(os.path.join(this_dir, "MLRC")):
-        if os.path.isdir(os.path.join(this_dir, file)):
+        if os.path.isdir(os.path.join(this_dir, "MLRC", file)):
             paper_ids.append(file)
+    print(paper_ids)
     return paper_ids
 
 
@@ -41,13 +42,13 @@ def generate_files():
     mlrc_exps = load_mlrc_exps()
     mlrc_funcs = load_mlrc_funcs(paper_ids)
 
-    for num_removed in range(1, 4):  # TODO: change this to generate files for different n
+    for num_removed in range(0, 6):  # TODO: change this to generate files for different n
         print(f"Generating jsonl file for num removed n = {num_removed}")
         datapoints = []
         total_exps = 0
 
         for paper_id in paper_ids:
-            print(f"Paper id: {paper_id}")
+            # print(f"Paper id: {paper_id}")
             funcs = mlrc_funcs[paper_id]
 
             for comb in combinations(funcs, num_removed):
@@ -57,8 +58,11 @@ def generate_files():
                 datapoint["func_details"] = comb
 
                 exp_dependencies = set([exp_id for func in comb for exp_id in func["exp_dependencies"]])
-                relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and exp["exp_id"] in exp_dependencies]
-                # print(f"Function IDs: {func_ids} / number of exps: {len(relevant_exps)}")
+                if num_removed == 0:
+                    relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id]
+                else:
+                    relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and exp["exp_id"] in exp_dependencies]
+
                 if len(relevant_exps) == 0:
                     continue
                 total_exps += len(relevant_exps)
@@ -77,7 +81,7 @@ def generate_files():
 
                 datapoint["experiments"] = experiment_string
                 datapoint["solution"] = bash_string
-                datapoint["results"] = results
+                datapoint["results"] = json.dumps(results)
                 
                 datapoints.append(datapoint)
 
@@ -85,7 +89,7 @@ def generate_files():
         print(f"average experiments: {total_exps/len(datapoints)}")
             
         # Write mlrc_funcs to jsonl file
-        with open(os.path.join(this_dir, "MLRC", f"mlrc_n={num_removed}.jsonl"), 'w') as f:
+        with open(os.path.join(this_dir, "MLRC", f"mlrc_n_{num_removed}.jsonl"), 'w') as f:
             for function in datapoints:
                 json.dump(function, f)
                 f.write('\n')

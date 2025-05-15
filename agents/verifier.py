@@ -15,14 +15,15 @@ def get_combined_ids():
     with open("combined_ids.txt", "r") as f:
         return f.read().splitlines()
 
-def get_generated_codes():
+
+def get_generated_codes(log_dir):
     combined_ids = get_combined_ids()
     runs = ["r1", "r2", "r3", "r4", "r5"]
     codes = {combined_id: {} for combined_id in combined_ids}
 
     print("Getting generated codes...")
-    log_dir = os.path.join("logs", "main_gpt4o", "analysis.csv")
-    with open(log_dir, "r") as f:
+    analysis_file = os.path.join(log_dir, "analysis.csv")
+    with open(analysis_file, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
             combined_id = row["combined_id"]
@@ -35,8 +36,8 @@ def get_generated_codes():
     return codes
 
 
-def verify_code(model_engine):
-    codes = get_generated_codes()
+def verify_code(log_dir, model_engine):
+    codes = get_generated_codes(log_dir)
     for combined_id, runs in codes.items():
         print("-" * 100)
         print(f"Verifying {combined_id}")

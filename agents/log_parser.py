@@ -68,9 +68,6 @@ def calculate_loss(gold, pred, metric_fn=percent_loss):
         correct_per_exp[key] = correct
         all_correct = all_correct and correct
     return loss_per_exp, correct_per_exp, correct_count, all_correct
-    # except Exception as e:
-    #     # print(e)
-    #     return None, None, 0, False
  
 
 def get_gold_output_and_code(combined_id):
@@ -96,8 +93,6 @@ def call_llm(messages, model, **kwargs):
         print(message)
         return LLMResponse(prompt=messages, response=message, prompt_tokens=0, completion_tokens=0, cost=0, error=True)
 
-def extract_error_messages(contents):
-    pass
 
 def extract_generated_code(contents, gold_code, model):
     # extract all the diffs
@@ -249,30 +244,9 @@ def main_analysis(trace_dir, model):
  
 
 if __name__=="__main__":
-    trace_dir = os.path.join("logs", "claude_main")
-    main_analysis(trace_dir, "gpt-4o-mini")
-    # for setting in ["no", "full", "oracle"]:
-    # log_dir = os.path.join("agents", "logs", "code_retrieval")
-    # classify(log_dir, "code_retrieval")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, required=True)
+    parser.add_argument("--log-dir", type=str, required=True)
+    args = parser.parse_args()
 
-
-    # trace_dir = os.path.join("agents", "traces", "code_retrieval", "correct")
-    # main_analysis(trace_dir, "gpt-4o")
-    # trace_dir = os.path.join("agents", "traces", "code_retrieval", "incorrect")
-    # main_analysis(trace_dir, "gpt-4o")
-    
-    # for setting in ["full", "oracle"]:
-    #     trace_dir = os.path.join("agents", "traces", setting, "correct")
-    #     main_analysis(trace_dir, "gpt-4o")
-    #     trace_dir = os.path.join("agents", "traces", setting, "incorrect")
-    #     main_analysis(trace_dir, "gpt-4o")
-    # trace_dir = os.path.join("agents", "traces", "oracle", "correct")
-    # main_analysis(trace_dir, "gpt-4o", delimeter="retrieval_")
-    # trace_dir = os.path.join("agents", "traces", "full", "failed")
-    # main_analysis(trace_dir, "gpt-4o")
-    # trace_dir = os.path.join("agents", "traces", "oracle", "correct")
-    # main_analysis(trace_dir, "gpt-4o", delimeter="retrieval_")
-    # trace_dir = os.path.join("agents", "traces", "full", "failed")
-    # main_analysis(trace_dir, "gpt-4o")
-    # trace_dir = os.path.join("agents", "traces", "full", "incorrect")
-    # main_analysis(trace_dir, "gpt-4o")
+    main_analysis(args.log_dir, args.model)
