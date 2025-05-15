@@ -3,12 +3,11 @@ agents/openai_api_key.txt
 agents/__pycache__
 agents/workspace
 agents/traces
+agents/logs
+agents/generated_code
 
 # Workspace, logs, and utils
 workspace/*
-logs
-traces
-generated_code
 wandb
 deploy/*.sbatch
 deploy/sbatches/*.sbatch
@@ -16,8 +15,7 @@ deploy/sbatches/*.sbatch
 
 # dataset
 dataset/__pycache__
-dataset/MLRC/*.jsonl
-dataset/MLRC/*/*.jsonl
+dataset/MLRC
 dataset/workspace
 *.pt
 *.zip

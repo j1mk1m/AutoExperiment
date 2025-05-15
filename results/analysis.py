@@ -57,9 +57,9 @@ def plot_step_correct():
     plt.rcParams['axes.labelsize'] = 14     # Increase axis label font size
     plt.figure(figsize=(10, 6))
     plt.plot(list(step_correct_o3_mini.keys()), list(step_correct_o3_mini.values()), marker='o', label='o3-mini')
-    plt.plot(list(step_correct_gpt_4o.keys()), list(step_correct_gpt_4o.values()), marker='o', label='gpt-4o')
-    plt.plot(list(step_correct_gpt_4o_mini.keys()), list(step_correct_gpt_4o_mini.values()), marker='o', label='gpt-4o-mini')
-    plt.plot(list(step_correct_claude_3_5.keys()), list(step_correct_claude_3_5.values()), marker='o', label='claude-3.5-sonnet')
+    plt.plot(list(step_correct_gpt_4o.keys()), list(step_correct_gpt_4o.values()), marker='o', label='GPT-4o')
+    plt.plot(list(step_correct_gpt_4o_mini.keys()), list(step_correct_gpt_4o_mini.values()), marker='o', label='GPT-4o mini')
+    plt.plot(list(step_correct_claude_3_5.keys()), list(step_correct_claude_3_5.values()), marker='o', label='Claude 3.5 Sonnet')
     plt.xlabel('Max Interactions')
     plt.ylabel('Success Rate')
     plt.title('Performance vs Max Interactions')
@@ -94,10 +94,10 @@ def plot_main_results():
     df = pd.read_csv("main_results.csv")
     num_removed = df["N"]
     plt.figure(figsize=(10, 6))
-    plt.plot(num_removed, df["gpt-4o"], marker='o', label='gpt-4o')
-    plt.plot(num_removed, df["gpt-4o-mini"], marker='o', label='gpt-4o-mini')
-    plt.plot(num_removed, df["claude-3.5-sonnet"], marker='o', label='claude-3.5-sonnet')
-    plt.plot(num_removed, df["claude-3.7-sonnet"], marker='o', label='claude-3.7-sonnet')
+    plt.plot(num_removed, df["gpt-4o"], marker='o', label='GPT-4o')
+    plt.plot(num_removed, df["gpt-4o-mini"], marker='o', label='GPT-4o mini')
+    plt.plot(num_removed, df["claude-3.5-sonnet"], marker='o', label='Claude 3.5 Sonnet')
+    plt.plot(num_removed, df["claude-3.7-sonnet"], marker='o', label='Claude 3.7 Sonnet')
     plt.xlabel('n')
     plt.ylabel('Pass Rate (%)')
     plt.legend()
@@ -105,8 +105,8 @@ def plot_main_results():
     plt.close()
 
 
-# plot_step_correct()
-# plot_success_across_max_token()
+plot_step_correct()
+plot_success_across_max_token()
 plot_main_results()
 
 
