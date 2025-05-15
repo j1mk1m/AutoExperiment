@@ -14,8 +14,6 @@ sys.path.append(this_dir)
 from llm import call_llm
 
 def add_env_args(parser):
-    parser.add_argument("--environment", type=str, choices=["MLAgentBench", "SWE-Agent"], default="MLAgentBench",
-                        help="Type of environment to use")
     parser.add_argument("--code-retrieval", type=str, choices=["no", "agent", "oracle"], default="agent")
 
 class ACI:
@@ -220,7 +218,7 @@ class Environment:
             return f"Something went wrong in executing {command}: {e}."
 
 
-class MLAgentBench_Env(Environment):
+class BasicEnvironment(Environment):
     def __init__(self, llm_manager, X, metadata, tags, **kwargs) -> None:
         # Remove max_compute_time from kwargs if it exists to avoid duplicate argument
         super().__init__(llm_manager, X, metadata, tags, **kwargs)
@@ -647,50 +645,4 @@ Provide the full code after the edit, making no other changes. Provide only the 
             return f"Directory successfully changed to {self.cur_dir[len(root)+1:]}"
         else:
             return f"Directory not found in the root directory. Tip: use list_files to see contents of the current directory"
-
-
-# TODO
-class SWE_AGENT_Env(Environment):
-    def __init__(self, llm_manager, X, metadata, tags, **kwargs) -> None:
-        super().__init__(llm_manager, X, metadata, tags, **kwargs)
-
-        self.action_to_function_mapper["find_file"] = self.find_file
-        self.action_to_function_mapper["search_file"] = self.search_file
-        self.action_to_function_mapper["search_dir"] = self.search_dir
-        self.action_to_function_mapper["open"] = self.open
-        self.action_to_function_mapper["scroll_up"] = self.scroll_up
-        self.action_to_function_mapper["scroll_down"] = self.scroll_down
-        self.action_to_function_mapper["goto"] = self.goto
-        self.action_to_function_mapper["edit"] = self.edit
-
-        self.opened_file = None
-        self.line_start = 0
-        self.line_end = 100
-
-    # actions
-    def find_file(self, filename):
-        pass
-
-    def search_file(self, query):
-        pass
-
-    def search_dir(self, query):
-        pass
-
-    def open(self, file_path):
-        pass
-
-    def scroll_up(self):
-        pass
-
-    def scroll_down(self):
-        pass
-
-    def goto(self, line):
-        pass
-
-    def edit(self, start_line, end_line, replacement_text):
-        pass
-
-
 

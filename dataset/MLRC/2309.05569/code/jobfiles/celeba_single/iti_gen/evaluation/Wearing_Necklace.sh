@@ -1,3 +1,0 @@
-python evaluation.py \
-    --img-folder "results/celeba_single/iti_gen/Wearing_Necklace" \
-    --class-list "a headshot of a person wearing necklace" "a headshot of a person" 

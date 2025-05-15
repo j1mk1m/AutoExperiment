@@ -8,13 +8,8 @@ from agents.memory import Memory, FullMemory, SlidingWindowMemory, Summary
 
 
 def get_env(env_args, llm_manager, X, metadata, tags):
-    if env_args.environment == "MLAgentBench":
-        return MLAgentBench_Env(llm_manager, X, metadata, tags, **vars(env_args))
-    elif env_args.environment == "SWE-Agent":
-        return SWE_AGENT_Env(llm_manager, X, metadata, tags, **vars(env_args))
-    else:
-        raise NotImplementedError()
-
+    return BasicEnvironment(llm_manager, X, metadata, tags, **vars(env_args))
+   
 def get_memory(memory_args, llm_manager):
     if memory_args.memory == "Full":
         return FullMemory(llm_manager)
