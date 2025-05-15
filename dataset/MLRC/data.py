@@ -21,13 +21,17 @@ def load_mlrc_funcs(paper_ids):
     for paper_id in paper_ids:
         repo_path = os.path.join(this_dir, paper_id)
         if os.path.isdir(repo_path):
-            sampled_functions_path = os.path.join(repo_path, "sampled_functions.jsonl")
-            # sampled_functions_path = os.path.join(repo_path, "functions.jsonl")
-            with open(sampled_functions_path, 'r') as f:
+            # sampled_functions_path = os.path.join(repo_path, "sampled_functions.jsonl")
+            # with open(sampled_functions_path, 'r') as f:
+            #     for line in f:
+            #         func = json.loads(line)
+            #         mlrc_funcs[paper_id].append(func)
+            functions_path = os.path.join(repo_path, "functions.jsonl")
+            with open(functions_path, 'r') as f:
                 for line in f:
                     func = json.loads(line)
                     mlrc_funcs[paper_id].append(func)
-            
+ 
     return mlrc_funcs
 
 
@@ -35,12 +39,13 @@ def generate_files(paper_ids):
     mlrc_exps = load_mlrc_exps()
     mlrc_funcs = load_mlrc_funcs(paper_ids)
 
-    for num_removed in range(1, 4): # TODO: change this
+    for num_removed in range(4, 6): # TODO: change this
         print(f"Num removed n = {num_removed}")
         datapoints = []
+        total_exps = 0
 
         for paper_id in paper_ids:
-            print(f"Paper id: {paper_id}")
+            # print(f"Paper id: {paper_id}")
             funcs = mlrc_funcs[paper_id]
 
             # Filter functions that have no experiments
@@ -64,9 +69,10 @@ def generate_files(paper_ids):
 
                 exp_dependencies = set([exp_id for func in comb for exp_id in func["exp_dependencies"]])
                 relevant_exps = [exp for exp in mlrc_exps if exp["paper_id"] == paper_id and exp["exp_id"] in exp_dependencies]
-                print(f"Function IDs: {func_ids} / number of exps: {len(relevant_exps)}")
+                # print(f"Function IDs: {func_ids} / number of exps: {len(relevant_exps)}")
                 if len(relevant_exps) == 0:
                     continue
+                total_exps += len(relevant_exps)
 
                 experiment_string = ""
                 bash_string = ""
@@ -85,9 +91,11 @@ def generate_files(paper_ids):
                 datapoint["results"] = results
                 
                 datapoints.append(datapoint)
+        print(len(datapoints))
+        print(f"average experiments: {total_exps/len(datapoints)}")
             
         # Write mlrc_funcs to jsonl file
-        with open(f'mlrc_n={num_removed}_full.jsonl', 'w') as f:
+        with open(f'mlrc_n={num_removed}.jsonl', 'w') as f:
             for function in datapoints:
                 json.dump(function, f)
                 f.write('\n')
@@ -103,6 +111,7 @@ def find_averages():
                 total_exps += len(data['results'].keys())
                 count += 1
         avg = total_exps / count if count > 0 else 0
+        print(count)
         print(f"Average experiments for n={n}: {avg:.2f}")
 
 

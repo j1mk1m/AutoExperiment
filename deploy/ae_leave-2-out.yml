@@ -48,6 +48,5 @@ parameters:
         - 2309.05569_6,9
         - 2309.05569_2,5
       model-engine: 
-        - 'gpt-4o-mini'
         - 'anthropic/claude-3-5-sonnet-20240620'
         - 'anthropic/claude-3-7-sonnet-20250219'

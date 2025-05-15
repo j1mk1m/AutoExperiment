@@ -34,12 +34,14 @@ def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", wo
                 if row["paper_id"] == paper_id and row["func_ids"] == func_ids_string:
                     experiment = row
                     break
-        with open(os.path.join(this_dir, "MLRC", f"mlrc_n={n}_full.jsonl"), "r") as file:
-            for line in file:
-                row = json.loads(line)
-                if row["paper_id"] == paper_id and row["func_ids"] == func_ids_string:
-                    experiment = row
-                    break 
+        path = os.path.join(this_dir, "MLRC", f"mlrc_n={n}_full.jsonl")
+        if os.path.exists(path):
+            with open(path, "r") as file:
+                for line in file:
+                    row = json.loads(line)
+                    if row["paper_id"] == paper_id and row["func_ids"] == func_ids_string:
+                        experiment = row
+                        break 
 
     # Get conda environment
     environment = "None"

@@ -166,12 +166,6 @@ class Agent(ABC):
                 inputs = json.loads(tool_calls[0].function.arguments)
                 return action, inputs 
 
-            prompt.append(llm_response.reponse)    
-            prompt.append({"role": "user", "content": self.thought_reprompt}) #add reprompt
-
-            if i == self.max_retries - 1:
-                return None, None
-
         return None, None
 
 

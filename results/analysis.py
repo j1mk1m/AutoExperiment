@@ -32,8 +32,8 @@ def create_heatmap(df):
 def get_step_correct(df):
     # Calculate success rate by step
     step_correct = {}
-    for k in range(0, 22, 2):
-        if k <= 20:  # Only include steps up to 20
+    for k in range(0, 18, 2):
+        if k <= 16:  # Only include steps up to 20
             total_runs = len(df)
             correct_runs = len(df[(df['step'] <= k) & (df['all_correct'])])
             step_correct[k] = correct_runs / total_runs
@@ -63,7 +63,7 @@ def plot_step_correct():
     plt.xlabel('Max Interactions')
     plt.ylabel('Success Rate')
     plt.title('Performance vs Max Interactions')
-    plt.xticks(range(0, 22, 2))  # Set x-axis ticks from 0 to 20 in increments of 2
+    plt.xticks(range(0, 18, 2))  # Set x-axis ticks from 0 to 20 in increments of 2
     plt.ylim(0, 0.5)  # Set y-axis limits from 0 to 1.0
     plt.legend()
     plt.savefig('performance_vs_max_interactions.png')
@@ -90,9 +90,24 @@ def plot_success_across_max_token():
     plt.savefig('performance_vs_max_tokens.png')
     plt.close() 
 
-plot_step_correct()
-plot_success_across_max_token()
+def plot_main_results():
+    df = pd.read_csv("main_results.csv")
+    num_removed = df["N"]
+    plt.figure(figsize=(10, 6))
+    plt.plot(num_removed, df["gpt-4o"], marker='o', label='gpt-4o')
+    plt.plot(num_removed, df["gpt-4o-mini"], marker='o', label='gpt-4o-mini')
+    plt.plot(num_removed, df["claude-3.5-sonnet"], marker='o', label='claude-3.5-sonnet')
+    plt.plot(num_removed, df["claude-3.7-sonnet"], marker='o', label='claude-3.7-sonnet')
+    plt.xlabel('n')
+    plt.ylabel('Pass Rate (%)')
+    plt.legend()
+    plt.savefig('main_results.png')
+    plt.close()
 
+
+# plot_step_correct()
+# plot_success_across_max_token()
+plot_main_results()
 
 
 ### DEPRECATED ###

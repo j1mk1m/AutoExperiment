@@ -4,7 +4,6 @@ command:
 - ${args}
 method: grid
 parameters:
-  model-engine: gpt-4o
   agent: ReAct 
   environment: MLAgentBench
   memory: Full
@@ -49,6 +48,8 @@ parameters:
         - 2309.05569_0,2,3,7,9
         - 2309.05569_1,4,6,7,9
         - 2309.05569_1,4,5,7,9
-
+      model-engine: 
+        - 'anthropic/claude-3-5-sonnet-20240620'
+        - 'anthropic/claude-3-7-sonnet-20250219'
 
 
