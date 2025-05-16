@@ -1,7 +1,7 @@
 # From Reproduction to Replication: Evaluating Research Agents with Progressive Code Masking
 Gyeongwon James Kim, Alex Wilf, Louis-Philippe Morency, Daniel Fried (Carnegie Mellon University)
 
-### Dataset
+# Dataset
 Access the dataset via [Huggingface](https://huggingface.co/datasets/j1mk1m/AutoExperiment) r run 
 ```
 cd dataset
@@ -13,7 +13,7 @@ For each repository, it is recommended to create conda environments from the pro
 Note: Each sample in the dataset is identified with the "combined_id" ({paper_id}_{function_id}). For example, 2205.00048_0 represents a sample where code repository from paper 2205.00048 is used and function 0 is masked out. Also, 2205.00048_0,1 represents a sample with functions 0 and 1 masked out.
 
 
-### Running the Agent
+# Running the Agent
 Basic example of running the agent.
 ```
 bash run_exp_from_env.sh \
@@ -32,13 +32,13 @@ Optional arguments
 - `--code-retrieval full`: options are "no", "full", "ast", and "embedding"
 
 
-### Experiments
+# Experiments
 These are instructions on how to reproduce the experiments in the paper.
 
-#### Removing $n \ge 1$ functions (Section 3.1)
+### Removing $n \ge 1$ functions (Section 3.1)
 Preparing the dataset will generate files `mlrc_n_[1,2,3,4,5].jsonl`. Each sample can be run individually with its combined_id. A way to run a batch of samples is described in section [Batched run jobs using wandb sweeps](#batched-run-jobs-using-wandb-sweeps).
 
-#### The Pass@k Gap (Section 3.2)
+### The Pass@k Gap (Section 3.2)
 After running $k$ passes through the same set of datapoints, collect all logs in one directory. Then, run 
 ```
 cd agents
@@ -50,7 +50,7 @@ python verifier.py --log-dir path/to/log/directory --model-engine model_name
 ```
 This will run the model verifier with the specified LLM engine and output a file containing verifier selections.
 
-#### Scaling Interactivity and Test-Time Compute in Agents (Section 3.3)
+### Scaling Interactivity and Test-Time Compute in Agents (Section 3.3)
 We reproduce the "agentless" harness. This can be run by setting `--agent Agentless` and disregarding any parameter related to agent architecture. The maximum number of reasoning tokens can be controlled with `--max-reasoning-tokens` paramter.
 
 ### Dependence on Natural Language (Section 3.4)
@@ -64,9 +64,13 @@ Any combination of agent architecture and model backbone can be tested.
 - `--model-engine`: any LLM can be used via litellm library. The ones used in the paper are [gpt-4o, gpt-4o-mini, anthropic/claude-3-5-sonnet-20240620, anthropic/claude-3-7-sonnet-20250219, o1, o3-mini].
 
 
+# Running Experiments
 ### Batched run jobs using wandb sweeps
 We make use of wandb sweeps to organize batched runs of multiple samples. Use the template yaml files in `deploy` directory and run
 ```
 python deploy_sweeps.py example.yml
 ```
-This creates a wandb sweep. More information [here](https://docs.wandb.ai/guides/sweeps/).
+This creates a wandb sweep. More information about wandb sweeps [here](https://docs.wandb.ai/guides/sweeps/).
+
+### Docker 
+To ensure safety, we recommend running agents in a Docker container. The image we used is provided in `utils/Dockerfile`. Learn more about how to use Docker [here](https://docs.docker.com/get-started/).
