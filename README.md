@@ -8,7 +8,9 @@ cd dataset
 python process_dataset.py
 ```
 
-Each sample in the dataset is identified with the "combined_id" ({paper_id}_{function_id}). For example, 2205.00048_0 represents a sample where code repository from paper 2205.00048 is used and function 0 is masked out. Also, 2205.00048_0,1 represents a sample with functions 0 and 1 masked out.
+For each repository, it is recommended to create conda environments from the provided yml files. Refer to [conda-docs](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) on how to manage conda environments.
+
+Note: Each sample in the dataset is identified with the "combined_id" ({paper_id}_{function_id}). For example, 2205.00048_0 represents a sample where code repository from paper 2205.00048 is used and function 0 is masked out. Also, 2205.00048_0,1 represents a sample with functions 0 and 1 masked out.
 
 
 ### Running the Agent

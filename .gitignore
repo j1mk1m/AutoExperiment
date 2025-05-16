@@ -12,6 +12,7 @@ wandb
 deploy/*.sbatch
 deploy/sbatches/*.sbatch
 *.py[cod]
+deploy/experiments_*.yml
 
 # dataset
 dataset/__pycache__

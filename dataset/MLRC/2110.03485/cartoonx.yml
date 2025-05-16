@@ -1,0 +1,9 @@
+name: cartoonx
+channels:
+  - defaults
+dependencies:
+  - python=3.8.8
+  - conda-forge::docker-pycreds
+  - conda-forge::litellm
+  - conda-forge::python-dateutil
+prefix: /work/gyeongwk/anaconda3/envs/cartoonx
