@@ -61,15 +61,19 @@ def main_results():
         # "GPT-4o-mini": "dynamic_gpt_4o_mini.csv",
         # "Claude-3.5-sonnet": "dynamic_claude_3_5.csv",
         # "Claude-3.7-sonnet": "dynamic_claude_3_7.csv",
-        "GPT-4o": "gpt_4o_n_2.csv",
-        "GPT-4o-mini": "gpt_4o_mini_n_2.csv",
-        "Claude-3.5-sonnet": "claude_3_5_n_2.csv",
-        "Claude-3.7-sonnet": "claude_3_7_n_2.csv",
+        # "GPT-4o": "gpt_4o_n_2.csv",
+        # "GPT-4o-mini": "gpt_4o_mini_n_2.csv",
+        # "Claude-3.5-sonnet": "claude_3_5_n_2.csv",
+        # "Claude-3.7-sonnet": "claude_3_7_n_2.csv",
+        "GPT-4o": "n_4_gpt_4o.csv",
+        "GPT-4o-mini": "n_4_gpt_4o_mini.csv",
+        "Claude-3.5-sonnet": "n_4_claude_3_5.csv",
+        "Claude-3.7-sonnet": "n_4_claude_3_7.csv",
     }
 
     data = {}
     for model, file in files.items():
-        data[model] = load_data(file)
+        data[model] = load_data("data/" + file)
 
 
     # Perform McNemar's test for each pair of models
@@ -80,11 +84,13 @@ def main_results():
             model1 = models[i]
             model2 = models[j]
 
-            sys1, sys2 = convert_dict_to_binary(data[model1], data[model2])
+            # sys1, sys2 = convert_dict_to_binary(data[model1], data[model2])
+            sys1 = [0 for _ in range(37)]
+            sys2 = [0 for _ in range(37)]
             gold = [1 for _ in range(len(sys1))]
             
-            print(f"\nMcNemar's test results for {model1} vs {model2}:")
-            p_value = mcnemar_test(sys1, sys2)  
+            # print(f"\nMcNemar's test results for {model1} vs {model2}:")
+            # p_value = mcnemar_test(sys1, sys2)  
             
             print(f"\nPaired bootstrap results for {model1} vs {model2}:")
             eval_with_paired_bootstrap(gold, sys1, sys2)
@@ -115,7 +121,58 @@ def run_verifier_results():
     print("Claude 3.5")
     verifier_results(claude_data)
 
-run_verifier_results()
+
+def agent_architecture_results():
+    react_full = load_data("data/react_full.csv")
+    react_sliding = load_data("data/react_sliding.csv")
+    mla_sliding1 = load_data("data/mla_sliding1.csv")
+    mla_full_mini = load_data("data/mla_full_mini.csv")
+
+    sys1, sys2 = convert_dict_to_binary(react_full, react_sliding)
+    gold = [1 for _ in range(len(sys1))]
+    print(f"\nPaired bootstrap results for react_full and react_sliding:")
+    eval_with_paired_bootstrap(gold, sys1, sys2)
+
+    sys1, sys2 = convert_dict_to_binary(react_full, mla_sliding1)
+    gold = [1 for _ in range(len(sys1))]
+    print(f"\nPaired bootstrap results for react_full and mla_sliding1:")
+    eval_with_paired_bootstrap(gold, sys1, sys2)
+
+    sys1, sys2 = convert_dict_to_binary(react_sliding, mla_sliding1)
+    gold = [1 for _ in range(len(sys1))]
+    print(f"\nPaired bootstrap results for react_sliding and mla_sliding1:")
+    eval_with_paired_bootstrap(gold, sys1, sys2)
+
+    sys1, sys2 = convert_dict_to_binary(react_full, mla_full_mini)
+    gold = [1 for _ in range(len(sys1))]
+    print(f"\nPaired bootstrap results for react_full and mla_full_mini:")
+    eval_with_paired_bootstrap(gold, sys1, sys2)
+
+def run_nl_results():
+    data = load_csv("n_2.csv")
+
+    sys1 = list(data["No 1"]) + list(data["No 2"]) + list(data["No 3"]) #+ list(data["no 4"]) + list(data["no 5"])
+    # sys1 = list(data["no 1"]) + list(data["no 2"]) + list(data["no 3"]) + list(data["no 4"]) + list(data["no 5"])
+    sys2 = list(data["Full 1"]) + list(data["Full 2"]) + list(data["Full 3"]) #+ list(data["full 4"]) + list(data["full 5"])
+    # sys2 = list(data["full 1"]) + list(data["full 2"]) + list(data["full 3"]) + list(data["full 4"]) + list(data["full 5"])
+    # sys1 = [1 if result else 0 for result in sys1]
+    sys1 = [1 if result=="x" else 0 for result in sys1]
+    # sys2 = [1 if result else 0 for result in sys2]
+    sys2 = [1 if result=="x" else 0 for result in sys2]
+    gold = [1 for _ in range(len(sys1))]
+    print(sys1)
+
+
+    print(f"\nPaired bootstrap results for no and full:")
+    eval_with_paired_bootstrap(gold, sys1, sys2)
+
+
+
+# run_verifier_results()
+# agent_architecture_results()
+# main_results()
+run_nl_results()
+
 
 
                 

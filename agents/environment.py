@@ -14,7 +14,7 @@ sys.path.append(this_dir)
 from llm import call_llm
 
 def add_env_args(parser):
-    parser.add_argument("--code-retrieval", type=str, choices=["no", "agent", "oracle"], default="agent")
+    parser.add_argument("--code-retrieval", type=str, choices=["no", "full", "oracle"], default="full")
 
 class ACI:
     def __init__(self, name, description, args, func) -> None:
@@ -463,20 +463,23 @@ class BasicEnvironment(Environment):
 
         if self.code_retrieval == "no":
             context = ""
-        elif self.code_retrieval == "agent":
+        elif self.code_retrieval == "full":
             context = file_content
         elif self.code_retrieval == "oracle": 
             context = func_details["code_context"] 
+        elif self.code_retrieval == "embedding":
+            context = func_details["code_context_embedding"]
         else:
             raise NotImplementedError()
 
         if self.retrieval == "oracle":
-            paper_context = self.X["funcs_to_block"][0]["relevant_paper"]
-        elif self.retrieval == "agent":
+            paper_context = func_details["relevant_paper"]
+        elif self.retrieval == "embedding":
+            paper_context = func_details["paper_context_embedding"]
+        elif self.retrieval == "full":
             paper_context = "None"
         else:
             paper_context = "None"
-            # edit_instruction = "Write the following Python function"
 
         prompt = f"""Given the following code context, paper context, and edit instruction, write the Python function. 
 ### CODE CONTEXT ###

@@ -5,10 +5,7 @@ command:
 method: grid
 parameters:
   agent: 'Agentless'
-  memory: 'Full'
-  environment: 'MLAgentBench'
   max-completion-tokens: 16384
-  model-engine: 'gpt-4o'
   subtests:
     agentless:
       combined-id:
@@ -47,4 +44,9 @@ parameters:
         - '2205.00048_3'
         - '2205.00048_4'
         - '2205.00048_5'
-        - '2205.00048_6'       
+        - '2205.00048_6'      
+      model-engine: 
+        - 'gpt-4o'
+        - 'gpt-4o-mini'
+        - 'anthropic/claude-3-5-sonnet-20240620'
+        - 'anthropic/claude-3-7-sonnet-20250219'

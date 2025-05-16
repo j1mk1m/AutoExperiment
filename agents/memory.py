@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod 
 
 def add_memory_args(parser):
-    parser.add_argument("--memory", type=str, choices=["Full", "SlidingWindow", "Summary"], required=True,
+    parser.add_argument("--memory", type=str, choices=["Full", "SlidingWindow", "Summary"], default="Full",
                         help="Type of memory to use")
     parser.add_argument("--lookback", type=int, default=5,
                         help="Number of previous steps to include in sliding window memory")

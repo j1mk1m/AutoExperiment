@@ -7,7 +7,7 @@ import datetime
 this_dir = os.path.dirname(__file__)
 
 
-def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", workspace="workspace", verbose=False, only_metadata=False, include_paper=True, oracle=False):
+def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", workspace="workspace", verbose=False, only_metadata=False, include_paper=True, retrieval="full"):
     """ Parse experiment_csv and gather experiment information """
     if "PC" in mode:
         paper_id, func_ids_string = combined_id.split("_")
@@ -56,7 +56,7 @@ def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", wo
     if only_metadata:
         return metadata
 
-    workspace_dir = prepare_workspace(split, mode, combined_id, paper_id, experiment, workspace, verbose, include_paper=include_paper, oracle=oracle)
+    workspace_dir = prepare_workspace(split, mode, combined_id, paper_id, experiment, workspace, verbose, include_paper=include_paper, retrieval=retrieval)
  
     X = metadata.copy()
     X["path"] = workspace_dir # path to directory containing code, paper.txt, etc
@@ -69,7 +69,7 @@ def get_datapoint(combined_id="0000.00000_0", split="MLRC", mode="PC+refsol", wo
     return X, experiment["results"], metadata
     
 
-def prepare_workspace(split, mode, combined_id, paper_id, experiment, workspace, verbose, include_paper=True, oracle=False):
+def prepare_workspace(split, mode, combined_id, paper_id, experiment, workspace, verbose, include_paper=True, retrieval="full"):
     """ Set up workspace directory for paper_id, exp_id and returns path to workspace """
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
@@ -97,7 +97,7 @@ def prepare_workspace(split, mode, combined_id, paper_id, experiment, workspace,
         shutil.copyfile(os.path.join(paper_dir, "paper.txt"), os.path.join(workspace_dir, "paper.txt"))
 
     if "PC" in mode:
-        experiment["func_details"] = remove_functions(workspace_dir, funcs_to_block, oracle)
+        experiment["func_details"] = remove_functions(workspace_dir, funcs_to_block, retrieval)
  
     if verbose: print(f"Workspace {workspace_dir} prepared")
     return workspace_dir
@@ -132,7 +132,7 @@ def group_functions(functions):
         all_groups[func["file"]].append(func)
     return all_groups
 
-def remove_functions(path, functions, oracle=True):
+def remove_functions(path, functions, retrieval="full"):
     all_groups = group_functions(functions)
     new_funcs = []
 
@@ -158,9 +158,10 @@ def remove_functions(path, functions, oracle=True):
                 num_space += 1
             num_space = num_space + 4
 
-            if oracle:
-                # comments = ['"""'] + func["relevant_paper"].split("\n") + ['\n'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
+            if retrieval == "oracle":
                 comments = ['"""', 'IMPLEMENT THIS FUNCTION ACCORDING TO THE FOLLOWING CONTEXT FROM RESEARCH PAPER:'] + func["relevant_paper"].split("\n") + ['\n'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
+            elif retrieval == "embedding":
+                comments = ['"""', 'IMPLEMENT THIS FUNCTION ACCORDING TO THE FOLLOWING CONTEXT FROM RESEARCH PAPER:'] + func["paper_context_embedding"].split("\n") + ['\n'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
             else: 
                 comments = ['"""'] + func["description"].split("\n") + ['"""', "raise NotImplementedError()", ""] 
 

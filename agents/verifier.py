@@ -38,6 +38,7 @@ def get_generated_codes(log_dir):
 
 def verify_code(log_dir, model_engine):
     codes = get_generated_codes(log_dir)
+    results = {}
     for combined_id, runs in codes.items():
         print("-" * 100)
         print(f"Verifying {combined_id}")
@@ -58,11 +59,21 @@ def verify_code(log_dir, model_engine):
             messages=[{"role": "user", "content": prompt}],
         )
 
-        print(f"Response: {response.choices[0].message.content}")
+        response = response.choices[0].message.content
+
+        print(f"Response: {response}")
+        results[combined_id] = response
+
+    with open(os.path.join(log_dir, "results.json"), "w") as f:
+        json.dump(results, f)
+
+    return results
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--log-dir", type=str, required=True)
     parser.add_argument("--model-engine", type=str, required=True)
     args = parser.parse_args()
 
-    verify_code(args.model_engine)
+    verify_code(args.log_dir, args.model_engine)

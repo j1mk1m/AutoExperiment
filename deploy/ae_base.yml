@@ -4,10 +4,13 @@ command:
 - ${args}
 method: grid
 parameters:
-  agent: AutoAgent 
-  mode: PC+refsol
+  model-engine: gpt-4o-mini # change these as needed
+  agent: 'ReAct'
+  memory: 'Full'
+  retrieval: 'full' # optional
+  code-retrieval: 'full' # optional
   subtests:
-    AutoAgent,PC+refsol:
-      model: gpt-4o-mini
-      combined_id:
+    test:
+      combined-id:
         - '0000.00000_0'
+        # add more combined-ids as needed

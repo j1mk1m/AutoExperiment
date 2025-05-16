@@ -8,7 +8,7 @@ class Agentless(Agent):
     def __init__(self, env, llm_manager, memory_module, X, metadata, **kwargs) -> None:
         super().__init__(env, llm_manager, memory_module, X, metadata, **kwargs)
 
-        self.max_completion_tokens = kwargs["max_completion_tokens"]
+        self.max_reasoning_tokens = kwargs["max_reasoning_tokens"]
 
     def _retrieve_nl(self, query):
         text_search = SearchEngine(self.X["path"])
@@ -56,8 +56,8 @@ Think about how you want to implement the missing Python function.
         print(f"### THOUGHT PROMPT ###\n{prompt}")
         reasoning_tokens = 0
         thought = ""
-        while reasoning_tokens < self.max_completion_tokens:
-            llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, max_completion_tokens=self.max_completion_tokens-reasoning_tokens)
+        while reasoning_tokens < self.max_reasoning_tokens:
+            llm_response = self.llm_manager.call_llm([{"role": "user", "content": prompt}], None, max_completion_tokens=self.max_reasoning_tokens-reasoning_tokens)
 
             if llm_response.error:
                 self.env.cleanup()

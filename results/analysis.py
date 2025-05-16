@@ -98,10 +98,12 @@ def plot_main_results():
     plt.plot(num_removed, df["gpt-4o-mini"], marker='o', label='GPT-4o mini')
     plt.plot(num_removed, df["claude-3.5-sonnet"], marker='o', label='Claude 3.5 Sonnet')
     plt.plot(num_removed, df["claude-3.7-sonnet"], marker='o', label='Claude 3.7 Sonnet')
-    plt.xlabel('n')
-    plt.ylabel('Pass Rate (%)')
+    plt.rcParams.update({'font.size': 14})  # Increase base font size
+    plt.rcParams['axes.titlesize'] = 16     # Increase title font size
+    plt.xlabel('n', fontsize=16)
+    plt.ylabel('Pass Rate (%)', fontsize=16)
     plt.xlim(0.5, 5.5)
-    plt.xticks(range(1, 6))  
+    plt.xticks(range(1, 6), fontsize=16)  
     plt.legend()
     plt.savefig('plots/main_results.png')
     plt.close()

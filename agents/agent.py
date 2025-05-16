@@ -10,8 +10,8 @@ def add_agent_args(parser):
                         help="Type of agent to use")
     parser.add_argument("--max_retries", type=int, default=3,
                         help="Maximum number of retries for LLM calls")
-    parser.add_argument("--retrieval", default="agent", choices=["no", "agent", "oracle"])
-    parser.add_argument("--max-completion-tokens", type=int)
+    parser.add_argument("--retrieval", default="full", choices=["no", "full", "oracle", "embedding"])
+    parser.add_argument("--max-reasoning-tokens", type=int)
 
 
 class Agent(ABC):
