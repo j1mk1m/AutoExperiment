@@ -1,6 +1,6 @@
 import wandb
 
-from agents.environment import Environment, MLAgentBench_Env, SWE_AGENT_Env
+from agents.environment import Environment, BasicEnvironment 
 from agents.agent import Agent, ReActAgent, PlanningAgent, MLAgentBenchAgent
 from agents.agentless import Agentless
 from agents.llm import LLM 

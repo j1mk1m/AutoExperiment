@@ -48,6 +48,8 @@ def calculate_loss(gold, pred, metric_fn=percent_loss):
     try:
         if isinstance(pred, str):
             pred = json.loads(pred)
+        if isinstance(gold, str):
+            gold = json.loads(gold)
 
         loss_per_exp = {}
         correct_per_exp = {}
@@ -92,7 +94,6 @@ if __name__ == "__main__":
     tags = args._tags.split(',')
     tags.append(args.combined_id)
     tags.append(args.agent)
-    tags.append(args.environment)
     tags.append(args.memory)
     tags.append(args.model_engine)
     tags.append(args.retrieval)
@@ -111,7 +112,7 @@ if __name__ == "__main__":
         run_refsol(X)
     else:
         print("###############################")
-        print(f"Agent: {args.agent}\nMemory: {args.memory}\nEnvironment: {args.environment}\nModel Engine: {args.model_engine}\nDatapoint: {args.combined_id}")
+        print(f"Agent: {args.agent}\nMemory: {args.memory}\nModel Engine: {args.model_engine}\nDatapoint: {args.combined_id}")
         print("###############################\n")
 
         # Run agent and get result

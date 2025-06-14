@@ -94,24 +94,65 @@ def plot_main_results():
     df = pd.read_csv("data/main_results.csv")
     num_removed = df["N"]
     plt.figure(figsize=(10, 6))
-    plt.plot(num_removed, df["gpt-4o"], marker='o', label='GPT-4o')
-    plt.plot(num_removed, df["gpt-4o-mini"], marker='o', label='GPT-4o mini')
-    plt.plot(num_removed, df["claude-3.5-sonnet"], marker='o', label='Claude 3.5 Sonnet')
-    plt.plot(num_removed, df["claude-3.7-sonnet"], marker='o', label='Claude 3.7 Sonnet')
+    plt.plot(num_removed, df["gpt-4o"] * 100, marker='o', label='GPT-4o')
+    plt.plot(num_removed, df["gpt-4o-mini"] * 100, marker='o', label='GPT-4o mini')
+    plt.plot(num_removed, df["claude-3.5-sonnet"] * 100, marker='o', label='Claude 3.5 Sonnet')
+    plt.plot(num_removed, df["claude-3.7-sonnet"] * 100, marker='o', label='Claude 3.7 Sonnet')
     plt.rcParams.update({'font.size': 14})  # Increase base font size
     plt.rcParams['axes.titlesize'] = 16     # Increase title font size
     plt.xlabel('n', fontsize=16)
     plt.ylabel('Pass Rate (%)', fontsize=16)
     plt.xlim(0.5, 5.5)
     plt.xticks(range(1, 6), fontsize=16)  
-    plt.legend()
+    plt.legend(fontsize=14)
     plt.savefig('plots/main_results.png')
     plt.close()
 
 
+def plot_verifier_results():
+    df = pd.read_csv("data/verifier_results.csv")
+    # Extract data for each model
+    gpt4_data = df['gpt-4o'] * 100
+    claude_data = df['claude-3-5'] * 100
+
+    # Prepare data for plotting
+    models = ['GPT-4o', 'Claude 3.5 Sonnet']
+    metrics = ['Pass@1', 'Verifier', 'Pass@5']
+
+    # # Create figure and axis
+    plt.figure(figsize=(10, 6))
+    
+    # # Set width of bars and positions of the bars
+    barWidth = 0.25
+    r1 = np.arange(len(models))
+    r2 = [x + barWidth for x in r1]
+    r3 = [x + barWidth for x in r2]
+    
+    # # Create bars
+    plt.bar(r1, [gpt4_data[0], claude_data[0]], width=barWidth, label='Pass@1')
+    plt.bar(r2, [gpt4_data[2], claude_data[2]], width=barWidth, label='Verifier')
+    plt.bar(r3, [gpt4_data[1], claude_data[1]], width=barWidth, label='Pass@5')
+
+    # Add numbers on top of bars
+    for i, v in enumerate([gpt4_data[0], claude_data[0]]):
+        plt.text(r1[i], v, f'{v:.1f}%', ha='center', va='bottom')
+    for i, v in enumerate([gpt4_data[2], claude_data[2]]):
+        plt.text(r2[i], v, f'{v:.1f}%', ha='center', va='bottom')
+    for i, v in enumerate([gpt4_data[1], claude_data[1]]):
+        plt.text(r3[i], v, f'{v:.1f}%', ha='center', va='bottom')
+    
+    plt.xlabel('Models', fontsize=16)
+    plt.ylabel('Pass Rate (%)', fontsize=16)
+    plt.ylim(0, 60)
+    plt.xticks([r + barWidth for r in range(len(models))], models, fontsize=16)
+    plt.legend(fontsize=14)
+    plt.savefig('plots/verifier_results.png')
+    plt.close()
+
 # # plot_step_correct()
 # plot_success_across_max_token()
 plot_main_results()
+plot_verifier_results()
 
 
 ### DEPRECATED ###
