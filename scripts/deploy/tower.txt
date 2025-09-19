@@ -1,0 +1,8 @@
+--- Agent Commands ---
+wandb agent j1mk1m/AutoExperiment/xvbzguxf
+
+--- Sweep URLs ---
+https://wandb.ai/j1mk1m/AutoExperiment/sweeps/xvbzguxf
+
+--- atlas ---
+sbatch /work/gyeongwk/auto_experiment/scripts/deploy/sbatches/ae_main_n_1._Jul_26_n=1_openhands_6d3e_atlas.sbatch

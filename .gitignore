@@ -1,24 +1,16 @@
 # Agent 
-agents/openai_api_key.txt
-agents/__pycache__
-agents/workspace
-agents/traces
-agents/logs
-agents/generated_code
-
-# Workspace, logs, and utils
-workspace/*
-wandb
-deploy/*.sbatch
-deploy/sbatches/*.sbatch
-*.py[cod]
-deploy/experiments_*.yml
+autoexperiment/agents/openai_api_key.txt
+autoexperiment/agents/__pycache__
+autoexperiment/agents/workspace
+autoexperiment/agents/traces
+autoexperiment/agents/logs
+autoexperiment/agents/generated_code
 
 # dataset
-dataset/__pycache__
-dataset/MLRC/mlrc_*.jsonl
-dataset/MLRC/*/*.jsonl
-dataset/workspace
+autoexperiment/dataset/__pycache__
+autoexperiment/dataset/MLRC/mlrc_*.jsonl
+autoexperiment/dataset/MLRC/*/*.jsonl
+autoexperiment/dataset/workspace
 *.pt
 *.zip
 *.tar
@@ -26,9 +18,19 @@ dataset/workspace
 *.npz
 *.png
 *.jpg
+*.pkl
 
+# Workspace, logs, and utils
+workspace/*
+wandb
+scripts/deploy/*.sbatch
+scripts/deploy/sbatches/*.sbatch
+scripts/deploy/experiments_*.yml
+
+autoexperiment.egg-info
+
+# Docker
 *.def
 *.sif
-
 *.img
-*.pkl
+

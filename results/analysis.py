@@ -36,36 +36,39 @@ def get_step_correct(df):
         if k <= 16:  # Only include steps up to 20
             total_runs = len(df)
             correct_runs = len(df[(df['step'] <= k) & (df['all_correct'])])
-            step_correct[k] = correct_runs / total_runs
+            step_correct[k] = (correct_runs / total_runs) * 100
     print(step_correct)
     return step_correct
 
 def plot_step_correct():
     # Read the CSV file
-    df = pd.read_csv("data/dynamic_o3_mini.csv")
-    step_correct_o3_mini = get_step_correct(df)
+    # df = pd.read_csv("data/dynamic_o3_mini.csv")
+    # step_correct_o3_mini = get_step_correct(df)
     df = pd.read_csv("data/dynamic_gpt_4o.csv")
     step_correct_gpt_4o = get_step_correct(df)
     df = pd.read_csv("data/dynamic_gpt_4o_mini.csv")
     step_correct_gpt_4o_mini = get_step_correct(df)
     df = pd.read_csv("data/dynamic_claude_3_5.csv")
     step_correct_claude_3_5 = get_step_correct(df)
+    df = pd.read_csv("data/dynamic_claude_3_7.csv")
+    step_correct_claude_3_7 = get_step_correct(df)
 
     # Plot success rate as a line plot with larger labels and title
     plt.rcParams.update({'font.size': 14})  # Increase base font size
     plt.rcParams['axes.titlesize'] = 16     # Increase title font size
     plt.rcParams['axes.labelsize'] = 14     # Increase axis label font size
     plt.figure(figsize=(10, 6))
-    plt.plot(list(step_correct_o3_mini.keys()), list(step_correct_o3_mini.values()), marker='o', label='o3-mini')
+    # plt.plot(list(step_correct_o3_mini.keys()), list(step_correct_o3_mini.values()), marker='o', label='o3-mini')
     plt.plot(list(step_correct_gpt_4o.keys()), list(step_correct_gpt_4o.values()), marker='o', label='GPT-4o')
     plt.plot(list(step_correct_gpt_4o_mini.keys()), list(step_correct_gpt_4o_mini.values()), marker='o', label='GPT-4o mini')
     plt.plot(list(step_correct_claude_3_5.keys()), list(step_correct_claude_3_5.values()), marker='o', label='Claude 3.5 Sonnet')
-    plt.xlabel('Max Interactions')
-    plt.ylabel('Success Rate')
-    plt.title('Performance vs Max Interactions')
-    plt.xticks(range(0, 18, 2))  # Set x-axis ticks from 0 to 20 in increments of 2
-    plt.ylim(0, 0.5)  # Set y-axis limits from 0 to 1.0
-    plt.legend()
+    plt.plot(list(step_correct_claude_3_7.keys()), list(step_correct_claude_3_7.values()), marker='o', label='Claude 3.7 Sonnet')
+    plt.xlabel('Max Interactions', fontsize=20)
+    plt.ylabel('Success Rate', fontsize=20)
+    plt.xticks(range(0, 18, 2), fontsize=16)  # Set x-axis ticks from 0 to 20 in increments of 2
+    plt.ylim(0, 50)  # Set y-axis limits from 0 to 1.0
+    plt.yticks(range(0, 50, 10), fontsize=16)  # Set x-axis ticks from 0 to 20 in increments of 2
+    plt.legend(fontsize=16)
     plt.savefig('plots/performance_vs_max_interactions.png')
     plt.close()
 
@@ -76,28 +79,33 @@ def plot_success_across_max_token():
     success_rates = {"o1": [], "o3-mini": []}
     for token in max_tokens:
         # print(df[token])
-        success_rates["o1"].append(df[token][1])
-        success_rates["o3-mini"].append(df[token][0])
+        success_rates["o1"].append(df[token][1] * 100)
+        success_rates["o3-mini"].append(df[token][0] * 100)
 
     plt.figure(figsize=(10, 6))
     plt.plot(max_tokens, success_rates["o1"], marker='o', label='o1')
     plt.plot(max_tokens, success_rates["o3-mini"], marker='o', label='o3-mini')
-    plt.xlabel('Max Tokens')
-    plt.ylabel('Success Rate')
-    plt.title('Performance vs Max Tokens')
-    plt.ylim(0, 0.5)  # Set y-axis limits from 0 to 1.0
-    plt.legend()
+    plt.xlabel('Max Tokens', fontsize=20)
+    plt.ylabel('Success Rate', fontsize=20)
+    # plt.title('Performance vs Max Tokens')
+    plt.ylim(0, 50)  # Set y-axis limits from 0 to 1.0
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.legend(fontsize=16, loc='upper left')
     plt.savefig('plots/performance_vs_max_tokens.png')
     plt.close() 
 
 def plot_main_results():
-    df = pd.read_csv("data/main_results.csv")
+    # df = pd.read_csv("data/main_results.csv")
+    df = pd.read_csv("data/nl_retrieval.csv")
     num_removed = df["N"]
     plt.figure(figsize=(10, 6))
-    plt.plot(num_removed, df["gpt-4o"] * 100, marker='o', label='GPT-4o')
-    plt.plot(num_removed, df["gpt-4o-mini"] * 100, marker='o', label='GPT-4o mini')
-    plt.plot(num_removed, df["claude-3.5-sonnet"] * 100, marker='o', label='Claude 3.5 Sonnet')
-    plt.plot(num_removed, df["claude-3.7-sonnet"] * 100, marker='o', label='Claude 3.7 Sonnet')
+    plt.plot(num_removed, df["No"] * 100, marker='o', label='No context')
+    plt.plot(num_removed, df["Full"] * 100, marker='o', label='Full context')
+    # plt.plot(num_removed, df["gpt-4o"] * 100, marker='o', label='GPT-4o')
+    # plt.plot(num_removed, df["gpt-4o-mini"] * 100, marker='o', label='GPT-4o mini')
+    # plt.plot(num_removed, df["claude-3.5-sonnet"] * 100, marker='o', label='Claude 3.5 Sonnet')
+    # plt.plot(num_removed, df["claude-3.7-sonnet"] * 100, marker='o', label='Claude 3.7 Sonnet')
     plt.rcParams.update({'font.size': 14})  # Increase base font size
     plt.rcParams['axes.titlesize'] = 16     # Increase title font size
     plt.xlabel('n', fontsize=16)
@@ -105,7 +113,8 @@ def plot_main_results():
     plt.xlim(0.5, 5.5)
     plt.xticks(range(1, 6), fontsize=16)  
     plt.legend(fontsize=14)
-    plt.savefig('plots/main_results.png')
+    # plt.savefig('plots/main_results.png')
+    plt.savefig('plots/nl_retrieval.png')
     plt.close()
 
 
@@ -149,10 +158,10 @@ def plot_verifier_results():
     plt.savefig('plots/verifier_results.png')
     plt.close()
 
-# # plot_step_correct()
-# plot_success_across_max_token()
-plot_main_results()
-plot_verifier_results()
+plot_step_correct()
+plot_success_across_max_token()
+# plot_main_results()
+# plot_verifier_results()
 
 
 ### DEPRECATED ###
