@@ -1,10 +1,10 @@
 # From Reproduction to Replication: Evaluating Research Agents with Progressive Code Masking
-Gyeongwon James Kim, Alex Wilf, Louis-Philippe Morency, Daniel Fried (Carnegie Mellon University)
+Anonymous Submission
 
 # Dataset
 First, clone this repository and install dependencies in `requirements.txt`.
 
-Access the dataset via [Huggingface](https://huggingface.co/datasets/j1mk1m/AutoExperiment) or run 
+Run 
 ```
 cd dataset
 python process_dataset.py
